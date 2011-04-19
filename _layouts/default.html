@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>{{ page.title }} | dave^2 = -1</title>
+  <link rel="stylesheet" href="/css/shCore.css" type="text/css" />
+  <link rel="stylesheet" href="/css/shThemeDefault.css" type="text/css" />
+  <link rel="stylesheet" href="/css/style.css" type="text/css" />
+</head>
+<body>
+  <div id="header">
+      <h1><a href="http://davesquared.net">dave^2 = -1</a></h1>
+      <h2>A software development blog by some bloke called Dave.</h2>
+  </div>
+
+  <div id="content">
+      {{ content }}
+  </div>
+
+  <div id="footer">
+      All code and advice is provided without warranty -- use at your own risk!  Opinions expressed here are my own and not that of my employer or any one else.
+This is just a blog! Don't take it too seriously!
+Despite not being too serious, this blog has a <a href="http://davesquared.net/2007/07/privacy-policy.html">Privacy Policy</a>, because it uses Google Analytics to see if anyone drops by.
+This blog may contain traces of <a href="http://tango.freedesktop.org/">Tango icons</a>.
+  </div>
+
+  <script type="text/javascript" src="/scripts/shCore.js"></script>
+  <script type="text/javascript" src="/scripts/shBrushCSharp.js"></script>
+  <script type="text/javascript" src="/scripts/shBrushRuby.js"></script>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      doHighlighting();
+    });
+
+    function doHighlighting() {
+        SyntaxHighlighter.defaults.gutter = false;
+        SyntaxHighlighter.defaults.toolbar = false;
+        SyntaxHighlighter.all();
+    }
+  </script>
+
+    <script type="text/javascript">
+
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-2217573-4']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+
+    </script>
+</body>
+</html>
