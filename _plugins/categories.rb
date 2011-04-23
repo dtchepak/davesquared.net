@@ -22,7 +22,7 @@ module Jekyll
             if site.layouts.key? 'category'
                 dir = 'tagged'
                 site.categories.keys.each do |category|
-                    write_category_index(site, File.join(dir, category), category) unless category.include? '*'
+                    write_category_index(site, File.join(dir, category), category)
                 end
             end
         end

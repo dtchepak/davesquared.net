@@ -2,15 +2,36 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>{{ page.title }} | dave^2 = -1</title>
+  <title>
+      {% if page.title == null %}
+          dave^2 = -1: David Tchepak's software development blog
+      {% else %}
+          {{ page.title }} | dave^2 = -1
+      {% endif %}
+  </title>
   <link rel="stylesheet" href="/css/shCore.css" type="text/css" />
   <link rel="stylesheet" href="/css/shThemeDefault.css" type="text/css" />
   <link rel="stylesheet" href="/css/style.css" type="text/css" />
+
+  {% if page.previous.url %}
+  <link rel="prev" href="{{page.previous.url}}" />
+  {% endif %}
+  {% if page.next.url %}
+  <link rel="next" href="{{page.next.url}}" />
+  {% endif %}
 </head>
 <body>
+  <div style="background-color: #000; width:100%">Search</div>
   <div id="header">
-      <h1><a href="http://davesquared.net">dave^2 = -1</a></h1>
-      <h2>A software development blog by some bloke called Dave.</h2>
+      <div id="title">
+          <h1><a href="/">dave^2 = -1</a></h1>
+          <h2>A software development blog by some bloke called Dave.</h2>
+      </div>
+      <div id="badges">
+          <img src="/images/rss.png" />
+          <img src="/images/twitter.png" />
+          <img src="/images/email.png" />
+      </div>
   </div>
 
   <div id="content">

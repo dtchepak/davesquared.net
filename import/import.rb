@@ -27,7 +27,7 @@ def get_post(entry)
     post = Post.new
     post.id = entry.id.content
     post.title = entry.title.content
-    post.tags = entry.categories.map { |x| x.term }.select { |x| not x.end_with?('#post') }
+    post.tags = entry.categories.map { |x| x.term.sub('*', '+') }.select { |x| not x.end_with?('#post') }
     post.published = entry.published.content
     post.updated = entry.updated.content
     post.content = entry.content.content

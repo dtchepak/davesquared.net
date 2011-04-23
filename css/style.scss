@@ -56,6 +56,15 @@ a:active { color: #000000; text-decoration: underline;}
     border:0;
 }
 
+#title {
+    float: left;
+}
+
+#badges {
+    float: right;
+    margin-top: 1.6em;
+}
+
 #footer { font-size: xx-small; text-align: center; padding: 15px; clear: both; }
 
 #content {
@@ -73,6 +82,19 @@ a:active { color: #000000; text-decoration: underline;}
 
 #page-navigation > .previous {
     float: left;
+}
+
+blockquote {
+    padding: 2em;
+    background-color: #EEE;
+    border-left: 15px solid #CCC;
+}
+
+.post-info {
+    color: #777;
+    font-size: 0.7em;
+    line-height: 0.7em;
+    top: -1em;
 }
 
 /* SyntaxHighlighter fix for vertical scrollbar in Chrome */
