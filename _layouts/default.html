@@ -2,6 +2,13 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta content="David Tchepak" name="author"/> 
+  <meta content="m9AwWGJvEIZc0KDR601AHxGXy0/pSZOi7V1Uh9qqYaI=" name="verify-v1"/> 
+  <meta content="bNZj4YX0JTcKLGJ3Dt7Fy4ePh9t8Y9pAGX30PfkT3O8=" name="verify-v1"/> 
+  <meta content="4B6B9C131D9347A55703A69B23E8D4B0" name="msvalidate.01"/> 
+  <meta content="C20FD3C7DF3940F7AA9175180171DB4D" name="msvalidate.01"/> 
+  <META content="b0fbb5105795aadf" name="y_key" />
+  <meta content="dd8c9bdcee0cd8b2" name="y_key"/> 
   <title>
       {% if page.title == null %}
           dave^2 = -1: David Tchepak's software development blog
@@ -12,6 +19,7 @@
   <link rel="stylesheet" href="/css/shCore.css" type="text/css" />
   <link rel="stylesheet" href="/css/shThemeDefault.css" type="text/css" />
   <link rel="stylesheet" href="/css/style.css" type="text/css" />
+  <link href="/davesquared-search.xml" rel="search" title="Dave^2 Search" type="application/opensearchdescription+xml"/> 
 
   {% if page.previous.url %}
   <link rel="prev" href="{{page.previous.url}}" />
@@ -21,7 +29,7 @@
   {% endif %}
 </head>
 <body>
-  <div style="background-color: #000; width:100%">Search</div>
+
   <div id="header">
       <div id="title">
           <h1><a href="/">dave^2 = -1</a></h1>
@@ -32,6 +40,24 @@
           <img src="/images/twitter.png" />
           <img src="/images/email.png" />
       </div>
+  </div>
+
+  <div id="navigation">About | Archives | Tags | Search
+        <!-- Google CSE Search Box Begins  -->
+        <form id="searchbox_005697633880271604295:snlx0l0dwf0" action="http://www.google.com/cse" onsubmit="davesquared_submitSearchBoxWidget()">
+          <input value="005697633880271604295:snlx0l0dwf0" name="cx" type="hidden"/>
+          <input value="" name="cof" type="hidden"/>
+          <input style="font-size: 0.9em" name="q" size="20" type="text"/>
+          <input style="font-size: 0.9em" value="Search" name="sa" type="submit"/>
+        </form>
+        <!-- Google CSE Search Box Ends -->
+        <script type="text/javascript">
+        function davesquared_submitSearchBoxWidget() {
+          var searchBox = document.getElementById("searchbox_005697633880271604295:snlx0l0dwf0");
+          searchBox.action = "/search.html";
+          searchBox.cof.value="FORID:11";
+        }
+        </script>
   </div>
 
   <div id="content">
