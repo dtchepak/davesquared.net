@@ -67,9 +67,15 @@ a:active { color: #000000; text-decoration: underline;}
 
 #navigation {
     clear: both;
-    background-color: #000; 
     width:100%;
-    color:#FFFFFF;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    padding: 3px;
+    a {
+        padding-right: 1em;
+        padding-left: 1em;
+        color:#000000;
+    }
 }
 
 #footer { font-size: xx-small; text-align: center; padding: 15px; clear: both; }
