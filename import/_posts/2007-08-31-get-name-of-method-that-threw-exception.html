@@ -1,0 +1,26 @@
+---
+layout: "post"
+title: "Get the name of the method that threw an exception"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4413250582144512906"
+categories: [".net"]
+date: "2007-08-31T12:07:00.0+10:00"
+updated: "2008-05-01T09:04:07.743+10:00"
+---
+
+<p>I recently had to dynamically retrieve the name of the method that had thrown an exception. It turns out that this is really easy to do using <code>Exception.TargetSite.Name</code>. Here is a passing NUnit test to illustrate:</p><pre>[TestFixture]
+public class ExceptionBehaviour {		
+  [Test]
+  public void TestGetMethodNameThrowingException() {
+    try {
+      new Something().MakeExceptionHappen();				
+    } catch (Exception ex) {
+      Assert.That(<b>ex.TargetSite.Name</b>, Is.EqualTo("MakeExceptionHappen"));
+    }
+  }
+  private class Something {
+    public void MakeExceptionHappen() {
+      throw new NotImplementedException();
+    }
+  }
+}</pre>
+<p><code>TargetSite</code> returns a <code>System.Reflection.MethodBase</code> that has a number of interesting properties, like the type that threw the exception. Quite useful for logging.</p>

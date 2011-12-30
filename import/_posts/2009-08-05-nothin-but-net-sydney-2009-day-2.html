@@ -1,0 +1,58 @@
+---
+layout: "post"
+title: "Nothin' but .NET, Sydney 2009: Day 2"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6904653973472262732"
+categories: ["+nbdn"]
+date: "2009-08-05T09:15:00.0+10:00"
+updated: "2009-08-05T09:19:34.38+10:00"
+---
+
+<p>Day 2 of <a href="http://www.jpboodhoo.com/training.oo">JP Boodhoo's Nothin' but .NET bootcamp</a> has come and gone. JP's been aiming for an 11pm stop, but we went through until about 12:30am. Which was awesome, because we had started covering some really interesting stuff. Apologies in advance for the rambling nature of this post, but most of it was done after 2am. :-\ I'll try and distil this stuff into some decent posts after the course.</p>
+
+<p>The main highlight I took away from the day was finally identifying the source of and solution to a lot of the problems I have when designing OO systems. Whenever I've tried test-driving a solution from top-down I've commonly found my tests seem to raise more questions than they answer. I'd struggle through writing one test, and have to almost-arbitrarily whack in a number of dependent classes that I'd need to contort in some strange way via mocking to get the assertion to pass.</p>
+
+<p>Turns out that this was on the right track (driving out dependencies), but for the wrong reason. I had been looking for any form of collaborator for my subject under test (SUT) in a vain effort to find something (anything!) to test. It all felt pretty contrived. The reason I was struggling is for the same reason I identified on <a href="http://www.davesquared.net/2009/08/nothin-but-net-sydney-2009-day-1.html">day 1</a>: I suck at segregation and assignment of responsibilities. When you start thinking of things you want to test on your SUT, they should all relate to one behaviour/concern/responsibility (SRP). Anything else, no matter how trivial it seems, really needs to be pushed into a collaborator. (The <a href="http://en.wikipedia.org/wiki/GRASP_%28Object_Oriented_Design%29">GRASP patterns</a> can really help in identifying what these collaborators should be.) This collaborator will most of the time need to be accessed via an interface, not a concrete class (DIP). This let's you drive out the intention behind each collaborator, without needing to fill in the shape, structure or implementation of them.</p>
+
+<p>This approach gives lots of very small, very focussed classes. It also produces very focussed interfaces for each collaborator (ISP). When it's done right it also means that when a responsibility needs to be added, it can generally be done without modifying existing classes, but instead producing another implementation of one of your collaborator interfaces (OCP).</p>
+
+<p>You'll notice I've littered a whole lot of TLAs (Three Letter Acronyms ;)) through those last couple of sentences -- that's my effort to tie these things back to the fundamental <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">SOLID principles</a>. Now I felt I had a really good understanding of SOLID, and I am very careful to consider any code I write in light of those principles, but I'd never taken them to their full, logical conclusion.</p>
+
+<p>Now there is one big downside to the designs that come out of thinking like this. The object model is very, very abstract and complex. You can't just hold the entire model in your head at once. It is not immediately obvious how some input at the top layer of the application works its way through the web of myriad of incredibly simple objects to give you some output at the other end. And you know what? I'm dead certain that this is the absolute entire point of Object Oriented development.</p>
+
+<p>Understanding the entire flow of an operation or application is the point of procedural programming. We know that if this value is x then it will go down this branch of an <code>if</code> condition, then that will call a method with this argument that will check some argument to call some other method... this is done in OO languages all the time. Sure there might be some OO niceties sprinkled around like polymorphism, composition etc but classes and objects can still end up being little more than glorified namespaces for organising functions.</p>
+
+<p>By contrast if you use OO programming to its fullest, you lose that immediately-apparent result you get from a more procedural style, and instead you get a whole bunch of almost-endless abstraction. The point of abstraction is that you don't need to understand the entire model, just the bit you are working on. But the benefit you get is that it becomes trivial to understand that small piece and affect how it works via its collaborators, whose implementations are equally easy to understand once you have stepped down into the next level of abstraction.</p>
+
+<p>Sure, it is hard to maintain context during huge leaps through abstraction layers, but again you don't really need the entire context. It seems to me that I need to let go of that procedural safety net of knowing all the complete paths through my application to truly start doing OO design right. And doing OO right means getting a new safety net -- having each piece of my application being trivial to understand, and almost as trivial to change its behaviour. As an aside, having these trivial components also makes your design very easy to test.</p>
+
+<h2>Patterns and principles</h2>
+
+<p>We also covered a few more patterns and principles today:</p>
+
+<ul>
+<li>Static Gateway as a static entry point to a DSL/fluent interface.</li>
+<li>A simple version of the Event Aggregator pattern for decoupling listeners and publishers. Basically you just have system-wide events published to and subscribed via an Event Aggregator, and then let multiple components respond independently to events of system-wide significance. This also makes it easier to handle exceptions that occur during callbacks than with traditional .NET event handling (which will generally halt an invocation of a MulticastDelegate). Also learned a cool way of using attributes to tie into the Event Aggregator (so members can be decorated to get called on a system-wide event). And found out about the <code>System.ComponentModel.EventHandlerList</code> class.</li>
+<li>Collecting Parameter pattern.</li>
+<li>Registry pattern for lookups.</li>
+<li>Object Mother for creating and setting up unit test data.</li>
+<li>The Front Controller pattern, the forerunner (?) to MVC and other separated presentation patterns. The Front Controller object becomes the entry point that maps inputs (e.g. from UI) into Commands, and uses these Commands to coordinate between Models and Views. I've probably got the details wrong, but we'll be doing more on this tomorrow.</li>
+<li>Null Object pattern for eliminating null checks, including on basic things like event invocation.</li>
+<li>The Highlander Principle: there can only be one. Translated, this means that related methods should all delegate to the method with the biggest number and specificity of parameters. This is particularly important for overridding.</li>
+<li>Decorator pattern. I've sometimes been hesitant to decorate classes where it only does something very trivial to the calls it delegates too, but this is really the entire point. Sure you have to reproduce several methods, but the power it gives you to augment behaviour while conforming to OCP has made me love this pattern again. :)</li>
+<li>We went through the Dependency Inversion Principle.</li>
+</ul>
+
+<h2>Miscellaneous stuff</h2>
+
+<p>Some other things I jotted down from today:</p>
+
+<ul>
+<li>You can put generic constraints on delegate definitions (this is pretty obvious in retrospect, but I hadn't thought about it before).</li>
+<li>We went through the difference between the <code>Delegate</code> type and the <code>delegate</code> keyword.</li>
+<li>The idea of closing a lambda/anonymous method down to a known delegate type.</li>
+<li>Const fields are copied to other assemblies when compiled, so updating the original assembly won't change the values in the other assemblies until they are recompiled.</li>
+<li>Closures can be replaced by a class with state and then pointing to a function of that class (which is what the compiler generates for closures anyway).</li>
+<li>Referring to passing delegates around as "passing behaviours".</li>
+<li>Naming test contexts very simply helps to isolate responsibilities. Any behaviour not specified in the tests for a SUT generally means that those concerns are delegated to dependencies.</li>
+<li>When writing tests/specs, focus on the happy path where everything goes right. We can then choose to defer exceptions to this path to a dependency, or to flesh out the behaviour in later tests/specs.</li>
+</ul>

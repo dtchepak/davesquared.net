@@ -1,0 +1,146 @@
+---
+layout: "post"
+title: "Tweaking your Blogger blog"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-840976493871716091"
+categories: ["misc"]
+date: "2008-03-12T10:09:00.01+11:00"
+updated: "2008-05-01T09:04:07.719+10:00"
+---
+
+<p>A non-programming post today. Here is a collection of miscellaneous tweaks I have used on my Blogger blog, just in case I need to find them again. Some of them may require certain Blogger options enabled (like archiving etc). I haven't changed much from the defaults, so if something does not seem to work you might want to check your options and see if that accounts for the difference.</p>
+<p><strong>Warning: back up your template before making any changes to it!!!</strong> As with all my content, all tweaks here are completely without warranty, and may destroy your blog and/or the universe as we know it. You have been warned. :-)</p> 
+<h2>Tracking visits</h2> 
+<p>There are lots of statistics providers out there. I use <a href="http://www.google.com/analytics">Google Analytics</a>. It is easy to setup. Once you have signed up you will be given a snippet of JavaScript code to include on all pages you want tracked on your site. For basic Blogger blogs like mine, this just means editing your template and pasting the tracking code just before the closing <code>&lt;/body&gt;</code> tag.</p> 
+<p>The Analytics terms of use also require you to include an easily accessible <a href="http://davesquared.blogspot.com/2007/07/privacy-policy.html">Privacy Policy</a> on your site. I did this by creating a new post called "Privacy Policy", and adding an HTML footer to my blog (Dashboard -&gt; Layout -&gt; Page Elements) to include a link to the policy.</p> 
+<h2>Tracking feed readers</h2>  
+<p>Sign up to <a href="http://www.feedburner.com">Feedburner</a> and you can track how many people subscribe to your RSS/ATOM feed. It can also do some tricks around formatting your feed. You can then re-point you Blogger feed to your new feed address: Dashboard -&gt; Settings -&gt; Site Feed and enter the feed address in the <em>Post Feed Redirect URL</em> field. Also a good idea to throw a purdy feed icon and subscribe link on one of your sidebar widgets.</p>
+<h2>Sensible search engine indexing</h2>
+<p>I found that searching my blog using Google commonly displayed results from my archive pages. This means that the post I was searching for appeared somewhere amongst my 15 other posts for that archived month.</p>
+<p>To fix this I added some <a href="http://www.robotstxt.org/meta.html">META tags</a> to my Blogger template to give search engines some hints about my content. In the &lt;HEAD /&gt; of my template I added the following:</p>
+<pre>
+&lt;b:if cond='data:blog.pageType == &quot;archive&quot;'&gt;
+  &lt;meta content='noindex,follow' name='robots'/&gt;
+&lt;/b:if&gt;
+&lt;b:if cond='data:blog.pageType == &quot;index&quot;'&gt;
+  &lt;b:if cond='data:blog.url != data:blog.homepageUrl'&gt;
+    &lt;meta content='noindex,follow' name='robots'/&gt;
+  &lt;/b:if&gt;
+&lt;/b:if&gt; 
+</pre>
+<p>The first META tag tells robots not to include archive pages in their index, but to follow all links on the page (which go to the full post at its permanent address). The next is optional, and does a similar thing for index pages of your blog.</p>
+<p>Since Googlebot has made a few rounds with the new META tags, I have a much easier time finding my own content, and as a side benefit have noticed a lot more visitors coming from search engines (some of whom I've even been able to help!).</p>
+<h2>Adding pages to your blog</h2> 
+<p>Unlike Wordpress et al. Blogger doesn't provide additional pages for your site (well, not if you aren't using the FTP option). If I need to add pages I tend to write a new post with an appropriate title and use its permalink (see <a href="http://davesquared.blogspot.com/2007/07/privacy-policy.html">Privacy Policy</a> or <a href="http://davesquared.blogspot.com/2008/01/search.html">Search Results</a>). Downside is that these go out on your feed :( (although you can work around this by changing the post's date to a long time ago, or a galaxy far, far away). Lucky for me I don't have any readers :).</p>
+<h2>Custom search results</h2>
+<p>Now that I've got my blog well indexed with my shiny new META tags, and know how to add pages to my blog, I want to add a search page that is a bit more advanced than the out-of-the-box Blogger search (which is still good, but doesn't abbreviate post content by default, and also makes finding older posts difficult).</p>
+<p>My approach was to use a <a href="http://www.google.com/coop/cse/">Google Customer Search Engine (CSE)</a>. I created one just for my blog, and added <code>davesquared.blogspot.com/*/*/*.html</code> as the only site and URL pattern for which results would be returned (this pattern will depend on your permalink format -- it works for mine!).</p>
+<p>CSE provides a custom, Google-hosted search page for your search engine, but also provides some neat ways of embedding the search results within your site, including a nifty AJAX popup (see the <em>Code</em> link on your search engine's Control Panel). I found the nifty AJAX popup annoying, and ideally wanted something that should work everywhere, so instead I decided to put the search box in a widget on my sidebar, and have it post back to a <a href="http://davesquared.blogspot.com/2008/01/search.html">Search Results</a> page I created (see previous tweak on adding pages).</p>
+<p>First to create the search input I added an HTML/JS Page Element to my sidebar, then added a slightly modified version of the code Google provides to host results on a non-Google page using an IFRAME. The modifications are to try and support browsers with javascript turned off, or without javascript support.</p>
+<pre>
+&lt;!-- Google CSE Search Box Begins  --&gt;
+&lt;form id=&quot;searchbox_<b>(your_unique_search_engine_code)</b>&quot; action=&quot;http://www.google.com/cse&quot; onsubmit=&quot;<b>davesquared_submitSearchBoxWidget()</b>&quot;&gt;
+  &lt;input value=&quot;<b>(your_unique_search_engine_code)</b>&quot; name=&quot;cx&quot; type=&quot;hidden&quot;/&gt;
+  &lt;input value=&quot;&quot; name=&quot;cof&quot; type=&quot;hidden&quot;/&gt;
+  &lt;input style=&quot;font-size: 0.9em&quot; name=&quot;q&quot; size=&quot;20&quot; type=&quot;text&quot;/&gt;
+  &lt;input style=&quot;font-size: 0.9em&quot; value=&quot;Search&quot; name=&quot;sa&quot; type=&quot;submit&quot;/&gt;
+&lt;/form&gt;
+&lt;!-- Google CSE Search Box Ends --&gt;
+&lt;script type=&quot;text/javascript&quot;&gt;
+function <b>davesquared_submitSearchBoxWidget()</b> {
+  var searchBox = document.getElementById(&quot;searchbox_<b>(your_unique_search_engine_code)</b>&quot;);
+  searchBox.action = &quot;<b>http://davesquared.blogspot.com/2008/01/search.html</b>&quot;;
+  searchBox.cof.value=&quot;FORID:11&quot;;
+}
+&lt;/script&gt;
+</pre>
+<p>You need to change the <b>(your_unique_search_engine_code)</b> to the one provided by the CSE code sample (it looks something like 12312983712387129:asdfjkh23jh). You also need to change the <code>searchBox.action</code> line in the JS function to point to your own page for hosting the results. I've left mine in as a sample. Finally, you might want to change the JS function names so they don't say davesquared :-). The idea behind this is that if JS isn't enabled, a normal post request will be to the Google-hosted version of the search engine. It isn't nicely integrated with your site, but at least it works for non-JS toting users. If JS is enabled, it will update the search box to post to the results page on your own site.</p>
+<p>Lastly, you need to add a bit of code to your search results page (http://davesquared.blogspot.com/2008/01/search.html for me). Again, you can get this code from your custom search engine's control panel.</p>
+<pre>
+&lt;!-- Google Search Result Snippet Begins --&gt;
+&lt;div id=&quot;results_<b>(your_unique_search_engine_code)</b>&quot;&gt;&lt;/div&gt;
+&lt;script type=&quot;text/javascript&quot;&gt;
+  var googleSearchIframeName = &quot;results_<b>(your_unique_search_engine_code)</b>&quot;;
+  var googleSearchFormName = &quot;searchbox_<b>(your_unique_search_engine_code)</b>&quot;;
+  var googleSearchFrameWidth = 600;
+  var googleSearchFrameborder = 0;
+  var googleSearchDomain = &quot;www.google.com&quot;;
+  var googleSearchPath = &quot;/cse&quot;;
+&lt;/script&gt;
+&lt;script type=&quot;text/javascript&quot; src=&quot;http://www.google.com/afsonline/show_afs_search.js&quot;&gt;&lt;/script&gt;
+&lt;!-- Google Search Result Snippet Ends --&gt;
+</pre>
+<p>And that's it! Bit of work, but I find it invaluable for helping me trawl through my drivel to find some useful information. :-)</p>
+<h2>Line breaks</h2>
+<p>Basic one, but one I stuffed up when first starting out. Blogger can automatically insert &lt;br/&gt; breaks whenever you add a new line. This makes things easy if you never have markup in your posts. I always have markup in my posts, and commonly compose in Notepad++ and plain HTML. It can also make things difficult if you publish from a client like Windows Live Writer. You can turn off this auto-line break behaviour by Dashboard -&gt; Settings -&gt; Formatting and changing the <em>Convert line breaks</em> option. Be aware that this can stuff up your older posts a bit if you were relying on the previous behaviour.</p>
+<h2>Dotnetkicker</h2>
+<p>An ex-colleague of mine (I forced him to subscribe to my blog before leaving) submitted one of my posts to <a href="http://www.dotnetkicks.com">DotNetKicks</a>. No I didn't force him that time, only found out when Analytics said I actually had some visitors :-). I did like the idea of putting a counter on the post itself so I could see if anyone voted for it, and also to make it easier on anyone that feels a post is worth submitting. You can manually put the code on each post, but it is fairly easy to add to your post template.</p>
+<p>Go into Dashboard -&gt; Layout -&gt; Edit HTML, and make sure you tick <em>Expand Widget Templates</em>. First thing I did was to create an "includable" item (just chucked it between other <code>&lt;b:includable/&gt;</code> definitions, before <code>&lt;b:includable id='feedLinks' /&gt;</code>).</p>
+<pre>
+&lt;b:includable id='dotnetkicker'&gt;
+  &lt;div&gt;
+    &lt;a expr:href='&quot;http://www.dotnetkicks.com/kick/?url=&quot; + data:post.url + &quot;&amp;amp;title=&quot; + data:post.title'&gt;
+     &lt;img alt='kick it on DotNetKicks.com' border='0' expr:src='&quot;http://www.dotnetkicks.com/Services/Images/KickItImageGenerator.ashx?url=&quot; + data:post.url' style='border:none;'/&gt;
+    &lt;/a&gt;
+  &lt;/div&gt;
+&lt;/b:includable&gt;
+</pre>
+<p>Note that this can stuff up if you have unusual characters in your <code>data:post.title</code>, so watch out for that.</p>
+<p>The next step is to include the includable in the post itself. In <code>&lt;b:includable id='post' var='post' /&gt;</code>, find where you want to put the kicker and include it like this: <code>&lt;b:include data='post' name='dotnetkicker'/&gt;</code>. I put mine after the <code>data:post.body</code>. End result was this:</p>
+<pre>
+...
+&lt;div class='post-body'&gt;
+  &lt;p&gt;&lt;data:post.body/&gt;&lt;/p&gt;
+  &lt;b:include data='post' name='dotnetkicker'/&gt;
+  &lt;div style='clear: both;'/&gt; &lt;!-- clear for photos floats --&gt;
+&lt;/div&gt;
+...
+</pre>
+<h2>Highlight your own comments</h2>
+<p>I like on some blogs how the author's comments are display in a slightly different style, so you can quickly skim through the author's responses to feedback. This tweak might depend on what base template you use, but it should be fairly easy to apply the basic approach. First, add a style to your template (Dashboard -&gt; Layout -&gt; Edit HTML):</p>
+<pre>
+dd.comment-by-author {
+  background: #F3F3F3;
+}
+</pre>
+<p>You'll obviously need to customise the style to fit with your own blog. Next, in the <code>&lt;b:includable id='comments' var='post'/&gt;</code> code, find the loop that renders the comments (<code>&lt;b:loop values='data:post.comments' var='comment'&gt;</code>) and update it to include the following condition (changes emphasised):</p>
+<pre>
+<b>&lt;b:if cond='data:comment.author == data:post.author'&gt;
+  &lt;dd class='comment-body comment-by-author'&gt;
+    &lt;p&gt;&lt;data:comment.body/&gt;&lt;/p&gt;
+  &lt;/dd&gt;
+&lt;b:else/&gt;</b>
+  &lt;dd class='comment-body'&gt;
+    &lt;b:if cond='data:comment.isDeleted'&gt;
+      &lt;span class='deleted-comment'&gt;&lt;data:comment.body/&gt;&lt;/span&gt;
+    &lt;b:else/&gt;
+      &lt;p&gt;&lt;data:comment.body/&gt;&lt;/p&gt;
+    &lt;/b:if&gt;
+  &lt;/dd&gt;
+<b>&lt;/b:if&gt;</b>
+</pre>
+<p>This selectively applies the comment-by-author style to comments (I couldn't find a nice way to do it using an expression (expr) on the DD class attribute).</p>
+<h2>Fixing standard comments link</h2>
+<p>When viewing stories on the front page of your blog there is generally an <em>&quot;x comments&quot;</em> link. I always expect this to go off to the full post and jump to an anchor at the comments section. Instead, by default, it takes you to Blogger's dorky comment submission form. This displays the comments in a fairly unfriendly format, and is hosted at www.blogger.com, rather than integrated into your blog's look and feel.</p>
+<p>This is easy to fix by jumping into your template again (Dashboard -&gt; Layout -&gt; Edit HTML, make sure <em>Expand Widget Templates</em> is checked). Look for code that looks similar to the following an change the link to that shown emphasised below:</p>
+<pre>
+&lt;b:if cond='data:blog.pageType != &quot;item&quot;'&gt;
+  &lt;b:if cond='data:post.allowComments'&gt;
+    &lt;a alt='View any comments left on this post' class='comment-link' 
+      expr:href=<b>'data:post.url + &quot;#comments&quot;'</b>&gt;
+      &lt;b:if cond='data:post.numComments == 1'&gt;
+        1 &lt;data:top.commentLabel/&gt;
+      &lt;b:else/&gt;
+        &lt;data:post.numComments/&gt; &lt;data:top.commentLabelPlural/&gt;
+      &lt;/b:if&gt;
+    &lt;/a&gt;
+  &lt;/b:if&gt;
+&lt;/b:if&gt;
+</pre>
+<p>This makes the link go straight to the full post and jumps to the comments section. Readers can then go off to the dorky Blogger form to post a comment if they want, otherwise they can read the comments and scroll up to read the full story if they like. Down side is potentially one extra click if readers want to leave a comment, but to me this behaviour is closer to my expectations when reading posts. If the extra click worries you, you could always add a direct &quot;Post a comment&quot; link to the original Blogger form.</p>
+<h2>Previous posts</h2> 
+<p>Here's a couple of previous posts that relate to Blogger tweaks:</p>
+<ul> 
+<li><a href="http://davesquared.blogspot.com/2006/12/label-cloud-in-blogger-beta.html">Tag/label cloud</a></li> 
+<li><a href="http://davesquared.blogspot.com/2007/08/excluding-your-own-visits-from.html">Excluding your own visits with a dynamic IP from Google Analytics statistics</a></li> 
+</ul>  
+<p>Hope this helps!</p>

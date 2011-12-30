@@ -1,0 +1,424 @@
+---
+layout: "post"
+title: "Brackets, braces, parentheses, and other such creatures"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2370242890567483728"
+categories: ["featured", ".net", "tdd", "kata"]
+date: "2008-07-25T00:40:00.02+10:00"
+updated: "2008-07-31T23:20:05.446+10:00"
+---
+
+<p>I've been fairly busy the last couple of weeks finishing up my current job and preparing for my new one (a really exciting role with a team practising Scrum, TDD etc.), so I haven't been able to dedicate much time to the three potentially bloggable projects I am working on at the moment. The other day I found <a href="http://www.dev102.com/2008/07/21/a-programming-job-interview-challenge-13-brackets/">Part 13</a> of a series of coding challenges posted to <a href="http://www.dev102.com">dev102.com</a>, and thought I'd give it a go as a quick little exercise.</p>
+
+<div class="note"><b>Note:</b> potential spoiler ahead, in the event you were intending to work through this yourself. That's not to say my solution is even vaguely correct, but if you want to do it completely off your own bat then have a go before you have all my mistakes to help you :)</div>
+
+<h2>The problem</h2>
+<p>This aim of this challenge was to determine whether any given string has a legal bracket structure. Basically, make sure all the '(', '[', '{', and '<' have matching ')', ']', '}' and '>'. We also need to take nesting into account, so that &quot;({)}&quot; is incorrect, and &quot;({}<{}>)&quot; will pass.</p>
+
+<p>Part of the challenge is also to &quot;Provide the most efficient, elegant and simple solution&quot;. I'm not even going to attempt that, but I'll try and get something vaguely efficient and, much like this author, simple.</p>
+
+<h2>Some quick planning</h2>
+<p>Shahar Yair (who posted the challenge) notes &quot;I think that this is a well known problem&quot;. I think (although without a good googling I can't be sure due to my limited cranial capacity) one of the common implementations is to use a stack, and push brackets on as you find them, and pop them off when you close them. If you have an empty stack at the end your string is ok. If a closing bracket doesn't match the bracket on the top of the stack then you have a problem. The beautiful image below (crafted in that great image editor, MS Word) shows the basic idea: pushing on open brackets and popping them off once they get closed.</p>
+
+<a href="http://bp3.blogger.com/_wEsHWMWy090/SIiVZI9h7UI/AAAAAAAAAng/_7ywVHW8ycg/s1600-h/BracketStackExample.png"><img src="http://bp3.blogger.com/_wEsHWMWy090/SIiVZI9h7UI/AAAAAAAAAng/_7ywVHW8ycg/s400/BracketStackExample.png" border="0" alt="Using a stack to keep track of open brackets." id="BLOGGER_PHOTO_ID_5226591626698288450" /></a>
+
+<p>In terms of efficiency, the worst case for this is when you have a valid string, as you will have had to checked every character at least once (to see if it is a bracket). Using a stack will let us make a single pass through the string.</p>
+
+<p>With this basic plan in mind, let's start writing some tests. We're not doing real TDD here I guess, as we have an end implementation in mind, but I still feel more comfortable working with the protection of some tests. It will hopefully cut down the amount of silly mistakes I normally make :).</p>
+
+<h2>Starting small</h2>
+<p>Here are a few easy tests to start off with (I'm using XUnit.NET here. I'm kind of growing attached to the simplicity of it :)):</p>
+
+<pre>
+public class When_matching_brackets {
+    BracketMatcher matcher = new BracketMatcher();
+    [Fact]
+    public void Empty_string_should_pass() {
+        should_pass(String.Empty);
+    }
+    [Fact]
+    public void Null_string_should_pass() {
+        should_pass(null);
+    }    
+    private void should_pass(String input) {
+        Assert.True(matcher.IsValid(input));
+    }
+    private void should_fail(String input) {
+        Assert.False(matcher.IsValid(input));
+    }    
+}
+public class BracketMatcher {
+    public bool IsValid(string input) { return true; }
+}</pre>
+
+<p>We can pass these by just returning true. Let's write a test that will make this fail:</p>
+
+<pre>
+[Fact]
+public void Single_bracket() {
+    should_fail("(");
+}
+</pre>
+
+<p>We can cheat again to pass this:</p>
+
+<pre>
+public class BracketMatcher {
+    public bool IsValid(string input) { 
+        if (input == null) return true;
+        return input.Length < 1;
+    }
+}</pre>
+
+<p>To drive the next bit of our algorithm we can add another failing test:</p>
+
+<pre>
+[Fact]
+public void Matched_brackets() {
+    should_pass("()");
+}
+</pre>
+
+<p>We could dodgy this up again, but let's start writing something a bit more realistic -- but only a little.</p>
+
+<pre>
+public class BracketMatcher {
+    public bool IsValid(string input) {
+        if (input == null) return true;
+        int openBrackets = 0;
+
+        foreach (var c in input) {
+            if (c == '(') { openBrackets++; }
+            else if (c == ')') { openBrackets--; }                                
+        }
+        return openBrackets == 0;
+    }
+}
+</pre>
+
+<p>This passes, but it is obviously going to incorrectly return true for an input like &quot;)(&quot;. We'll use this to write our next test. What we are doing here is slowly building up a number of cases that should have a specific result, and writing a minimal (and trivial) implementation to make the test cases pass. The actual time spent doing this is quite short. I doubt anyone would spend any more than a few minutes typing this out. What we gain is momentum, and a test suite for when the time comes to refactor. Maybe it's just me, but if I were going straight to an implementation, I'd generally make great progress for a while but stuff up a sign or an end case or similar, and then spend and inordinate amount of time manually tracing through the code to find where I had gone wrong. The slow-and-steady approach here means less initial speed, but no speed bumps later, and usually a faster* trip overall.</p>
+
+<p style="font-size: x-small">* Caution: unsubstantiated anecdote! YMMV</p>
+
+<h2>Skipping ahead to our first major refactoring</h2>
+
+<p>After plugging away for a little while I've got the following test cases:</p>
+
+<pre>
+public class When_matching_brackets {
+    BracketMatcher matcher = new BracketMatcher();
+
+    [Fact]
+    public void Empty_string_should_pass() {
+        should_pass(String.Empty);
+    }
+
+    [Fact]
+    public void Null_string_should_pass() {
+        should_pass(null);
+    }
+
+    [Fact]
+    public void Single_bracket_should_fail() {
+        should_fail(&quot;(&quot;);
+    }
+
+    [Fact]
+    public void Single_bracket_within_string_should_fail() {
+        should_fail(&quot;abc(&quot;);
+    }
+
+    [Fact]
+    public void Matched_brackets_should_pass() {
+        should_pass(&quot;()&quot;);
+    }
+
+    [Fact]
+    public void Matched_brackets_within_string_should_pass() {
+        should_pass(&quot;This is (a test).&quot;);
+    }
+
+    [Fact]
+    public void Matched_brackets_with_single_brace_should_fail() {
+        should_fail(&quot;This {is (a test).&quot;);
+    }
+
+    [Fact]
+    public void Matched_brackets_and_braces_should_pass() {
+        should_pass(&quot;This {is} a (test).&quot;);
+    }
+
+    <b>[Fact]
+    public void Correct_number_but_wrong_nesting_of_brackets_and_braces_should_fail() {
+        should_fail(&quot;This {is a (test}).&quot;);
+    }</b>
+
+    private void should_pass(String input) {
+        Assert.True(matcher.IsValid(input));
+    }
+
+    private void should_fail(String input) {
+        Assert.False(matcher.IsValid(input));
+    }
+}
+</pre> 
+
+<p>The last test (emphasised) is failing with the following implementation (which passes all the other tests), because it fails to take bracket nesting into account:</p>
+
+<pre>
+public class BracketMatcher {             
+    public bool IsValid(string input) {
+        if (input == null) return true;
+        
+        var bracketCount = 0;
+        var braceCount = 0;
+        foreach (var c in input) {                
+            if (c == '(') {
+                bracketCount++;
+            } else if (c == ')') {
+                bracketCount--;
+            } else if (c == '{') {
+                braceCount++;
+            } else if (c == '}') {
+                braceCount--;
+            }
+        }
+        return bracketCount == 0 && braceCount == 0;
+    }
+}
+</pre>
+
+<p>You can also see I have duplicated the counters for braces and brackets, and we'll only be adding to this problem when it comes time to add the other bracket types. Let's refactor to remove this, and get in the stack idea we talked about earlier.</p>
+
+<div class="note"><b>Aside:</b> Strictly speaking this isn't refactoring -- I'm changing both design and behaviour in one big step (currently there is one failing test, afterward they all pass). In this case it works out ok, but I have gotten myself into trouble many, many times by doing this kind of premature refactoring (it's a bad habit I'm trying to break). In general I'd suggest getting all your tests passing, <i>then</i> refactoring to remove duplication.</div>
+
+<pre>
+public class BracketMatcher {                  
+    public bool IsValid(string input) {            
+        if (input == null) return true;
+
+        var bracketStack = new Stack&lt;char&gt;();
+        foreach (var c in input) {                
+            if (c == '(') {
+                bracketStack.Push(c);
+            } else if (c == ')') {
+                if (bracketStack.Pop() != '(') return false;
+            } else if (c == '{') {
+                bracketStack.Push(c);
+            } else if (c == '}') {
+                if (bracketStack.Pop() != '{') return false;
+            }
+        }
+        return bracketStack.Count == 0;
+    }
+}
+</pre> 
+
+<p>This passes all our tests, but it's still ugly. The pushes and pops obscure the algorithm we are using. Sure, you can pick it out by tracing through a few cases, but it would be nicer to get the gist of it by inspection alone. We also have some duplicated <code>if (bracketStack.Pop() != '(') return false;</code> style code happening, but now we are at least passing all our tests, we can continue to work toward removing the ugliness without breaking what we have.</p>
+
+<pre>
+public class BracketMatcher {
+    private static Dictionary&lt;char, char&gt; bracketPairs
+        = new Dictionary&lt;char, char&gt; { {'(', ')'}, {'{', '}'} };
+
+    public bool IsValid(string input) {
+        if (input == null) return true;
+
+        var bracketStack = new Stack&lt;char&gt;();
+        foreach (var c in input) {
+            if (bracketPairs.ContainsKey(c)) {
+                bracketStack.Push(c);
+            } else if (bracketPairs.ContainsValue(c)) {
+                char lastBracket = bracketStack.Pop();
+                if (bracketPairs[lastBracket] != c) return false;
+            }
+        }
+        return bracketStack.Count == 0;
+    }
+}
+</pre>
+
+<p>This version is a bit of an improvement: we have removed the duplication by adding a dictionary of bracket pairs. It still isn't exactly intention revealing though with those key/value checks and pushing and popping. I'll go out on a limb here though, and suggest that it's much better than the implementation we opened this section with.</p>    
+
+<h2>Finishing up</h2>
+<p>A few more tests, and a refactoring later, and here's what I ended up with:</p>
+
+<pre>
+public class BracketMatcher {
+    private static readonly Dictionary&lt;char, char&gt; bracketPairs
+        = new Dictionary&lt;char, char&gt; { {'(', ')'}, {'{', '}'}, {'[', ']'}, {'&lt;', '&gt;'} };
+
+    private Stack&lt;char&gt; bracketStack;
+
+    <b>public bool IsValid(string input) {        
+        if (input == null) return true;
+        clearOpenedBrackets();
+        foreach (var c in input) {
+            if (isOpenBracket(c)) {
+                recordBracketOpening(c);
+            } else if (isCloseBracket(c)) {
+                if (!canCloseLastOpenBracket(c)) return false;
+                closeLastOpenedBracket();                    
+            }
+        }
+        return areAllBracketsClosed();
+    }</b>
+
+    private void clearOpenedBrackets() {
+      bracketStack = new Stack&lt;char&gt;();
+    }
+
+    private bool areAllBracketsClosed() {
+      return bracketStack.Count == 0;
+    }
+
+    private void closeLastOpenedBracket() {
+        bracketStack.Pop();
+    }
+
+    private bool canCloseLastOpenBracket(char bracket) {
+        if (areAllBracketsClosed()) return false;
+        char lastOpenBracket = bracketStack.Peek();
+        char closingBracket = bracketPairs[lastOpenBracket];
+        return bracket == closingBracket;
+    }
+
+    private void recordBracketOpening(char bracket) {
+        bracketStack.Push(bracket);
+    }
+
+    private bool isOpenBracket(char c) {
+        return bracketPairs.ContainsKey(c);
+    }
+
+    private bool isCloseBracket(char c) {
+        return bracketPairs.ContainsValue(c);
+    }
+}
+</pre>
+
+<p>I think <code>IsValid(...)</code> is actually reading pretty well here. The intent of the operation is fairly clear from a quick read through, with no implementation details like pops and pushes scattered around the code. The implementation itself is pushed to fairly simple helper methods.</p>
+
+<p>The <code>canCloseLastOpenBracket(...)</code> method is a bit ugly, but it is only four lines, has descriptive variable names, and is tucked away in a private method. It's also a bit inefficient, as we are doing an unecessary <code>Peek()</code> before <code>Pop()</code>ing the value off the stack. I rewrote the code several ways, but any approach that combined the <code>Pop()</code> with matching the brackets tended to obscure what the code was doing. I've had a minor method-count explosion, but they are all small and self-explanatory (less lines that commenting the previous version in any event ;)).</p>
+
+<p>We might be able to simplify this in a number of ways, like putting the required closing brackets on the stack to make the matching more straightforward, but the other approaches I tried all seemed to compromise readability to some extent, so I ended up sticking with the verbosity of this version. I'm sure you can do better (leave a comment!), but for now it's passing the tests thrown at it and I can live with how it reads. Which means we're as good as done. :)</p>
+
+<p>Speaking of done, here's the test suite it passes:</p>
+
+<pre>
+public class When_matching_brackets {
+    BracketMatcher matcher = new BracketMatcher();
+
+    [Fact]
+    public void Empty_string() {
+        should_pass(String.Empty);
+    }
+
+    [Fact]
+    public void Null_string() {
+        should_pass(null);
+    }
+
+    [Fact]
+    public void Single_bracket() {
+        should_fail(&quot;(&quot;);
+    }
+
+    [Fact]
+    public void Single_closing_bracket() {
+        should_fail(&quot;)&quot;);
+    }
+
+    [Fact]
+    public void Single_bracket_within_string() {
+        should_fail(&quot;abc(&quot;);
+    }
+
+    [Fact]
+    public void Matched_brackets() {
+        should_pass(&quot;()&quot;);
+    }
+
+    [Fact]
+    public void Matched_brackets_within_string() {
+        should_pass(&quot;This is (a test).&quot;);
+    }
+
+    [Fact]
+    public void Missing_a_brace() {
+        should_fail(&quot;This {is (a test).&quot;);
+    }
+
+    [Fact]
+    public void Pairs_of_matched_brackets_and_braces() {
+        should_pass(&quot;This {is} a (test).&quot;);
+    }
+
+    [Fact]
+    public void Incorrect_nesting_of_brackets_and_braces() {
+        should_fail(&quot;This {is a (test}).&quot;);
+    }
+
+    [Fact]
+    public void Valid_nesting_with_multiple_types() {
+        should_pass(&quot;&lt;Hello (World), ({how} are) you today&gt;?&quot;);
+    }
+
+    [Fact]
+    public void Multiple_pairs() {
+        should_pass(&quot;(Hello) {World}, &lt;how&gt; are (you) today?&quot;);
+    }
+
+    [Fact]
+    public void Multiple_lines_with_valid_brackets() {
+        should_pass(@&quot;(Hello {World,
+                        How are you}
+                        ?)&quot;);
+    }
+
+    [Fact]
+    public void Multiple_lines_with_invalid_brackets() {
+        should_fail(@&quot;(Hello {World,
+                        How are you)
+                        ?)&quot;);
+    }
+
+    [Fact]
+    public void Valid_example_from_problem_statement() {
+        should_pass(&quot;([](&lt;{}&gt;))&quot;);
+    }
+
+    [Fact]
+    public void Invalid_example_from_problem_statement() {
+        should_fail(&quot;({&lt;)&gt;}&quot;);
+    }
+
+    [Fact]
+    public void Matching_square_brackets() {
+        should_pass(&quot;[asdf]&quot;);
+    }
+
+    [Fact]
+    public void Single_square_bracket() {
+        should_fail(&quot;[&quot;);
+    }
+
+    [Fact]
+    public void Single_angle_bracket() {
+        should_fail(&quot;&lt;&quot;);
+    }
+    [Fact]
+    public void Matching_angle_brackets() {
+        should_pass(&quot;&lt;&gt;&quot;);  
+    }
+
+    private void should_pass(String input) {
+        Assert.True(matcher.IsValid(input));
+    }
+
+    private void should_fail(String input) {
+        Assert.False(matcher.IsValid(input));
+    }
+}
+</pre>
+
+<p>Was a bit of fun for a half hour or so :) Please feel free to leave a comment if you have any suggested improvements (or better yet, some failing tests!).</p>

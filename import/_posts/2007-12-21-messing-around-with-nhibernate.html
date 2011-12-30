@@ -1,0 +1,152 @@
+---
+layout: "post"
+title: "Messing around with NHibernate"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1170755694863298842"
+categories: ["orm", ".net", "nhibernate"]
+date: "2007-12-21T12:06:00.0+11:00"
+updated: "2008-09-01T17:25:54.987+10:00"
+---
+
+<p><em>This post is part of a small series on .NET ORM tools. You can find the rest of them </em><a href="http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html"><em>here</em></a><em>.</em></p> <p>After <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-subsonic.html">messing around with SubSonic</a>, I thought I'd run through the same scenario with NHibernate. A quick disclaimer: both tools are very different, so comparing them is a bit like comparing apples and oranges. As an example, a large part of SubSonic is the generation of DAL classes. There are ways of generating relevant NHibernate artifacts, but they aren't really an integral part of the tool. </p> <p>Still, I'm not going to let a simple thing like facts get in the way of proceeding. I was interested to see how to perform the same basic scenario as last time around using NHibernate. And as&nbsp;per last time, all of this is really quick and hacky, as it is just to get a little familiarity with the tool rather than to uncover any "best practices" or similar. So here goes...</p> <h2>Scene refresher</h2> <p>I have a table of suppliers, and a table of states (or provinces, territories, prefectures etc.). Both suppliers and states have names, which are stored as strings/varchars, and IDs, which are stored as Guids/uniqueidentifiers. Each supplier can service many states. So we have a simple many-to-many relationship between the two main entities. It looks a bit like this:</p> <p><a href="http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png"><img id="BLOGGER_PHOTO_ID_5145922358406504498" style="cursor: pointer" alt="" src="http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png" border="0"> </a></p> <p>I am using Aussie states for my tests, so I have populated the State table with the following names: NSW, VIC, QLD, TAS, SA, WA, ACT, NT.</p> <h2>Setting up NHibernate</h2> <p>I created a new C# class library project and added a reference to <a href="http://www.hibernate.org/343.html">NHibernate</a>. I chucked in an app.config for NHibernate's benefit that ended up like this:</p>
+
+<div class="note">Note: This syntax has <a href="http://davesquared.blogspot.com/2008/08/configuration-changes-in-nhibernate-20.html">changed for NHibernate 2.0</a>.</div>
+
+<pre>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;configuration&gt;
+  &lt;configSections&gt;
+    &lt;section name="nhibernate"
+       type="System.Configuration.NameValueSectionHandler, System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+    /&gt;
+  &lt;/configSections&gt;
+  &lt;nhibernate&gt;
+    &lt;add key="hibernate.connection.provider" value="NHibernate.Connection.DriverConnectionProvider" /&gt;
+    &lt;add key="hibernate.dialect" value="NHibernate.Dialect.MsSql2005Dialect" /&gt;
+    &lt;add key="hibernate.connection.driver_class" value="NHibernate.Driver.SqlClientDriver" /&gt;
+    &lt;add key="hibernate.connection.connection_string" value="Data Source=127.0.0.1\SQLEXPRESS;Initial Catalog=SubSonicWorkshop;Integrated Security=True" /&gt;
+  &lt;/nhibernate&gt;
+&lt;/configuration&gt;
+</pre>
+
+<p>Rather than using any NHibernate auto-mapping or code generation, I manually created the classes I wanted. I am using the automatic property accessors in C# 3.0, so if you're still using 2.0 you'll need to manually add a backing store for these.</p><pre>/* State.cs */
+public class State {
+  public Guid StateId { get; set; }
+  public String Name { get; set; }
+}
+/* Supplier.cs */
+public class Supplier {
+  public Guid SupplierId { get; set; }
+  public String Name { get; set; }
+  public IList&lt;State&gt; StatesServiced { get; set; }
+}
+</pre>
+<p>I then need to tell NHibernate how I want to map between these classes and my relational data. You can do this by creating Hibernate Mapping files (.hbm.xml), and setting them to be included as embedded resources in the compiled DLL. Again, I did this manually, but you specify use attributes on your classes to do this auto-magically, or generate the classes, database, and/or mapping files using a variety of tools.</p>
+<p>First let's look at the mapping for states (State.hbm.xml): <pre>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;hibernate-mapping xmlns="urn:nhibernate-mapping-2.2" 
+                   assembly="NHibernateWorkshop.Tests" 
+                   namespace="NHibernateWorkshop.Tests"&gt;
+  &lt;class name="State" table="State" lazy="false"&gt;
+    &lt;id name="StateId" type="guid"&gt;
+      &lt;generator class="guid" /&gt;
+    &lt;/id&gt;
+    &lt;property name="Name" type="String" /&gt;
+  &lt;/class&gt;
+&lt;/hibernate-mapping&gt;
+</pre>
+<p>Here I am telling NHibernate that a State has a StateId, which is the primary key. I am also telling NHibernate that it can generate this ID as a new Guid. I also let it know it can persist the Name property as a String. By default NHibernate will match the property name with the column name, but you can also specify that a property matches to a different column name if you like.</p>
+<p>Now for the more interesting entity mapping, Supplier.hbm.xml:</p><pre>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;hibernate-mapping xmlns="urn:nhibernate-mapping-2.2"
+                   assembly="NHibernateWorkshop.Tests"
+                   namespace="NHibernateWorkshop.Tests"&gt;
+  &lt;class name="Supplier" table="Supplier" lazy="false"&gt;
+    &lt;id name="SupplierId" type="guid"&gt;
+      &lt;generator class="guid" /&gt;
+    &lt;/id&gt;
+    &lt;property name="Name" type="String" /&gt;
+    &lt;bag name="StatesServiced" table="Supplier_StatesServiced"&gt;
+      &lt;key column="SupplierId" /&gt;
+      &lt;many-to-many column="StateId" class="State" /&gt;
+    &lt;/bag&gt;
+  &lt;/class&gt;
+&lt;/hibernate-mapping&gt;
+</pre>
+<p>This is very similar to the last mapping, with the exception of the &lt;bag&gt; property. This tells NHibernate that I have a many-to-many relationship between State and Supplier, and that it can navigate this relationship using the Supplier_StatesServiced table and the SupplierId and StateId keys.</p>
+<h2>Creating a test fixture for messing around</h2>
+<p>As I mentioned last time, I like working in test fixtures, so I created a new test fixture to run the remainder of the code in this post. Before I start using NHibernate within the fixture, I want to get access to the NHibernate <code>ISession</code>. I guess you could think of <code>ISession</code> as a conversation between NHibernate and the database. I'll do this by exposing a <code>ISessionFactory</code> property (note, there are optimal ways of doing this... this ain't it):</p><pre>protected static readonly ISessionFactory <strong>SessionFactory</strong> = initialSessionFactory();
+private static ISessionFactory initialSessionFactory() {
+  Configuration config = new Configuration();
+  <strong>config.AddAssembly("NHibernateWorkshop.Tests")</strong>;
+  return config.BuildSessionFactory();
+}
+</pre>
+<p>I am going to use this property to create sessions as required. The <code>AddAssembly(...)</code> call gets NHibernate to load in all the .hbm.xml mapping files we created earlier, so the sessions we create know how to persist our entities.</p>
+<h2>Populating the database</h2>
+<p>Now we can get to work populating our database (I cleaned it out from last time). We are now on par with the SubSonic example. The steps and method signatures are going to be very similar from here on in. So like last time, I'll write a method to encapsulate the process of creating a supplier and mapping the states it services:</p><pre>private static void createSupplier(String name, String[] statesServiced) {
+  using (ISession session = SessionFactory.OpenSession())
+  {
+    Supplier supplier = new Supplier();
+    supplier.Name = name;
+    IList&lt;State&gt; states = session
+      .CreateCriteria(typeof (State))
+      .Add(
+        Expression.In("Name", statesServiced)
+      )
+      .List&lt;State&gt;();
+    supplier.StatesServiced = states;
+    session.SaveOrUpdate(supplier);
+    session.Flush();
+    session.Close();
+  }
+}
+</pre>
+<p>Wow. To me all that additional setup now starts to seem worth it. I create a normal object and set the name property. I then create a criteria object that is going to query states, and add a restriction that the state's name must be in the array of <code>statesServiced</code> we passed in. I then assign the results to the supplier object, and ask the NHibernate session to <code>SaveOrUpdate</code> the supplier. (<code>SaveOrUpdate</code> means NHibernate will automatically determine whether it needs to INSERT or UPDATE the relevant database record.) As ISession represents a chat with a database, the whole thing is wrapping in a <code>using (...) { }</code> to ensure any resources used are cleaned up nicely.</p>
+<p>I then used the following code to insert the same data as last time:</p><pre>createSupplier("Dave^2 Quality Tea", new string[] { "NSW", "VIC" });
+createSupplier("ORMs'R'Us", new string[] { "NSW" });
+createSupplier("Lousy Example", new string[] { "TAS", "VIC" });
+createSupplier("Bridge Sellers", new string[] { "QLD" });</pre>
+<h2>Querying the data</h2>
+<p>Let's get a list of all the suppliers:</p><pre>[Test]
+public void Should_be_able_to_get_all_suppliers() {
+  using (ISession session = SessionFactory.OpenSession()) {
+    IList&lt;Supplier&gt; suppliers = session.CreateCriteria(typeof (Supplier)).List&lt;Supplier&gt;();
+    Assert.That(suppliers.Count, Is.EqualTo(4));
+  }
+}</pre>
+<p>That's pretty much on a par with the SubSonic equivalent. The test passes. Now let's get all the suppliers with an "s" in their name:</p><pre>[Test]
+public void Should_be_able_to_get_all_suppliers_with_s_in_their_name() {
+  using (ISession session = SessionFactory.OpenSession()) {
+    IList&lt;Supplier&gt; suppliers = session
+      .CreateCriteria(typeof (Supplier))
+      .Add(Expression.Like("Name", "%s%"))
+      .List&lt;Supplier&gt;();
+    Assert.That(suppliers.Count, Is.EqualTo(3));
+  }
+}</pre>
+<p>Again, pretty simple, and very similar to the SubSonic version. Now to the tricky example. We want to navigate over the supplier-state relationship and get all the suppliers that service NSW. This one wasn't pretty in SubSonic.</p><pre>[Test]
+public void Should_be_able_get_all_suppliers_that_service_NSW() {
+  using (ISession session = SessionFactory.OpenSession()) {
+    IList&lt;Supplier&gt; suppliers = session
+      .CreateCriteria(typeof (Supplier))
+      .CreateCriteria("StatesServiced")
+        .Add(Expression.Eq("Name", "NSW"))
+      .List&lt;Supplier&gt;();
+    Assert.That(suppliers.Count, Is.EqualTo(2));
+  }
+}
+</pre>
+<p>Again, wow. That was too easy. First we create a criteria that is going to return Supplier data. Then we want a sub-criteria that is going to use the StatesServiced property of the Supplier entity (not the table -- we are strictly dealing in domain objects here). We then say we only want the StatesServiced collection to include NSW. So what SQL ends up hitting the database?</p><pre>SELECT {fields for supplier and state} 
+FROM Supplier 
+  INNER JOIN Supplier_StatesServiced ON
+    Supplier.SupplierId=Supplier_StatesServiced.SupplierId 
+  INNER JOIN State ON Supplier_StatesServiced.StateId=State.StateId 
+WHERE State.Name = @p0
+</pre>
+<p>This is the query executed via a call to sp_executesql on SQL Server (slightly modified to better communicate the point, but the actual generated query is still very neat), with "NSW" passed as @p0.</p>
+<p>This was very different to the experience with SubSonic, which I couldn't get to sensibly navigate over the many-to-many relationship.</p>
+<h2>Vague semblance of a conclusion</h2>
+<p>Ignoring the initial setup and configuration (as this can all be generated, but to be honest it was all fairly quick), I really enjoyed working with NHibernate. While the querying looked a little daunting to me at first glance, after about 3 seconds I found it very intuitive. Sometimes when I was working with SubSonic I found myself scratching my head as to how to get back specific information. Not so with NHibernate, as the query options I needed* were all fairly discoverable, and I never felt like I was going to have to fight the tool to get stuff out.</p>
+<p>Again, there are vast differences between the SubSonic and NHibernate approaches, and there a probably situations to which one is better suited than the other. <a href="http://blog.wekeroad.com/">Rob Conery</a> has a good post about the <a href="http://blog.wekeroad.com/2007/12/14/aspnet-mvc-choosing-your-data-access-method/">strengths and weaknesses of both tools</a>, as well as LinqToSql.</p>
+<p>Here are a couple of chapters from the <a href="http://www.hibernate.org/hib_docs/nhibernate/html/index.html">official documentation</a> that I used to get NHibernate going:</p>
+<ul>
+<li><a href="http://www.hibernate.org/hib_docs/nhibernate/html/mapping.html">Mapping files</a> 
+<li><a href="http://www.hibernate.org/hib_docs/nhibernate/html/querycriteria.html">Criteria queries</a>, and the <a href="http://www.hibernate.org/hib_docs/v3/reference/en/html/querycriteria.html">Hibernate version</a> of the same chapter</li></ul>
+<p style="font-size: xx-small">* Luckily I didn't need Projections or similar. That may have started to get a bit hairier.</p>

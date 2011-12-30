@@ -1,0 +1,334 @@
+---
+layout: "post"
+title: "Test driving JavaScript code"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5118655427231158184"
+categories: ["javascript", "tdd"]
+date: "2007-07-12T10:10:00.0+10:00"
+updated: "2008-05-01T09:04:07.749+10:00"
+---
+
+<p>A while ago I was developing some JavaScript code that would be used by a custom&nbsp;ASP.NET web control. It was fairly straightforward code -- it just had to validate a particular format of dates. For anyone who has done custom controls before, they are not the sort of thing you want to debug when you are done. You need to recompile, redeploy, clear any VS.NET or web application caches... you get the idea. So I was keen to really test the&nbsp;script before I let it loose on the world.</p> <p>There are several JavaScript unit test frameworks around, including two flavours of JSUnit (<a href="http://www.jsunit.net/">1</a>, <a href="http://jsunit.berlios.de/">2</a>). I wanted to work a bit differently, so I decided to roll my own. It was surprisingly fun and surprisingly successful. First was a JavaScript file (JsUnitTests.js) for the unit testing framework code:</p><pre>//
+// Global test functions and state
+//
+var CurrentTestContext;
+
+function assertEquals(expected, actual, message) {        
+  if (!(expected==null &amp;&amp; actual==null) &amp;&amp; expected != actual) {
+  throw "Expected: " + expected + ", Got: " + actual + ", Message: " + message;
+  }
+}
+
+function assertDateEquals(expected, actual, message) {  
+  if (expected.getDate() != actual.getDate() ||
+    expected.getMonth() != actual.getMonth() ||
+    expected.getFullYear() != actual.getFullYear()) {
+  throw "Expected: " + expected + ", Got: " + actual + ", Message: " + message;
+  }
+}
+
+//
+// Test class
+//
+Test = function(testName, testFunction) {
+  this.testName = testName;
+  this.testFunction = testFunction;
+  this.result = null;
+  this.assertionMessage = null;
+  
+}
+Test.prototype = {
+  run: function() {
+    CurrentTestContext = this;
+    try {
+      this.testFunction();
+      this.result = true;
+    } catch (ex) {
+      this.result = false;
+      this.assertionMessage = ex;
+    }        
+    return this.result;
+  }
+}
+
+//
+// Test fixture
+//
+TestFixture = function(fixtureName) {
+  this.name = fixtureName;
+  this.tests = new Array();
+  this.onTestRun = new Object();
+}
+
+TestFixture.prototype = {
+  testRunner: null,  
+  setUp: function(){ return; },
+  tearDown: function(){ return; },
+  tests: null,
+  addTest:
+  function(testName, testFunction) {
+    this.tests[this.tests.length] = new Test(testName, testFunction);   
+  },
+  runTests:
+  function() {
+    for (var i=0; i&lt;this.tests.length; i++) {
+      this.setUp();
+      this.tests[i].run();
+      this.tearDown();
+      this.onTestRun(this.tests[i], this.testRunner);
+    }
+  } 
+}
+
+
+//
+// Test runner
+//
+TestRunner = function() {    
+  this.initialiseTestOutput();   
+}
+
+TestRunner.prototype = {
+  fixtures: new Array(),
+  addFixture: 
+  function(fixture) {
+    this.fixtures[this.fixtures.length] = fixture;
+    fixture.testRunner = this;
+  },
+  initialiseTestOutput:
+    function() {
+      if (this.getTestResults() == null) {
+        document.writeln("&lt;h1&gt;Test Results&lt;/h1&gt;");
+    document.writeln("&lt;div id='testResults'&gt;&lt;/div&gt;");
+      }         
+    },
+  getTestResults:
+    function() {
+      return document.getElementById("testResults");
+    },
+  addTestResult:
+    function(element) {
+      this.getTestResults().appendChild(element);
+    },  
+  addFixtureHeading:
+    function(fixture) {
+      var element = document.createElement("h2");
+      element.appendChild(document.createTextNode(fixture.name));
+      this.getTestResults().appendChild(element);
+    },    
+  clearTestResults:
+    function() {
+      var testResultsNode = this.getTestResults();
+      while (testResultsNode.childNodes.length &gt; 0) {
+        testResultsNode.removeChild(testResultsNode.firstChild);
+      }
+    },    
+  run:
+    function() {
+      this.clearTestResults();
+      for (var i=0; i&lt;this.fixtures.length; i++) {
+        this.addFixtureHeading(this.fixtures[i]);
+    this.fixtures[i].onTestRun = this.testRun;
+    this.fixtures[i].runTests();
+      }      
+    },
+  testRun:
+    function(test, testRunner) {     
+      var testReport = test.testName + ((test.result) ? " OK " : " FAIL ")
+      var testMessage = (test.assertionMessage==null) ? "" : test.assertionMessage;
+      var element = document.createElement("div");
+      element.style.color = (test.result) ? "green" : "red";
+      element.appendChild(document.createTextNode(testReport)); 
+      if (testMessage.length &gt; 0) {
+        element.appendChild(document.createElement("br"));
+        element.appendChild(document.createTextNode(" |--- " + testMessage));
+      }
+      testRunner.addTestResult(element);        
+    } 
+}</pre>Next was to setup an HTML page to run the tests: <pre>&lt;!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;Date Validation Unit Tests&lt;/title&gt;
+    &lt;script language="JavaScript" src="JsUnitTests.js"&gt;&lt;/script&gt;
+    &lt;script language="JavaScript" src="DateValidation.js"&gt;&lt;/script&gt;
+    &lt;script language="JavaScript" src="StandardDateParserFixture.js"&gt;&lt;/script&gt;
+    &lt;script language="JavaScript" src="DateValidatorFixture.js"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;script language="javascript"&gt;  
+    var testRunner = new TestRunner();  
+    testRunner.addFixture(StandardDateParserFixture);    
+    testRunner.addFixture(DateValidatorFixture);
+    testRunner.run();
+    &lt;/script&gt;    
+&lt;/html&gt;</pre>The JsUnitTests.js file is the first file in this post. The DateValidation.js is the code being tested. The StandardDateParserFixture.js and DateValidatorFixture.js are the tests (in test fixture classes) themselves. The tests call the DateValidator.js code and use assertion methods in the JsUnitTests.js file. The rest of the file sets up the test runner (<code>var testRunner = new TestRunner();</code>), adds the relevant fixtures and runs the test suite whenever the page is loaded. Let's have a look at an extract from one of the fixtures:<pre>var StandardDateParserFixture = new TestFixture("Standard Date Parser");    
+var parser;
+
+StandardDateParserFixture.setUp = function() {
+  parser = new StandardDateParser();
+}
+StandardDateParserFixture.tearDown = function() {
+  parser = null;
+}
+
+StandardDateParserFixture.addTest(
+  "Parse day",
+  function() {
+  parser.parseDate("21 April 2007");
+  assertEquals(21, parser.getDay());
+  parser.parseDate("4 April 2007");
+  assertEquals(4, parser.getDay());
+  parser.parseDate("04 April 2007");
+  assertEquals(4, parser.getDay());
+  }
+);
+
+StandardDateParserFixture.addTest(
+  "Parse valid but incorrect day",
+  function() {  
+  assertEquals(true, parser.parseDate("32 Jan 2007"));
+  assertEquals(32, parser.getDay());
+  }
+); 
+
+StandardDateParserFixture.addTest(
+  "Parse invalid day",
+  function() {
+  var invalidDayParts = ["ab", "40", "-1", "w"];      
+  for (var i=0; i&lt;invalidDayParts.length; i++) {        
+    var stringToParse = invalidDayParts[i] + " dec 2007";
+    assertEquals(false, parser.parseDate(stringToParse));
+    assertEquals(null, parser.getDay(), "Error parsing '" + stringToParse + "'");
+  }     
+  }
+);
+  
+StandardDateParserFixture.addTest(
+  "Get month index from 'April'",
+  function() {
+  assertEquals(3, parser.getMonthIndexFromString("April"));
+  }
+);    
+
+StandardDateParserFixture.addTest(
+  "Get month index from 'Apr'",
+  function() {
+  assertEquals(3, parser.getMonthIndexFromString("Apr"));
+  }
+);    
+
+StandardDateParserFixture.addTest(
+  "Get month index from 'Aprr' should be null",
+  function() {
+  assertEquals(true, parser.getMonthIndexFromString("Aprr")==null);
+  }
+);
+
+StandardDateParserFixture.addTest(
+  "Get month index for valid month name with any casing (upper/lower)",
+  function() {
+  var monthInputs = ["dec", "DEC", "deC", "december", "DECEMBER"];
+  for (var i=0; i&lt;monthInputs.length; i++) {
+    assertEquals(11, parser.getMonthIndexFromString(monthInputs[i]), "Failed on " + monthInputs[i]);
+  }
+  }
+);
+
+StandardDateParserFixture.addTest(
+  "Parse month index",
+  function() {
+  assertEquals(true, parser.parseDate("21 April 2007"));
+  assertEquals(3, parser.getMonthIndex());
+  }
+);
+
+StandardDateParserFixture.addTest(
+  "Parse year",
+  function() {
+  assertEquals(true, parser.parseDate("21 April 2007"));
+  assertEquals(2007, parser.getYear());
+  }
+);
+
+StandardDateParserFixture.addTest(
+  "Parse invalid year",
+  function() {
+  assertEquals(false, parser.parseDate("21 April 07"));
+  assertEquals(null, parser.getYear());
+  }
+);</pre>This code initialises a test fixture object, creates the object under test using the <code>setUp</code> function prototype, and then adds tests (which consist of a test name and function). You can then run the tests by opening the HTML page in your browser, reloading whenever you add a test. This is also really helpful for testing JavaScript implementations across different browsers. The main limitation of this approach is it does not do well for testing existing pages. For my purposes though, testing simple, isolated code modules that would be called by a control, it was invaluable. I wrote all the tests first, then added the relevant functionality into the class under test to make it pass. To complete this example, here is the finished code in DateValidation.js:<pre>// Parser for dates specified in dX[MMM|MMMM]Xyyyy format, where X is a non-alphanumeric separator.
+// This does not check for date correctness, just for the correct format.
+//
+// class StandardDateParser {
+StandardDateParser = function() {}
+
+StandardDateParser.prototype = {
+  monthNames: ["january","february","march","april","may","june","july","august","september","october","november","december"],
+  dateRegex: new RegExp("^([0-3]{0,1}\\d)\\W([A-Za-z]{3,})\\W(\\d{4})$"),
+  datePositionsInRegexMatch:  { full: 0, day: 1, month: 2, year: 3 },
+  datePartMatches: null,
+  getDatePart:
+    function(datePart) {
+      if (this.datePartMatches == null) return null;
+      return this.datePartMatches[this.datePositionsInRegexMatch[datePart]];
+    },
+  getMonthIndexFromString:
+    function(s) {
+      s = s.toLowerCase();
+      for (var i=0; i&amp;lt;this.monthNames.length; i++) {
+        if (s == this.monthNames[i] || s == this.monthNames[i].substr(0, 3)) {
+          return i;
+        }
+      }
+      return null;      
+    },    
+  getDay:
+    function() {
+      return this.getDatePart("day");
+    },
+  getMonthIndex:
+    function() {
+      var month = this.getDatePart("month");
+      if (month == null) { return null; }
+      return this.getMonthIndexFromString(month);
+    },
+  getYear:
+    function() {
+      return this.getDatePart("year");
+    },    
+  parseDate:
+    function(s) {
+      this.datePartMatches = this.dateRegex.exec(s);
+      return this.datePartMatches != null;
+    }
+  
+}
+// }
+
+// Validator for dates passed via string. Uses a parser object to parse date parts
+// from the initial string, then checks for the correctness of the date itself.
+//
+// class DateValidator {
+DateValidator = function() {}
+
+DateValidator.prototype = {
+  dateParser: new StandardDateParser(),  
+  getDate:
+    function(s) {     
+      if (this.dateParser.parseDate(s) != true) return null;
+      return new Date(this.dateParser.getYear(), this.dateParser.getMonthIndex(), this.dateParser.getDay());           
+    },
+  isValid:
+    function(s) {
+      var parsedDate = this.getDate(s);
+      if (parsedDate == null) return false;      
+      return parsedDate.getDate() == this.dateParser.getDay() &amp;&amp;
+              parsedDate.getMonth() == this.dateParser.getMonthIndex() &amp;&amp;
+              parsedDate.getFullYear() == this.dateParser.getYear();
+    }
+}
+// }</pre>
+<p>The final test output rendered to the HTML page&nbsp;looks something like this: </p>
+<blockquote>
+<p><b>Test Results</b></p>
+<p><b>Standard Date Parser</b></p>
+<p style="color: green">Parse day OK <br>Parse valid but incorrect day OK<br>Parse invalid day OK <br>Get month index from 'April' OK</p>...</blockquote>

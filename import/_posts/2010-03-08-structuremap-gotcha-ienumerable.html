@@ -1,0 +1,98 @@
+---
+layout: "post"
+title: "StructureMap gotcha: IEnumerable<T> instance registered but not injected"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5236264036011451315"
+categories: [".net"]
+date: "2010-03-08T21:54:00.0+11:00"
+updated: "2010-03-08T22:02:34.899+11:00"
+---
+
+<p>This had me stumped for a long time a few days back, so I thought I'd post it in case it trips up anyone else as well. This gotcha applies when asking <a href="http://structuremap.github.com/structuremap/index.html">StructureMap</a> (v 2.5+) to resolve a type which needs an array or other <code>IEnumerable&lt;T&gt;</code> injected.</p>
+
+<h2>Much ado about somethings</h2>
+
+<p>Say I have the following code:<p>
+
+<pre class="brush: csharp">
+public class Something { }
+
+public class SomeClass {
+    public IEnumerable&lt;Something&gt; Somethings { get; private set; }
+    public SomeClass(IEnumerable&lt;Something&gt; somethings) {
+        Somethings = somethings;
+    }
+}
+</pre>
+
+<p>I would like to ask <a href="http://structuremap.github.com/structuremap/index.html">StructureMap</a>, our friendly neighbourhood IoC container, to resolve an instance of <code>SomeClass</code> for me, injecting a specific <code>IEnumerable&lt;Something&gt;</code> instance into the constructor call. Piece of cake!</p>
+
+<pre class="brush:csharp">
+public class Bootstrapper {
+    public static readonly IEnumerable&lt;Something&gt; ThreeSomethings 
+          = new[] { new Something(), new Something(), new Something() };
+
+    public static void Start() {
+        ObjectFactory.Initialize(x =&gt;
+            {
+                x.For&lt;IEnumerable&lt;Something&gt;&gt;().Use(ThreeSomethings);
+            });
+    }
+}
+</pre>
+
+<p>Let's check our <code>ObjectFactory</code> is resolving our <code>IEnumerable</code> correctly:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void ShouldResolveEnumerableOfThreeSomethings() {
+    Bootstrapper.Start();
+    var somethings = ObjectFactory.GetInstance&lt;IEnumerable&lt;Something&gt;&gt;();
+    Assert.That(somethings, Is.EquivalentTo(Bootstrapper.ThreeSomethings));
+}
+</pre>
+
+<p>It passes. Too easy! Now let's get our <code>SomeClass</code> instance and start work!</p>
+
+<pre class="brush:csharp">
+[Test]
+public void ShouldResolveSomeClassWithThreeSomethings() {
+    Bootstrapper.Start();
+    var someClass = ObjectFactory.GetInstance&lt;SomeClass&gt;();
+    Assert.That(someClass.Somethings, Is.EquivalentTo(Bootstrapper.ThreeSomethings));
+}
+</pre>
+
+<p>Er, that test fails. According to NUnit, it expected 3 somethings, but it got an empty enumerable. But hang on, we already tested we had registered and can resolve our <code>IEnumerable&lt;Something&gt;</code>, and it's still passing! So what's going on?</p>
+
+<h2>Auto-wiring of <code>IEnumerable&lt;T&gt;</code> types in StructureMap</h2>
+
+<p>As of version 2.5 and later, <a href="http://structuremap.github.com/structuremap/AutoWiring.htm#section5">StructureMap has special handling for injecting <code>IEnumerable&lt;T&gt;</code> types</a> including arrays, lists of T, and <code>IEnumerable&lt;Something&gt;</code>. Rather than looking for a specific, registered instance of the enumerable itself, it will just inject <i>all registered instances of type T</i>.</p>
+
+<p>In our case we have registered an <code>IEnumerable&lt;Something&gt;</code>, but no <code>Something</code> instances. StructureMap's special handling for the enumerable type injects all our registered instances, i.e. an empty enumerator. We can fix it by changing our <code>ObjectFactory.Initialize</code> expression to explicitly add each instance:</p>
+
+<pre class="brush:csharp">
+ObjectFactory.Initialize(x =&gt;
+    {
+        x.For&lt;IEnumerable&lt;Something&gt;&gt;().Use(ThreeSomethings);
+        foreach (var something in ThreeSomethings) {
+            x.For&lt;Something&gt;().Add(something);                    
+        }
+    });
+</pre>
+
+<p>This passes both tests, although we probably don't care so much about directly resolving an <code>IEnumerable&lt;Something&gt;</code> anymore, so we could take out the <code>x.For&lt;IEnumerable&lt;Something&gt;&gt;().Use(ThreeSomethings);</code> line from the initialisation block and remove that test.</p>
+
+<h2>Workarounds (ssshh, don't do this!)</h2>
+
+<p>If you really (really!) don't want to use this  officially sanctioned method of injecting enumerables, you can override the behaviour by telling StructureMap what to use for that specific constructor argument:</p>
+
+<pre class="brush:csharp">
+x.ForConcreteType&lt;SomeClass&gt;()
+  .Configure
+    .Ctor&lt;IEnumerable&lt;Something&gt;&gt;()
+    .Is(ThreeSomethings);
+</pre>
+
+<p>Or better yet, wrap your enumerable in a new class or interface with more relevance to the domain instead of the built-in framework type. If <code>SomeClass</code> took a <code>Somethings</code> class instead of an <code>IEnumerable&lt;Something&gt;</code> then StructureMap would wire it up in the standard way.</p>
+
+<p>Hope this saves someone the couple of hours of hair-tearing it cost me. :) </p>

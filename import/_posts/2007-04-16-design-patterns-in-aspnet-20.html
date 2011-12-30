@@ -1,0 +1,19 @@
+---
+layout: "post"
+title: "Design Patterns in ASP.NET 2.0"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-83568284019908033"
+categories: ["patterns", ".net"]
+date: "2007-04-16T09:52:00.0+10:00"
+updated: "2008-05-01T08:53:22.283+10:00"
+---
+
+<p>Alex Homer has written a 3-part article series on <a href="http://www.daveandal.net/articles/ASPNETDesignPatterns/default.htm">Design Patterns in ASP.NET 2.0</a>.</p>
+<ul><li><a href="http://www.devx.com/dotnet/Article/33695">Basic Patterns for ASP.NET</a></li>
+<li><a href="http://www.devx.com/dotnet/Article/33889/0">Controller Patterns for ASP.NET</a></li>
+<li><a href="http://www.devx.com/dotnet/Article/34220/0">Advanced Patterns of ASP.NET</a></li></ul>
+<p>I don't agree with everything in the article. For example, I (<a href="http://codebetter.com/blogs/raymond.lewallen/archive/2007/02/20/Controller-_21003D00_-code_2D00_behind.aspx">et</a> <a href="http://codebetter.com/blogs/jeremy.miller/archive/2006/02/01/137457.aspx">al</a>.) don't consider the code-behind model a valid implementation of the Model View Presenter pattern. Just because some presenter and view code is physically separated into different files does not change the fact that logically they are the same class and generally tightly coupled to each other.</p>
+
+<p>Another point I disagree on is Alex's implementation of the Singleton pattern, which does not look thread safe to me, especially when you can get the safety for free in .NET using a <span style="font-family:courier new;">static readonly</span> property and a static constructor.</p>
+
+<p>What I did find helpful in the article is the plain language explanation of the patterns concerned and the areas where they can be applied to .NET.
+</p>

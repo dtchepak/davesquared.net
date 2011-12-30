@@ -1,0 +1,25 @@
+---
+layout: "post"
+title: "Covering drop down elements in IE"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3545552471543802200"
+categories: ["imho", "dhtml"]
+date: "2007-01-04T15:16:00.0+11:00"
+updated: "2007-10-16T21:24:29.713+10:00"
+---
+
+<p>Internet Explorer (as of version 6) renders select form elements (drop downs) and some other objects like iframes above all other layers. This is awful when you want to have an div element pop-up in an HTML screen, only to have half the pop-up obscured by a drop down box.</p>
+
+<p>One solution floating around (I used <a href="http://www.perlscriptsjavascripts.com/tutorials/javascript/misc.html#09294655">this article</a>) is to use this bug against itself. Divs can't cover selects, but iframes can. So you create an iframe to cover the elements, then put your div over the iframe. You could put the content itself in the iframe, but this can lead to headaches with script references.</p>
+
+<p>Here is the code I used:</p>
+
+<pre>
+&lt;div id="CalendarContainer" style="position: absolute; width: 200px; height: 190px; visibility:hidden;"&gt;
+&nbsp;&nbsp;&lt;iframe id="CalendarIframe" frameborder="0" style="width: 100%; height: 100%; position: absolute; z-index: 1;"&gt;
+&nbsp;&nbsp;&lt;/iframe&gt;
+&nbsp;&nbsp;&lt;div id="Calendar" style="width:100%; height:100%; position:absolute; z-index:2;"&gt;
+&nbsp;&nbsp;&lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+<p>You can then toggle the CalendarContainer and it will render in front of overlapping select elements. Firefox and other Gecko-based browsers don't suffer from this problem, and will render the div properly without these iframe gymnastics.</p>

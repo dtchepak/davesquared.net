@@ -1,0 +1,87 @@
+---
+layout: "post"
+title: "Messing around with SubSonic"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5190054974536897479"
+categories: ["orm", ".net"]
+date: "2007-12-20T16:25:00.0+11:00"
+updated: "2008-05-01T09:04:07.729+10:00"
+---
+
+<p><em>This post is part of a small series on .NET ORM tools. You can find the rest of them </em><a href="http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html"><em>here</em></a><em>.</em></p>
+<p>I recently heard a complaint about SubSonic queries, especially with regards to joining between tables. After looking at the forums, which basically recommended replacing complex queries or joins with SPs, I decided to have a quick play around myself. Note that all of this is really quick and hacky, as it is just to get a little familiarity with the tool rather than to uncover any "best practices" or similar. If you know better ways of doing the stuff below then you are more than welcome to leave a comment. :-)</p> <p><em><b>Update 11 Jan 2008</b>: Rob has announced that <a href="http://blog.wekeroad.com/2008/01/10/subsonic-version-21-pakala-preview-the-new-query-tool/">development of SubSonic version 2.1 is underway</a>. 2.1 will have an updated query tool, so chances are the queries attempted in this post will be easier in the new version. This post relates to version 2.0.</em></p> <h2>Setting the scene</h2> <p>I have decided to use a &lt;sarcasm&gt;very realistic and common scenario&lt;/sarcasm&gt; for my tests. I have a table of <strong>suppliers</strong>, and a table of <strong>states</strong> (or provinces, territories, prefectures etc.). Both suppliers and states have names, which are stored as strings/varchars, and IDs, which are stored as Guids/uniqueidentifiers. Each <strong>supplier</strong> can service many <strong>states</strong>. So we have a simple many-to-many relationship between the two main entities. It looks a bit like this:</p> <p><a href="http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png"><img id="BLOGGER_PHOTO_ID_5145922358406504498" style="cursor: pointer;" alt="" src="http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png" border="0" /></a></p> <p>I am using Aussie states for my tests, so I have populated the State table with the following names: NSW, VIC, QLD, TAS, SA, WA, ACT, NT (yes, my state table holds territories). This is all sitting in a little SQL Express database that I called SubSonicWorkshop.</p> <h2>Setting up SubSonic</h2> <p>After creating a new C# class library project and adding a reference to <a href="http://subsonicproject.com/">SubSonic</a>, I add an app.config file that looks like this*:</p><pre>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;configuration&gt;
+&lt;configSections&gt;
+&lt;section name="SubSonicService" type="SubSonic.SubSonicSection, SubSonic" requirePermission="false"/&gt;
+&lt;/configSections&gt;
+&lt;connectionStrings&gt;
+&lt;clear/&gt;
+&lt;add name="SubSonicWorkshop" connectionString="Data Source=127.0.0.1\SQLEXPRESS;Initial Catalog=SubSonicWorkshop;Integrated Security=True" /&gt;
+&lt;/connectionStrings&gt;
+&lt;SubSonicService defaultProvider="SubSonicWorkshop"&gt;
+&lt;providers&gt;
+  &lt;clear/&gt;
+  &lt;add name="SubSonicWorkshop" type="SubSonic.SqlDataProvider, SubSonic"
+    connectionStringName="SubSonicWorkshop"  generatedNamespace="SubSonicWorkshop.DataAccess" /&gt;
+&lt;/providers&gt;
+&lt;/SubSonicService&gt;
+&lt;/configuration&gt;
+</pre>
+<p>I then created a Generated folder within the solution and ran SubCommander to populate it:</p><pre>C:\Program Files\SubSonic\SubSonic 2.0.3\SubCommander\sonic.exe generate /out Generated</pre>
+<p>After getting VS to show all files in the solution, then including all the generated class files, we are ready to go.</p>
+<h2>Populating the database</h2>
+<p>I tend to like working in test fixtures, so I created a test fixture class and use my test runner to run the following snippets of code. Firstly, let's write a method to encapsulate the process of creating a supplier and mapping the states it services:</p><pre>private static void createSupplier(String name, String[] statesServiced) {
+ Supplier supplier = new Supplier();
+ supplier.SupplierId = Guid.NewGuid();
+ supplier.Name = name;
+ supplier.Save();
+
+ if (statesServiced.Length == 0) return;
+
+ Query stateQuery = State.CreateQuery().IN("Name", statesServiced);
+ StateCollection states = new StateCollection();
+ states.LoadAndCloseReader(stateQuery.ExecuteReader());
+
+ //Not sure why this doesn't work (raises exception):
+ //Supplier.SaveStateMap(supplier.SupplierId, states);
+ //Using this instead:
+ foreach (State state in states) {
+   SupplierStatesServiced.Insert(supplier.SupplierId, state.StateId);
+ }
+}</pre>
+<p>This code creates and saves a supplier with the given name. It then retrieves a collection of states that match the state names passed in via the array, and maps these to the newly saved supplied. For some reason I couldn't get the <code>Supplier.SaveStateMap(...)</code> call to work, so I did the mapping using a loop. Seeing as I don't have SVN access through the firewall here I haven't delved into the SubSonic source to see where things are going wrong. I then made the following calls to add some test data:</p><pre>createSupplier("Dave^2 Quality Tea", new string[] { "NSW", "VIC" });
+createSupplier("ORMs'R'Us", new string[] { "NSW" });
+createSupplier("Lousy Example", new string[] { "TAS", "VIC" });
+createSupplier("Bridge Sellers", new string[] { "QLD" });
+</pre>
+<h2>Querying the data</h2>
+<p>First up I wanted to see if I could load all my suppliers:</p><pre>[Test]
+public void Should_be_able_to_get_all_suppliers() {
+ SupplierCollection suppliers = new SupplierCollection().Load();
+ Assert.That(suppliers.Count, Is.EqualTo(4));
+}</pre>
+<p>Yep, no problems there. How about getting all the suppliers that have an "s" in their name?</p><pre>[Test]
+public void Should_be_able_to_get_all_suppliers_with_s_in_their_name() {
+ SupplierCollection suppliers = new SupplierCollection();
+ suppliers.Where(Supplier.Columns.Name, Comparison.Like, "%s%");
+ suppliers.Load();
+ Assert.That(suppliers.Count, Is.EqualTo(3));
+}</pre>
+<p>No problems there either. Now let's get a bit uglier. I want to navigate over the supplier-state relationship and get all suppliers that service NSW. I think this may be one of the situations mentioned on the SubSonic forums where you would probably want to use an SP to cut down the amount of chatting with the DB:</p><pre>[Test]
+public void Should_be_able_to_get_all_suppliers_that_service_NSW() {
+ State nsw = new State(State.Columns.Name, "NSW");
+
+ SupplierStatesServicedCollection statesServicedMap = new SupplierStatesServicedCollection();
+ statesServicedMap.Where(State.Columns.StateId, nsw.StateId);
+ statesServicedMap.Load();
+
+ SupplierCollection nswSuppliers = new SupplierCollection();
+ foreach (SupplierStatesServiced supplierService in statesServicedMap) {
+   nswSuppliers.Add(supplierService.Supplier);
+ }
+ Assert.That(nswSuppliers.Count, Is.EqualTo(2));
+}
+</pre>
+<p>The code above first gets the state we are interested in (NSW), and then gets all the mappings that feature this state. It then loops through all the mappings and adds the supplier the the SupplierCollection. This worked, but I'd hate to use that with more than a handful of records.</p>
+<p>I think in the last situation you'd probably want to use an SP (or direct SQL). Because SubSonic generates partial classes, you could also add a method to State, StateCollection or StateController like <code>FetchByServicedState(String stateName)</code> to do this in a reusable manner.</p>
+<p>That's it for now. I'm going to have a quick play with doing this in <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">NHibernate</a> and <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-linqtosql.html">LinqToSql</a>.</p>
+<p style="font-size: xx-small;">* I know I <a href="http://davesquared.blogspot.com/2007/12/syntax-highlighting-for-blogged-code.html">prevoiusly committed to giving colourful code samples</a>, but I ran in to a few hurdles with the tool and am sticking to plain, boring code samples for now.</p>

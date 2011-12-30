@@ -1,0 +1,74 @@
+---
+layout: "post"
+title: "Mocking delegates with Rhino Mocks"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1006222208088998601"
+categories: [".net", "testing"]
+date: "2009-12-16T13:58:00.0+11:00"
+updated: "2009-12-16T14:14:00.87+11:00"
+---
+
+<p>I recently found out that Rhino Mocks can mock delegates. Not that I didn't think it couldn't, it just never occurred to me to try. But it turns out to be quite nice for stubbing delegate calls or for checking they were called. Say we have the following class:</p>
+
+<pre class="brush:csharp">
+public class SomeClass {
+    private readonly Func&lt;int, int&gt; _mapper;
+
+    public SomeClass(Func&lt;int, int&gt; mapper) {
+        _mapper = mapper;
+    }
+
+    public int DoSomething(int toThisInt) {
+        return _mapper(toThisInt);
+    }
+}
+</pre>
+
+<p>Here's an example of testing that a simple <code>Func&lt;int, int&gt;</code> delegate is called correctly by our class under test without using Rhino Mocks:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void ManualFakeDelegate() {
+    //Arrange
+    var wasCalled = false;
+    var intMapped = 0;
+    var expectedResult = 1234;
+    Func&lt;int, int&gt; fakeMapper = i =&gt; {
+                        wasCalled = true;
+                        intMapped = i;
+                        return expectedResult;
+                    };
+    var someClass = new SomeClass(fakeMapper);
+
+    //Act
+    var result = someClass.DoSomething(10);
+
+    //Assert
+    Assert.True(wasCalled);
+    Assert.AreEqual(intMapped, 10);
+    Assert.AreEqual(expectedResult, result);
+}
+</pre>
+
+<p>Now using Rhino Mocks:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void MockingDelegates() {
+    var stubMapper = MockRepository.GenerateStub&lt;Func&lt;int, int&gt;&gt;();
+    var expectedResult = 1234;
+    stubMapper.Stub(x =&gt; x(10)).Return(expectedResult);            
+    var someClass = new SomeClass(stubMapper);
+
+    var result = someClass.DoSomething(10);
+
+    Assert.AreEqual(expectedResult, result);
+}
+</pre>
+
+<p>We no longer have to maintain all that test state to assert against, nor do we need to create any fake delegate implementation. We can also use <code>stubMapper.AssertWasCalled(x =&gt; x(10))</code>, but in this case that is already tested implicitly through the stubbed call and assertion.</p>
+
+<p>In the first case, we could move some more advanced logic into our <code>fakeMapper</code> to do more advanced parameter checking and avoid some of the extra state and assertions, but that is potentially error-prone and we get it for free with our mocking library.</p>
+
+<p>As an aside, you can obviously also mock <code>Action</code> or <code>Func</code>, but the <code>wasCalled</code>/<code>fakeMapper</code> approach is probably easier in that case.</p>
+
+<p>Not something I'll need very often, but nice to know for those rare occasions were I do.</p>

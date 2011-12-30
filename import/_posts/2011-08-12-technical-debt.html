@@ -1,0 +1,55 @@
+---
+layout: "post"
+title: "Technical debt"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8873711407594971790"
+categories: ["imho", "dev practices"]
+date: "2011-08-12T23:20:00.0+10:00"
+updated: "2011-08-13T15:15:33.484+10:00"
+---
+
+<div class="note"><b>tl;dr</b>: Every design decision creates technical debt. Trying to come up with the purest, best design can in some cases lead to more debt than seemingly less-ideal, lower impact changes. It can help to keep this in mind while making design decisions; today's optimal abstraction may cause much more pain long term than the quicker, less intrusive fix.
+</div>
+
+<p>I've started listening to the excellent <a href="http://rubyrogues.com/">Ruby Rogues</a> podcast recently, and the recent <a href="http://rubyrogues.com/technical-debt/">episode on technical debt</a> really got me thinking about the topic.</p>
+
+<h2>The technical debt metaphor</h2>
+
+<p>The <a href="http://www.martinfowler.com/bliki/TechnicalDebt.html">technical debt metaphor</a> has traditionally been used to explain the impact of using hacky approaches in software development. We can go into debt by trading some quality (be it design purity, code cleanliness, testing, documentation etc.) for a temporary boost in speed.</p>
+
+<p>The metaphor points out that, like financial debt, technical debt also accrues interest. By implementing something in a sub-optimal way we are not simply deferring a fixed time period it would have taken to do the work properly in the first place; that time will increase the longer we leave the hack in and become more dependent on it, or have to work around it in the rest of the code. This means if we accrue too much debt then our project becomes bankrupt -- the quality comes so low we can no longer work effectively with the codebase, and the project grinds to a stand still.</p>
+
+<p>The conclusion of the metaphor is that we can take on small amounts of technical debt as required to meet deadlines or other constraints, but we need to keep the debt at a manageable level by regularly paying it back with refactoring and rework to keep the project progressing well longer term.</p>
+
+<h2>Inadvertent debt</h2>
+
+<p>Martin Fowler points out that technical debt can be accrued both <a href="http://www.martinfowler.com/bliki/TechnicalDebtQuadrant.html">deliberately and inadvertently</a>. Most of the time we just don't know the right approach in advance, and so end up using sub-optimal solutions that accrue interest and slow us down.</p>
+
+<blockquote><p>"The moment you realize what the design should have been, you also realize that you have an inadvertent debt... My view is this kind of debt is inevitable and thus should be expected. Even the best teams will have debt to deal with as a project goes on - even more reason not to recklessly overload it with crummy code."<br/>
+<i>-- Martin Fowler, from his post on <a href="http://www.martinfowler.com/bliki/TechnicalDebtQuadrant.html">The Technical Debt Quadrant</a></i></p></blockquote>
+
+<p>After thinking about this some more I've come to the opinion that this doesn't quite go far enough. We may decide another design may have worked better, but until we've done it we don't really know for sure. The new design will have its own share of problems. It might even be considerably better, but there is more than likely another, even better solution that will become apparent once we learn from the mistakes of the second attempt.</p>
+
+<p>One may even make the outrageous assertion that there is no perfect design for any problem, there are only different sets of trade offs.</p>
+
+<h2>Would you like a silver bullet with your free lunch?</h2>
+
+<p>Wow, so <a href="http://en.wikipedia.org/wiki/No_Silver_Bullet">there is no silver bullet</a>, huh? Bet you've never heard that before. ;) While you're finishing up sniggering something about me and "<a href="http://en.wiktionary.org/wiki/Captain_Obvious">Captain Obvious</a>" into your RSS reader, let me try and explain why I find this is a very helpful realisation in the context of technical debt. :)</p>
+
+<p>If we acknowledge there is no perfect design, then every design decision we make is incurring technical debt that we'll need to pay off. This means that if we try and optimise all our decisions for what appears to be the ideal design, we are quite likely to end up taking longer to strive for perfect when the outcome will be sub-optimal anyway.</p>
+
+<p>That elegant object hierarchy, pattern, or great abstraction added to the application architecture that removes lots of duplication and provides a huge potential for future reuse may seem like the lowest debt solution, but it will not be completely debt free. It will accrue interest and end up costing us as the broad generalisation it encapsulates becomes less applicable as development continues. In my experience the larger the change and investment in that change, the greater the interest rate tends to be.</p>
+
+<p>Rather than looking for the ideal, we may be better off favouring decisions that are quick to implement and reversible/easy to change. Low impact, loosely-coupled changes (i.e. ones that require minimal amounts of changes to existing code) that at first seem less ideal maybe actually give us less debt overall. They may not perfectly abstract away the details of the current problem, but they will be easy to change or remove (along with the debt they contribute) as the needs of the project change or become better understood. Instead of picking the perfect fit for current requirements, we can focus on trying to pick the options that let us iterate and adapt to future requirements.</p>
+
+<p>This kind of thinking can lead us to picking options that at first seem counter-intuitive but end up proving remarkably useful, such as using loosely-grouped classes over strongly-layered architectures, Commands to model database calls via a micro-ORM over persisting large object graphs via full-fledged ORM, using a NoSQL data store rather than an RDBMS, or picking a Front Controller pattern or MVC for a web app over an abstraction like WebForms.</p>
+
+<h2>"Right" sometimes isn't</h2>
+
+<p>At least for the developers I talk to, there seems to be a lot of self-imposed pressure for us to pick the "right" design when faced with a design choice; the choice that seems to perfectly abstract the current requirement. The right choice seldom seems the quick, easy option, but is generally one that requires a large amount of work, much of it for the benefit that it looks pure and elegant from an OO and a architectural point of view. I hear (and have made) comments like "That's a bit ugly. We should extract a common interface, add a factory and <em>(insert lots more work here)</em>". It's as if taking the easy option makes us lazy, bad people; that we are somehow failing to live up to the ideals of <a href="http://manifesto.softwarecraftsmanship.org/">software craftsmanship</a>.</p>
+
+<p>I think our efforts to do the right thing in these cases can mean we inadvertently do a worse job overall; we are optimising for our current needs but going into debt by borrowing from our future needs. Our decision quickly racks up a huge amount of interest that we have to fight every time we need to make a change that does not quite match the previous requirements. The cost quickly outstrips the smaller, more modular change that would have been long gone, quickly refactored away the moment requirements started to push the code in a new direction. It seems like a good example of <a href="http://en.wikipedia.org/wiki/Perfect_is_the_enemy_of_good">perfect being the enemy of the good</a>.</p>
+
+<h2>Conclusion</h2>
+
+<p>This is not intended as an excuse for hacky code. I am talking about choosing between changes that are made with appropriate tests, taking SOLID principles and good programming practices into account, etc. My point is that the common way of thinking about technical debt can lead us to optimise for the wrong things. Rather than aiming for a beautiful OO abstraction that seems a zero-debt choice, we should acknowledge all our design decisions will incur debt and accrue interest, and so also look for low-impact, reversible changes that will add a smaller debt burden. It's not a question of whether to take on debt or not; it's how much to take and where from.</p>
+

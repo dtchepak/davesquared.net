@@ -1,0 +1,66 @@
+---
+layout: "post"
+title: "Example of deploying web apps using WiX"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7332029723915810374"
+categories: ["deployment", ".net"]
+date: "2007-08-22T15:22:00.0+10:00"
+updated: "2008-05-01T09:04:07.745+10:00"
+---
+
+<p>As a follow up to my recent post on <a href="http://davesquared.blogspot.com/2007/08/example-of-deploying-web-apps-using.html">deploying web applications via MSBuild</a>, I wanted to see how tough it was to do the same thing using a&nbsp;<a href="http://davesquared.blogspot.com/2007/08/automating-releases-with-wix-and.html">WiX</a>-built installation package. My basic aim is to deploy a simple web applications to localhost, including configuring and IIS virtual directories and application. I am going to assume that the web application has already been compiled to a directory called PrecompiledWeb (which is the default when building via MSBuild). I am using the development build of <a href="http://sourceforge.net/projects/wix/">WiX 3.0</a> (3.0.2925.0).</p> <p>The first step was creating a new WiX Setup project in my VS 2005 solution (this VS integration package is called <a href="http://wix.sourceforge.net/votive.html">Votive</a>). This creates a .wixproj file, which stores the information necessary to build your installation package.&nbsp;As of WiX 3.0 it can be built using MSBuild.&nbsp;</p> <p>To this project I added references to WixIIsExtension.dll (found in C:\Program Files\Windows Installer XML v3\bin\ in my case). This is to get access to some of the IIS-related actions. The WixUtilExtension.dll is also useful for creating users (amongst other things). To get these extensions to work properly I had to work around a bug in the current build that causes the Cultures property to set incorrectly in the .wixproj file. Search for "bug" on <a href="http://blog.wharton.com.au/2007/06/windows-installer-xml-wix-30-snippets.html">Jeff Wharton's post</a> for information on this. It basically just means manually setting the culture nodes to "en-US" or your current project's culture.</p> <p>Next I edited the default .wxs file created by Votive (or create a new one using Add --&gt; New Item&nbsp;--&gt; WiX Product File).</p><pre>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:iis="http://schemas.microsoft.com/wix/IIsExtension"&gt;
+  &lt;Product Id="(your guid0 here)" Name="Sample"
+           Language="1033" Version="1.0.0.0" Manufacturer="Me"
+           UpgradeCode="(your guid1 here)"&gt;
+    &lt;Package InstallerVersion="200" Compressed="yes" /&gt;
+    &lt;Media Id="1" Cabinet="WixSample.cab" EmbedCab="yes" /&gt;
+    &lt;iis:WebSite Id='DefaultWebSite' Description='Default Web Site'&gt;
+      &lt;iis:WebAddress Id='AllUnassigned' Port='80' /&gt;
+    &lt;/iis:WebSite&gt;
+    &lt;Directory Id="TARGETDIR" Name="SourceDir"&gt;
+      &lt;Directory Id="INSTALLDIR" Name="Sample"&gt;
+        &lt;Directory Id="MyWebSiteDir" Name="MyWebSite" /&gt;        
+      &lt;/Directory&gt;
+    &lt;/Directory&gt;
+    &lt;Feature Id="SampleFeature" Title="Sample" Level="1"&gt;
+      &lt;ComponentGroupRef Id="MyWebSite" /&gt;           
+    &lt;/Feature&gt;
+  &lt;/Product&gt;
+&lt;/Wix&gt;
+</pre>
+<p>This file sets up the basic install package structure. The iis:WebSite node is there just to provide a reference to the default web site on localhost. The Directory tags define the directory structure that will be created by the installer. In this case, it is just going to going to create a structure like C:\Sample\MyWebSite. The Feature tag defines exactly which Component we are installing. In this case we are installing the group of Components called MyWebSite. We have not defined these yet, so lets add another .wks file to do this now (Add --&gt; New Item --&gt; WiX File).</p><pre>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:iis="http://schemas.microsoft.com/wix/IIsExtension"&gt;
+  &lt;Fragment&gt;
+    &lt;ComponentGroup Id="MyWebSite"&gt;
+      &lt;ComponentRef Id="MyWebSiteRoot" /&gt;
+      &lt;ComponentRef Id="MyWebSiteBin" /&gt;
+      &lt;ComponentRef Id="MyWebSiteVirtualDir" /&gt;
+    &lt;/ComponentGroup&gt;
+    &lt;DirectoryRef Id="MyWebSiteDir" FileSource="$(var.SolutionDir)\PrecompiledWeb\Sample.MyWebSite"&gt;
+      &lt;Component Id="MyWebSiteRoot" Guid="(your guid here)"&gt;
+        &lt;File Id="Default" Name="Default.aspx" /&gt;
+        &lt;File Id="Web.Config" Name="Web.Config" /&gt;
+        &lt;File Id="PrecompiledApp.Config" Name="PrecompiledApp.config" /&gt;        
+      &lt;/Component&gt;
+      &lt;Directory Id="MyWebSiteDir_Bin" Name="bin" FileSource="$(var.SolutionDir)\PrecompiledWeb\Sample.MyWebSite\bin"&gt;
+        &lt;Component Id="MyWebSiteBin" Guid="(your guid here)"&gt;
+          &lt;File Id="App_Web_gmetwu2v.dll" Name="App_Web_gmetwu2v.dll" /&gt;
+          &lt;File Id="App_Web_gmetwu2v.pdb" Name="App_Web_gmetwu2v.pdb"/&gt;
+        &lt;/Component&gt;
+      &lt;/Directory&gt;
+      &lt;Component Id="MyWebSiteVirtualDir" Guid="(your guid here)"&gt;
+        &lt;CreateFolder /&gt;
+        &lt;iis:WebVirtualDir Id='MyWebSiteVirtualDir' Alias='MyWebSite' Directory='MyWebSiteDir'
+                           WebSite='DefaultWebSite'&gt;
+          &lt;iis:WebApplication Id='MyWebSiteApp' Name='MyWebSiteApp' Isolation='medium' /&gt;
+        &lt;/iis:WebVirtualDir&gt;
+      &lt;/Component&gt;
+    &lt;/DirectoryRef&gt;
+  &lt;/Fragment&gt;	
+&lt;/Wix&gt;
+</pre>
+<p>This file explicitly lists every web site file that is going to be distributed within our installer. The reason why I have done this in a separate .wks&nbsp;file is because it is a giant PITA to do this, especially for large web sites, and double especially as the App_Web_*.dll file name will change on every build, so ideally you would automate the creation of this file as part of the initial project build. WiX 3.0 comes with the <a href="http://www.wixwiki.com/index.php?title=Heat">Heat utility</a>&nbsp;(formerly Tallow) that is meant to help with this.</p>
+<p>Other than the file definitions, you will also see the node that will create the IIS web virtual directory and application. You can also do neat things like configure application pools at this step. You'll notice the WebSite attribute of the iis:WebVirtualDir node is "DefaultWebSite", which was the ID of the iis:WebSite node in our&nbsp;first file, so this virtual directory will be hosted from our default IIS website on localhost. </p>
+<p>You can now build your .wixproj from VS, and you should end up with an installer.&nbsp;After running the installer, you should have the sample application available&nbsp;at http://localhost/MyWebSite (with source files at C:\Sample\MyWebSite). Uninstalling should remove the files and IIS configuration entirely.</p>

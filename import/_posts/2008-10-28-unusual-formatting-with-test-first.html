@@ -1,0 +1,169 @@
+---
+layout: "post"
+title: "Unusual formatting with test-first extension method abuse"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-108783555430829477"
+categories: [".net", "tdd"]
+date: "2008-10-28T22:53:00.0+11:00"
+updated: "2008-10-28T23:14:20.276+11:00"
+---
+
+<p>My pair and I were looking at performing some unusual string formatting today. We kept finding that the extension methods in <code>System.Linq.Enumerable</code> were pretty helpful, but they often seemed to <a href="http://davesquared.blogspot.com/2008/03/ienumerable-and-foreach.html">fall just short</a> of what we needed to make the code really readable. Once I got home I thought I'd see how far I'd get by dumping some functionality into extension methods with blatant disregard for the potential consequences. (Unfortunately I had to miss the <a href="http://sydneyaltdotnet.blogspot.com/">Sydney ALT.NET</a> meeting tonight, so I had a bit of time to play around.)</p>
+
+<h2>Formatting arrays for acceptance tests</h2>
+<p>Here is the basic behaviour we're after. Given an array or other enumerable of integers (or of any type with a sensible <code>ToString()</code> method really), we want to return the items as a single, comma separated string. The strange part of it is that if every value in the enumeration is the same, we just want to return that one value as a single string. The reason for this unusual behaviour is to help get some easily usable output for the acceptance test framework we are using.</p>
+
+<p>As this is just a helper for acceptance tests (i.e. we won't be polluting namespaces in production code) I'll dump this functionality onto any <code>IEnumerable&lt;T&gt;</code> using an extension method. </p>
+
+<h2>Starting test first</h2>
+<p>Let's start with an easy case: what should happen when we have an empty enumerable?</p>
+
+<pre>
+[TestFixture]
+public class FixtureFormatterTests {
+    [Test]
+    public void Empty_array_should_format_as_empty_string() {
+        var emptyArray = new int[0];
+        Assert.That(emptyArray.ToFixtureString(), Is.EqualTo(string.Empty));
+    }
+} 
+
+public static class HelperExtensions {
+ public static string ToFixtureString&lt;T&gt;(this IEnumerable&lt;T&gt; enumerable) {
+   return string.Empty;
+ }
+} 
+</pre>
+
+<p>After that monumentally brilliant piece of code, let's add the comma-separated string part of the requirement.</p>
+
+<pre>
+[Test]
+public void Array_with_different_values_should_give_comma_separated_string() {
+ var ints = new[] {1, 2, 3, 4};
+ Assert.That(ints.ToFixtureString(), Is.EqualTo(&quot;1,2,3,4&quot;));            
+}
+</pre>
+
+<p>Now we'll get it to pass. We'll lean heavily on the built-in <code><a href="http://msdn.microsoft.com/en-us/library/57a79xd0.aspx">String.Join(String, String[])</a></code> method to do the  work for us.</p>
+
+<pre>
+public static string ToFixtureString&lt;T&gt;(this IEnumerable&lt;T&gt; enumerable) {
+ if (enumerable.Count() == 0) return string.Empty;
+ return string.Join(&quot;,&quot;, enumerable.Select(item =&gt; item.ToString()).ToArray());
+}
+</pre>
+
+<p>This passes, but it's a bit ugly. Let's look at refactoring.</p>
+
+<h2>First refactoring</h2>
+
+<p>First, I've got a feeling that if our enumerable is empty, <code>String.Join(...)</code> won't concatenate anything, and so will just return an empty string. This would render our first line redundant.</p>
+
+<pre>public static string ToFixtureString&lt;T&gt;(this IEnumerable&lt;T&gt; enumerable) {
+ return string.Join(&quot;,&quot;, enumerable.Select(item =&gt; item.ToString()).ToArray());
+}</pre>
+
+<p>It still passes both our tests so we are safe (I love unit tests :)). We also have that ugly bit of code where we are translating our <code>IEnumerable&lt;T&gt;</code> into an array of strings, using the <code>Select()</code> extension method. As I'm keen to start over using extensions methods, let's hide all that away in a Python-like <code>join()</code> method. Python's <code>join()</code> works like this:</p>
+
+<pre>
+&gt;&gt;&gt; ints = [1,2,3,4]
+&gt;&gt;&gt; &quot;,&quot;.join(str(i) for i in ints)
+'1,2,3,4'
+</pre>
+
+<p>I'd like to do that, but abstract away the sequence/enumerable to string conversion. Let's do this using an extension method to <code>char</code>:</p>
+
+<pre>
+public static string Join<T>(this char separator, IEnumerable<T> enumerable) {
+ return string.Join(separator.ToString(), enumerable.Select(item => item.ToString()).ToArray());
+}
+
+public static string ToFixtureString<T>(this IEnumerable<T> enumerable) {
+ <b>return ','.Join(enumerable);</b>
+}
+</pre>
+
+<p>Assuming you know the whole &quot;Join&quot; concept, our <code>ToFixtureString()</code> method is now pretty darned clean :). The original ugliness is now moved to the <code>Join()</code> method, but at least it is all directly related to the purpose of that method. In its original spot I think it obscured the intention behind the <code>ToFixtureString()</code> method.</p>
+
+<h2>Completing our <code>ToFixtureString()</code> requirements</h2>
+
+<p>The last requirement we have for this is to only show one value if all the items in the enumerable are the same.</p>
+
+<pre>
+[Test]
+public void Array_with_the_same_values_should_return_that_value_as_a_single_string() {
+ const int value = 2;
+ var ints = new[] {value, value, value};
+ Assert.That(ints.ToFixtureString(), Is.EqualTo(value.ToString()));
+}
+</pre>
+
+<p>Here's an attempt at get this to pass.</p>
+
+<pre>
+public static string ToFixtureString&lt;T&gt;(this IEnumerable&lt;T&gt; enumerable) {
+ <b>var firstItem = enumerable.First();
+ if (enumerable.All(item =&gt; item.Equals(firstItem)))
+ {
+  return firstItem.ToString();
+ }</b>
+ return ','.Join(enumerable);
+}
+</pre>
+
+<p>This fails our <code>Empty_array_should_format_as_empty_string</code> test because the <code>enumerable.First()</code> call throws with <code>InvalidOperationException: Sequence contains no elements</code>. So we're back to that <code>enumerable.Count() == 0</code> line, which gets all our tests passing again.</p>
+
+<pre>
+public static string ToFixtureString&lt;T&gt;(this IEnumerable&lt;T&gt; enumerable) {
+ <b>if (enumerable.Count() == 0) return string.Empty;</b>
+ var firstItem = enumerable.First();
+ if (enumerable.All(item =&gt; item.Equals(firstItem)))
+ {
+  return firstItem.ToString();
+ }
+ return ','.Join(enumerable);
+}
+</pre>
+
+
+<h2>Refactoring out the empty enumerable check</h2>
+
+<p>I don't like <code>enumerable.Count()</code>. It needs to go through the entire enumerator to get the count, when we really only care if the enumerable is empty. Sounds like time for some more extension method abuse. Here's some tests that require adding an <code>IsEmpty()</code> extension method to <code>IEnumerable&lt;T&gt;</code>:</p>
+
+<pre>
+[TestFixture]
+public class IsEmptyEnumerableTests {
+ [Test]
+ public void Empty_enumerable() {
+  Assert.That(new int[0].IsEmpty());
+ }
+
+ [Test]
+ public void Non_empty_enumerable() {
+  Assert.That(new[]{1,2,3}.IsEmpty(), Is.False);
+ }
+}
+
+public static class HelperExtensions {
+ //...  
+ <b>public static bool IsEmpty&lt;T&gt;(this IEnumerable&lt;T&gt; enumerable) {
+  return !enumerable.GetEnumerator().MoveNext();
+ }</b>
+}    
+</pre>
+
+<p>This is a bit hacky, but means we only need to to see if our enumerator has a single item to determine whether it is empty, and we can make our <code>ToFixtureString()</code> method a bit more expressive as a result:</p>
+
+<pre>
+public static string ToFixtureString&lt;T&gt;(this IEnumerable&lt;T&gt; enumerable) {
+ <b>if (enumerable.IsEmpty()) return string.Empty;</b>
+ var firstItem = enumerable.First();
+ if (enumerable.All(item =&gt; item.Equals(firstItem))) {
+  return firstItem.ToString();
+ }
+ return ','.Join(enumerable);
+}
+</pre>
+
+<h2>Vague semblance of a conclusion</h2>
+<p>We now have our unusual formatting covered, and <code>IsEmpty()</code> and <code>Join()</code> extension methods to help make our code a bit cleaner. I'm not advocating this kind of thing for every day use, but I think it shows how useful extension methods can be to make your code more expressive. It comes at the cost of changing classes that most .NET developers are familiar with, so it's definitely something to be careful with.</p>

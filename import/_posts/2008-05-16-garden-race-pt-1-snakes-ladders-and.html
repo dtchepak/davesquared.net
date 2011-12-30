@@ -1,0 +1,261 @@
+---
+layout: "post"
+title: "Garden Race Pt 1: Snakes, ladders and iterations"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5964998110122922467"
+categories: ["agile", "+Garden Race", ".net", "tdd"]
+date: "2008-05-16T00:04:00.01+10:00"
+updated: "2009-03-15T22:18:39.06+11:00"
+---
+
+<p><i>This post is <a href="http://davesquared.blogspot.com/2008/05/garden-race-series.html">part of a series</a> exploring the (very) basics of iterative development using the example of a simple <a href="http://en.wikipedia.org/wiki/Snakes_and_ladders">Snakes and Ladders</a>-like game. Links to each post in the series will be added to the <a href="http://davesquared.blogspot.com/2008/05/garden-race-series.html">index page</a>.</i></p>
+
+<p>For a while now I've wanted to write a <a href="http://en.wikipedia.org/wiki/Snakes_and_ladders">Snakes and Ladders</a>-style game for my daughter, both to be a nice nerdy Dad, and to practice some dev stuff. I was going to create &quot;Warps and Wormholes&quot;, but firstborn was adamant she wanted fairies involved. And so I've ended up with &quot;Garden Race&quot;, which is going to be a race for players to make it to one end of the garden aided by fairies, butterflies and other girlie stuff, while hindered by lizards, hoses, and other less-girlie stuff.</p>
+
+<p>I intend to use iterative development for this project -- I'll start off with a thin slice of functionality and keep adding to it to build up a semi-usable game. This should accomplish two things: first, showcase my own ineptitude, and second, to help improve my TDD and development skills. While I'm not exactly sure how far I'll get with this project (free time is short at present), I can commit to being fairly honest during this process. If and when I stuff up, I'll write it down (I might excuse myself a quick spike here and there so the posts don't get bogged down to much, but the stuff ups will stay).</p>
+
+<p>Note: MS has a <a href="http://creators.xna.com/">free game design version of Visual Studio</a> that might be useful if your aim is to make a good game for your kids (instead of just playing with dev stuff). There are also a few open source frameworks out there (like <a href="http://childsplay.sourceforge.net/docs-manifesto.php">Childsplay</a>).</p>
+
+<p>For my starting point, I began with a rough solution structure (main Game project and a test project), chucked it in a local SVN repo, and setup some of the tools I'd need. I'm trying using a <code>/src</code> based configuration just for kicks, and might try nant just for something different. I am also trying <a href="http://www.codeplex.com/xunit/">XUnit.Net</a>, instead of my usual NUnit test framework.</p>
+
+
+<h2>Requirements</h2>
+<p>Our customers, i.e. my firstborn (after some prompting) and I, want a Snakes and Ladders-type game involving fairies and other garden-dwelling folk. Here is the basic statement of what we want:</p>
+
+<blockquote>&quot;Garden Race is a computer-based board game. Players take it in turns to roll a die, and then move the corresponding number of squares on the board. If the player lands on a square featuring a garden creature of obstacle at the end of their turn, then that creature or obstacle will move the player to a connected square on the board. The first player to reach the bottom of the garden (the end of the board) wins. We want fancy 3D graphics, surround sound, and it has to be ready yesterday.&quot;</blockquote>
+
+<p>Ever noticed how hard it is to succinctly describe a simple concept, even something as simple as this? Let's try and remove some ambiguity by boiling things down into user stories.</p>
+
+<ol>
+<li>A player can roll the die, and then move that many spaces along the board.</li>
+<li>A player that ends his or her turn on a "feature square" (a square containing a creature or obstacle), will be moved to the square connected with that feature.</li>
+<li>There can be 1-4 players, and each player has their turn in sequence.</li>
+<li>A player that reaches the final square wins the game.</li>
+</ol>
+
+<p>That should probably be enough to get us going.</p>
+
+<h2>Planning and design for this iteration</h2>
+
+<p>In the spirit of iterative design we are going to first try to deliver a slice of functionality. As we are currently unsure of exactly how to present the customer with fancy 3D graphics and sound (at this stage the dev team (me) would like to try WPF or QT4, but we don't know all the requirements yet), let's focus on the core game functionality, which is pretty much captured by the user stories above.</p>
+
+<p>For our first iteration we've agreed with the customer to deliver stories 1 and 4, which is basically a single player rolling a die and moving to the end of the board. Exciting game huh? But it should reveal some basics of how the game mechanics work, so it seems a safe place to start.</p>
+
+<p>If we are picking nouns for potential classes in our game we might come up with <code>Player</code>, <code>Die</code>, <code>Square</code>, and <code>Board</code>, but we're definitely <a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">not going to use nouns as a basis for our design</a>. A nice place to start might just be a <code>Game</code> or <code>GameEngine</code> class. What tests could we come up with for our first story?</p>
+
+<ul>
+<li>A player should not be on the board until the roll the die and move.</li>
+<li>A player that rolls a 4 should then be on the 4th square from the start.</li>
+<li>A player that rolls a 2, and then a 6, should be on the 8th square from the start.</li>
+<li>The game should finish once the player reaches the end.</li>
+</ul>
+
+<p>We currently don't have enough information to implement all of this. How many squares are there on the board? What is the maximum value of the die used? What happens if the player is one square from the end, and rolls a 3? The first couple of points we will check with the customer, but it doesn't really affect our design. Let's test for the last case though, and we'll check with the customer if our assumption is correct:</p>
+
+<ul><li>A player that is one square from the end, and rolls a 3, should win the game.</li></ul>
+
+<p>Before we jump into this iteration, I'd be really interested to hear any up-front design ideas you have for this. If you were going to draw a UML class diagram or write up some CRC cards, what classes, data and relationships would you have? I've got my own ideas, but I don't want to influence my iterative design process too much at this point, nor do I want to deliberately come up with a shoddy upfront design and then marvel at how well my iterative design (hopefully) turns out. Please feel free to leave your design ideas in the comments or email me.</p>
+
+<p>Right, let's start.</p>
+
+<h2>First tests</h2>
+
+<p>Let's look at the second test on our test list. It looks like an easy thing to do and should help us learn a little about the problem domain.</p>
+<pre>public class GameSpec {
+    [Fact]
+    public void Player_should_be_on_fourth_square_after_rolling_a_four() {
+        var game = new Game();
+        game.Roll(4);
+        Assert.Equal(4, game.CurrentSquare);
+    }
+}</pre>
+
+<p>Not going to keep much of this, I'm pretty sure of that. But we need to start somewhere. By the way, if you aren't familiar with XUnit.Net, <code>[Fact]</code> == <code>[Test]</code>. Now let's pass the test:</p>
+
+<pre>public class Game {
+    public int CurrentSquare;
+
+    public void Roll(int dieValue) {
+        CurrentSquare += dieValue;
+    }
+}</pre>
+
+<p>Now let's test two rolls, which is the third test on our list.</p>
+
+<pre>[Fact]
+public void Player_should_be_on_eight_square_after_rolling_a_two_then_a_six() {
+ var game = new Game();
+ game.Roll(2);
+ game.Roll(6);
+ Assert.Equal(8, game.CurrentSquare);
+}</pre>
+
+<p>This works without change, as we jumped straight to an obvious implementation for <code>Roll()</code>. We could have taken smaller steps and initially used <code>CurrentSquare = dieValue;</code> to pass the first test, the updated it to pass the second test, but we don't need to do that unless we aren't really sure how to proceed.</p>
+
+<p>Let's add a third test to make sure the player starts off the board, or square 0.</p>
+
+<pre>var game = new Game();
+Assert.Equal(0, game.CurrentSquare);</pre>
+ 
+<p>Again, this passes without modification. We also have a test on our list about finishing the game. We don't have too much information about how this works, so let's look at what we can test.</p>
+
+<pre>
+[Fact]
+public void Game_should_finish_when_player_reaches_end_of_board() {
+ const int boardSize = 10;
+ var game = new Game(boardSize);
+ game.Roll(boardSize);
+ Assert.Equal(10, game.CurrentSquare);
+ Assert.True(game.IsFinished);
+}</pre>
+
+<p>This introduces two new concepts: board size, and the game state as finished or not finished. To get this to compile we need to add non-default constructor to <code>Game</code>, which means we also need to explicitly add a default constructor if we want to stop our other tests from breaking. We also need to add an <code>IsFinished</code> property to <code>Game</code>. The following implementation compiles and passes all the tests.</p>
+
+<pre>public class Game {        
+ public int CurrentSquare;
+ public Game(int boardSize) {}
+ public Game() {}
+ public bool IsFinished {
+  get { return true; }
+ }
+ public void Roll(int dieValue) {
+  CurrentSquare += dieValue;
+ }
+}</pre>
+ 
+<p>The <code>IsFinished</code> implementation obviously stinks, so let's also add a test around unfinished games.</p>
+
+<pre>[Fact]
+public void New_game_should_be_unfinished() {
+ const int boardSize = 10;
+ var game = new Game(boardSize);
+ Assert.False(game.IsFinished);
+}</pre>
+ 
+<p>I first did a trivial implementation:</p>
+
+<pre>public bool IsFinished {
+ get { return CurrentSquare == 0; }
+}</pre>
+
+<p>Which failed both my IsFinished tests. Oops, that should be <code>CurrentSquare != 0</code>. Tests now pass, but the implementation still stinks. Let's try this one:</p>
+
+<pre>[Fact]
+public void In_progress_game_should_be_unfinished() {
+ const int boardSize = 10;
+ var game = new Game(boardSize);
+ game.Roll(5);
+ Assert.False(game.IsFinished);
+}</pre>
+
+<p>Which we can pass with this:</p>
+ 
+<pre>public class Game {
+ private readonly int boardSize;  
+ public Game(int boardSize) {
+  this.boardSize = boardSize;
+ }
+ public bool IsFinished {
+  get { return CurrentSquare &gt;= boardSize; }
+ }
+ //...[snip]...</pre>
+
+<p>The last test on our list so far is to see what happens when we overrun the last square on the board.</p>
+ 
+<pre>[Fact]
+public void Game_should_still_finish_when_player_overruns_last_square() {
+ const int boardSize = 10;
+ var game = new Game(boardSize);
+ game.Roll(boardSize + 2);
+ Assert.True(game.IsFinished);
+}</pre>
+ 
+<p>This passes because we used &gt;= for the CurrentSquare/boardSize comparison. One thing I haven't been doing is the refactor step of the TDD red-green-refactor process. Let's look at <code>Game</code>:</p>
+
+<pre>public class Game {
+ private readonly int boardSize;
+ public int CurrentSquare;
+ public Game(int boardSize) {
+  this.boardSize = boardSize;
+ }
+ public Game() {}
+ public bool IsFinished {
+  get { return CurrentSquare &gt;= boardSize; }
+ }
+ public void Roll(int dieValue) {
+  CurrentSquare += dieValue;
+ }
+}</pre>
+
+<p>Not much to refactor there, right? The tests have some duplication in the <code>Game</code> setup though. And the default constructor of <code>Game</code> looks fairly useless. Normally I would just whack that into a <code>[SetUp]</code> method, but XUnit.Net discourages this as it can make for non-obvious test contexts. My GameSpec tests currently want to execute in the one test context -- a new <code>Game</code> with 10 squares. It seems reasonable that my GameSpec HAS-A context, so let's add a game as a field with a descriptive name. I can then replace the game initialisation in each test with a simple reference to <code>newTenSquareGame</code>, and get rid of Game's default constructor. </p>
+
+<pre>public class GameSpec {
+ private readonly Game newTenSquareGame = new Game(10);
+ //...[snip]...
+ [Fact]
+ public void Game_should_finish_when_player_reaches_end_of_board() {
+  newTenSquareGame.Roll(10);
+  Assert.Equal(10, newTenSquareGame.CurrentSquare);
+  Assert.True(newTenSquareGame.IsFinished);
+ }
+ //...[snip]...</pre>
+  
+<p>If we start having lots of different contexts or complicated contexts we may want to revisit this, but the whole test fixture reads fairly well for now. Full disclosure: before this approach I mucked around with some crazy test structure ideas I have regarding tests and test contexts. I'm omitting that from this post as it was mainly for personal interest rather that something I would normally do.</p>
+
+<p>So what's next? Our test list is empty, and we seem to have completed most of our first iteration, stories 1 and 4. If you remember, these basically covered moving a single player around the board, and being able to finish the game. This isn't really something we can show our customer though. You don't go showing a youngin' a bunch of unit tests when they are expecting a fairyised version of Snakes and Ladders. And we haven't even dealt with the concept of &quot;rolling a die&quot;, we have just assumed a value. But we seem to have the basic functionality we promised for this iteration.</p>
+
+<h2>Customer demo</h2>
+<p>To finish this iteration, let's write a console app that will allow our customer to run through the current game logic. Here's what I'm thinking of:</p>
+
+<pre>
+  Creating new game with 20 squares.
+  Press a key to roll the dice.
+  You rolled a 4. Now on square 4.
+  You rolled a 6. Now on square 10.
+  ...
+  You rolled a 2. You won the game!</pre>
+
+<p>At first I was thinking about creating a <code>GameController</code> class and writing some tests around that, then calling that from a simple console app. But <a href="http://en.wikipedia.org/wiki/YAGNI">we don't need that yet</a>. So let's just do the simplest thing that will work for our demo. And because it is slapped together and not designed to specific requirements, let's just promise not to use any of this code in the actual product.</p>
+ 
+ <pre>namespace DaveSquared.GardenRace.ConsoleFrontEnd {
+    class Program {
+        private static readonly Random random = new Random();
+                
+        static void Main(string[] args) {
+            Console.WriteLine(&quot;Welcome to Garden Race! It's like Snakes and Ladders, only without the copyright violation!&quot;);
+            Console.WriteLine();
+            
+            const int numberOfSquares = 20;
+            const bool interceptKey = true;
+            
+            Console.WriteLine(&quot;Creating a new game with &quot; + numberOfSquares + &quot; squares.&quot;);
+            var game = new Game(numberOfSquares);
+            Console.WriteLine(&quot;Press any key to roll the die.&quot;);
+            while (!game.IsFinished) {                
+                Console.ReadKey(interceptKey);
+                var dieRoll = GetDieValue();
+                game.Roll(dieRoll);
+                var currentState = (game.IsFinished) ? &quot;You won the game!&quot; : &quot;Now on square &quot; + game.CurrentSquare;
+                Console.WriteLine(&quot;You rolled a &quot; + dieRoll + &quot;. &quot; + currentState);
+            }
+            Console.WriteLine();
+            Console.WriteLine(&quot;Press a key to exit.&quot;);
+            Console.ReadKey(interceptKey);
+        }
+
+        static int GetDieValue() {
+            return random.Next(1, 6);
+        }
+    }
+}</pre>
+
+<p>A now for the moment of truth:</p>
+
+<p><a href="http://1.bp.blogspot.com/_wEsHWMWy090/SCxDKvdUwuI/AAAAAAAAAj8/iKpnP0vKv6I/s1600-h/gardenRaceConsole.png"><img style="cursor:pointer; cursor:hand;" src="http://1.bp.blogspot.com/_wEsHWMWy090/SCxDKvdUwuI/AAAAAAAAAj8/iKpnP0vKv6I/s400/gardenRaceConsole.png" border="0" alt="Console app showing our demo" id="BLOGGER_PHOTO_ID_5200605521523294946" /></a>
+</p>
+
+<p>Fantastic! <code>Assert.That(this_game_rocks).SaidWith(sarcasm)</code>! On the other hand, it took about 12 minutes to code this iteration up as well as write out tests (plus lots of time for me to type out this narrative), and our story list made it clear when we could stop. So let's go show our customers. I'm sure they'll be impressed...</p>
+
+<p><i><a href="http://davesquared.blogspot.com/2008/05/garden-race-pt-2-adding-multiple.html">To be continued...</a></i></p>
+
+<h2 id="GardenRacePart1-Download">Download</h2>
+<p>You can browse through or download this tremendously exiting code from <a href="http://code.google.com/p/davesquared/source/browse/DaveSquared.GardenRace/tags/part1/">davesquared.googlecode.com</a>.</p>

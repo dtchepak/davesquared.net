@@ -1,0 +1,16 @@
+---
+layout: "post"
+title: "Getting the current identity in WCF"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-642816383466118341"
+categories: [".net", "wcf"]
+date: "2008-04-17T13:17:00.0+10:00"
+updated: "2008-04-21T16:51:44.543+10:00"
+---
+
+<p>Playing around with an ASP.NET-hosted WCF service today. While testing using the <a href="http://msdn2.microsoft.com/en-us/library/bb552364.aspx">WCF Test Client</a> I (unsurprisingly in retrospect) got a null reference exception when trying to access <code>HttpContext.Current</code>. This completely stuffed up my attempt to get the current identity from <code>HttpContext.Current.User.Identity</code>.</p>
+
+<p>After a quick search I found the <a href="http://msdn2.microsoft.com/en-us/library/system.servicemodel.servicesecuritycontext.aspx">ServiceSecurityContext class</a> in the <code>System.ServiceModel</code> namespace. This gives you the current identity using <code>ServiceSecurityContext.Current.PrimaryIdentity</code> (and also exposes the current <code>WindowsIdentity</code>).</p>
+
+<p>Helpfully enough my code was well factored for once (to help with my unit testing/TDDing) and I only had to make the change in one place :)</p>
+
+<p>Might be some more gotchas around this depending on what authentication mechanism you are using, but this was enough to get things working for me.</p>

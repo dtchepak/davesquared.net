@@ -1,0 +1,108 @@
+---
+layout: "post"
+title: "Too LINQy?"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8710334505962540695"
+categories: [".net", "linq"]
+date: "2009-03-19T23:30:00.0+11:00"
+updated: "2009-03-19T23:47:56.804+11:00"
+---
+
+<p>This post contains a tale of two methods. Well, more precisely, a tale of one method implemented in two different ways -- once using LINQ-based functional-fu, and once using old school procedural code.</p>
+
+<p>Recently I was pairing on a task that required us to keep a running average of multiple sets of samples that came through our app. Unfortunately it was more than likely that some sets of samples would be different lengths (depending on exactly when sampling stopped). In these situations where we were missing samples the requirements were to leave the averages for the missing samples unchanged. When we had extra samples, we should use them as the new average at that position. Here's some tests that hopefully show what we were trying to do:</p>
+
+<pre>
+[Test]
+public void ShouldAverageFirstTwoLotsOfSamples() {
+    var firstSamples = new float[] { 1, 2, 3 };
+    var secondSamples = new float[] { 3, 4, 5 };
+    var expectedAverages = new float[] {2, 3, 4};
+    _averager.AddSamples(firstSamples);
+    _averager.AddSamples(secondSamples);
+    Assert.That(_averager.GetAverages(), Is.EqualTo(expectedAverages));
+}  
+
+[Test]
+public void ShouldAddExtraSamplesToAverages() {
+    var firstSamples = new float[] { 1, 2, 3 };
+    var secondSamples = new float[] { 3, 4, 5, 2 };
+    var expectedAverages = new float[] { 2, 3, 4, 2 };    
+    /* ... snip ... */
+}
+
+[Test]
+public void ShouldHandleShorterNumberOfSamples() {
+    var firstSamples = new float[] { 1, 2, 3 };
+    var secondSamples = new float[] { 3, 4 };
+    var expectedAverages = new float[] { 2, 3, 3};
+    /* ... snip ... */
+}
+</pre>
+
+<h2>A LINQ implementation</h2>
+<p>After a brief flurry of <code>for</code> looping, we decided to muck around with LINQ to filter and transform the sets of data in a pseudo-functional kind of way.</p>
+
+<pre>
+public class AverageCalculator {
+    private float[] _averages = new float[0];
+    private uint _numberOfAverages;    
+
+    public void AddSamples(float[] samples) {
+        _numberOfAverages++;
+        var numberOfNewSamples = samples.Length;
+        var numberOfSamplesInLastAverage = _averages.Length;
+        var leftOverSamples = samples.Skip(numberOfSamplesInLastAverage);
+        var leftOverAverages = _averages.Skip(numberOfNewSamples);
+
+        <b>_averages = _averages
+            .Take(numberOfNewSamples)
+            .Select(
+                (average, sampleIndex) =&gt; CalculateNewAverage(average, samples[sampleIndex], _numberOfAverages)
+            )
+            .Concat(leftOverAverages)
+            .Concat(leftOverSamples)
+            .ToArray();</b>
+    }
+
+    private float CalculateNewAverage(float oldAverage, float newSample, uint totalSamples) {
+        return oldAverage + (newSample - oldAverage) / totalSamples;
+    }
+
+    public float[] GetAverages() {
+        return _averages;
+    }
+}
+</pre>
+
+<p>Stepping through the logic, we take a maximum of <code>numberOfNewSamples</code> from the running <code>_averages</code>, then calculate the new averages based on each new sample. To handle the possibility of mismatched array sizes, we concatenate any left over items from each array. In reality, one of these arrays of left overs will be empty (depending on which array is larger).</p>
+
+<p>My first thought once the tests went green was "wow that's evil!", but compared with the procedural approach we started with, this one really began to grow on me. It was surprisingly easy to write, but I was concerned about its readability (initially we had the local variables in <code>AddSamples(...)</code> inlined, but we extracted them out to try and make it more readable). We decided to test out the procedural equivalent and see if that was any clearer.</p>
+
+<h2>A procedural implementation</h2>
+<pre>
+public void AddSamples(float[] samples) {
+    _numberOfAverages++;
+
+    var largestArray = (samples.Length &gt;= _averages.Length) ? samples : _averages;
+    var smallestArray = (samples.Length &gt;= _averages.Length) ? _averages : samples;
+
+    var newAverages = new float[largestArray.Length];
+    for (int i = 0; i &lt; newAverages.Length; i++) {
+        newAverages[i] = (i &lt; smallestArray.Length) 
+                            ? CalculateNewAverage(_averages[i], samples[i], _numberOfAverages) 
+                            : largestArray[i];
+    }
+
+    _averages = newAverages;
+}
+</pre>
+
+<p>The logic used here is to find which array is largest, and to create a new array of that size. We loop through every possible index, calculating the average until all of the smallest array is used, then append the left overs from the largest array. This seems quite neat to me, although I should mention that this is a refactored, sanitised version (as is the LINQ version). The initial implementation was more verbose and the logic less clear, and it somehow managed to take longer to get it to a state where the tests all passed.</p>
+
+<h2>Who's right?</h2>
+
+<p>Which approach do you like best? It probably comes down to how much <a href="http://en.wikipedia.org/wiki/Imperative_programming">imperative</a> vs. <a href="http://en.wikipedia.org/wiki/Functional_programming">functional</a> programming you've done. (Or you hate both versions of the method, in which case please leave a comment with the correct approach. :)). Imperative programming concentrates on telling the computer <i>how</i> to do something, while functional is more about telling the computer <i>what</i> to do. For example, our LINQ version starts with some data and specifies what transformations we want to make to it. Our second version of the code focuses more on the mechanics -- create an array, loop, check the bounds etc.</p>
+
+<p>The second version's focus on implementation makes it fairly easy to mentally trace through how it works, but how clear is the intention behind the implementation? The LINQ version probably takes a bit more effort to understand how it works (especially as the first exposure most people have to programming tends to be to imperative-style control structures like <code>IF</code>, <code>FOR</code>, <code>WHILE</code> and even <CODE>GOTO</CODE>), but what it is doing might be a little clearer.</p>
+
+<p>Overall, I kind of prefer the LINQ version for its faint hint of functional elegance, but on the other hand the procedural version is just so darn familiar and comfortable to read for a C#/Java/C person like me. I'd love to hear any thoughts you have on these approaches, and how you are handling the encroachment of functional concepts into our formerly purely-procedural C# language.</p>

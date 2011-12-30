@@ -1,0 +1,30 @@
+---
+layout: "post"
+title: "Generic method type inference in C#"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-9121194157424241204"
+categories: ["imho", ".net"]
+date: "2007-01-17T14:48:00+11:00"
+updated: "2007-10-16T21:24:29.712+10:00"
+---
+
+<p>I feel like an idiot - and not for the first time either! In this case it took Resharper 2.5 to point out my mistake.</p>
+
+<p>I have a method that looks a bit like this:</p>
+<code>
+public static void FillCollectionFromCommand&lt;T&gt;(IDbCommand command, ICollection&lt;T&gt; collection, ParseItemFromRecord&lt;T&gt; parser) { ... }
+</code>
+<p>Basically, it calls the parser function to populate a strongly typed collection from the execution of a command.</p>
+
+<p>My method calls have looked something like this:</p>
+<code>
+IList&lt;Guid&gt; list = new List&lt;Guid&gt;();
+Data.FillCollectionFromCommand<em>&lt;Guid&gt;</em>(command, list, getGuid);
+</code>
+<p>Resharper kindly pointed out that the emphasised code was redundant, because the compile infers type <code>T</code> as <code>Guid</code> from the list parameter, which we have declared as  <code>IList&lt;Guid&gt;</code>.</p>
+
+<p>The new calls looks like this:</p>
+<code>
+IList&lt;Guid&gt; list = new List&lt;Guid&gt;();
+Data.FillCollectionFromCommand(command, list, getGuid);
+</code>
+<p>This may not seem like a big deal, but it does make for much more readable code, especially when you start using types like <code>KeyValuePair&lt;Guid, String&gt;</code>, and that's why I'm bothering telling you so<a href="http://en.wikipedia.org/wiki/Dr._Seuss%27s_Sleep_Book">*</a>. And here's me thinking I had to wait for C# 3.0 for type inference.</p>

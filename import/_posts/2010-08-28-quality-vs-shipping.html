@@ -1,0 +1,69 @@
+---
+layout: "post"
+title: "Quality vs. shipping"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-314441382840163402"
+categories: ["imho"]
+date: "2010-08-28T12:10:00+10:00"
+updated: "2010-08-28T12:10:55.674+10:00"
+---
+
+<p>I've just been reading Phil Haack's <a href="http://haacked.com/archive/2010/08/26/not-paid-to-write-code.aspx">We're not paid to write code</a> post, and it happened to trip over one of my fundamental beliefs about software development and code quality.</p>
+
+<p>I agree with almost the entirety of the post. As developers, we are not paid to write code, we're paid &quot;<a href="http://twitter.com/haacked/status/22118616918">to ship products and deliver value</a>&quot;. True, we're paid primarily as people that know something about writing software, but that includes knowing what problems to tackle with custom software, when to use another piece of software and even when a non-technical solution is more appropriate.</p>
+
+<p>Which brings us to a related point: shipping is a feature. Without shipping, without actually giving customers something they can use and get value from, it doesn't matter how much or how good the code your write is. It may as well not exist.</p>
+
+<p>Phil also goes on to suggest &quot;quality isn't just the defect count of the code. It's also how well the code meets the business needs&quot;. Right on! There is very little point in having zero defects if it doesn't do what the customer needs. Sure, we need to take care to control defects and risks*, but to me the quality of software can not be measured purely by a bug count.</p>
+
+<div class="note"><b>*</b> There are some situations in which a defect simply cannot be tolerated, such when it will cause serious harm. The risk in this case simply must be eliminated, but that is different than having defect free software.</div>
+
+<p>All in agreement still? Great!</p>
+
+<h2>Scaling quality?</h2>
+
+<blockquote>&quot;Quality in development is important, but it has to be scaled appropriately. ... The reality is we all scale the quality of our code to the needs of the product."</blockquote>
+ 
+<p>Now I'm pretty sure Phil is a firm believer in software quality (some of his posts on TDD helped me get into the practice), so he's not suggesting that we ditch quality and switch to duct tape. More that quality, like most things, is a <b><i>tradeoff</i></b>.</p> 
+
+<p>He is writing this with respect to various approaches for reducing defects (like <a href="http://en.wikipedia.org/wiki/Cleanroom_Software_Engineering">Cleanroom Software Engineering</a> used for developing space shuttle software), rather than with the more holistic view of quality that includes suiting business needs, and he says as much in the post.</p> 
+
+<p>But the message is out there: we can trade quality, and I have two major problems with this.</p> 
+
+<h2>Semantics and convenient extrapolation</h2>
+
+<p>The first problem is due to the subjective nature of the term &quot;quality&quot;. Sure, if you are talking purely in terms of defects, a rigourous, 10 year testing phase on your intranet Phone Directory application may improve quality in terms of defect count, but at the cost of making the software completely useless for that time (and probably irrelevant by the time it ships). You can probably trade off some of that &quot;quality&quot; by adopting a more sensible, responsible testing regime. </p>
+
+<p>But how about the more holistic side of quality? What about the bit about meeting business needs? Is it meeting their needs to have an unreliable piece of software that loses the data they are relying on? How about a piece of software that is such a hack it cannot be modified to meet simple changes to their needs without a year-long re-write, during which they are losing time, money and business? I can trade off that kind of quality in favour of shipping, right? So why should I waste time keeping application and data access logic out of the UI code? Why should I bother writing unit or acceptance tests? Why should I care if this is a disgusting mess of spaghetti code if I ship?</p>
+
+<p>I believe there are some elements of quality your can't trade. The fundamentals of software development that help ensure your software is fit for purpose is one of these elements. I know Phil wasn't suggesting that, but it seems a fairly common and convenient extrapolation when people start talking about scaling quality.</p>
+
+<h2>Quality means slow?</h2>
+
+<p>My second problem with the idea of trading quality, and probably the most harmful as it encourages the &quot;convenient extrapolation&quot; I talked about above, is the implication that quality is slow, and that trading it away will somehow make shipping value to customers faster and more effective.</p>
+
+<p>Now it is my belief that this is wrong. The idea that doing shoddy work has any benefit to customers or timelines just doesn't match up with my experience of developing both &quot;just ship it&quot; software and software with a high focus on quality.</p>
+
+<p>I'm not talking about 10 year defect hunts here. I'm talking about developing software in a way that ensures quality; that ensures your software meets the needs of your customer.</p>
+
+
+<h2>Shipping with quality: What if you could have both?</h2>
+
+<p>This has been a key focus of the last 5+ years of my professional life: finding ways to ensure quality is built into the way I develop software. It should not be a cost; it should be the fastest and most effective way to get value into the hands of my customers. The idea that the software you ship is fit for purpose should be fundamental to producing that software.</p> 
+
+<p>Impossible? Do you believe sacrificing quality will always be faster than doing things &quot;properly&quot;?</p>
+
+<ul>
+<li>What if <a href="http://twitter.com/unclebobmartin">Uncle Bob</a> is on to something when he says &quot;the way to go fast is to go well&quot;?</li>
+<li>What if doing high quality work did not add extra cost to a project?</li>
+<li>What if doing things &quot;properly&quot;, instead of hacking up something to ship, did not take any longer?</li>
+<li>What if following <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">SOLID design principles</a>, writing tests, using design patterns (appropriately), dependency injection, continuous integration and TDD turned out to not be an overhead, but actually meant you could respond faster to customer needs?</li>
+<li>What if the higher quality of the code actually made it faster to work on, and meant you could ship sooner?</li>
+</ul>
+
+<p>If this all sounds crazy to you, what do you think has led you to that conclusion?</p>
+
+<p><b><i>What if your current choice of tools, practices or technology stack meant none of the above points were true?</i></b></p>
+
+<p>Would you simply accept that it is impossible to do good work <i>and</i> ship? Or would you change your <a href="http://rubyonrails.org/">stack</a>, look to other <a href="http://www.python.org/">technologies</a> or <a href="http://en.wikipedia.org/wiki/Functional_programming">different paradigms</a>, <a href="http://cukes.info/">find</a> or <a href="http://nsubstitute.github.com/">write</a> new tools, or adopt <a href="http://en.wikipedia.org/wiki/Test_driven_development">practices</a> that don't punish you for trying to do your job properly?</p>
+
+<p>What if this idea that quality and shipping are somehow in opposition is not an inherent property of software development? It is interesting way to challenge yourself: what can you change in the way you currently work so that quality aids shipping, rather than hinders it?</p>

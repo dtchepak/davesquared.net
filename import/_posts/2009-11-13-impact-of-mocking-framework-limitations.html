@@ -1,0 +1,29 @@
+---
+layout: "post"
+title: "The impact of mocking framework limitations on design"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4735014283690864992"
+categories: ["imho", "tdd"]
+date: "2009-11-13T21:46:00.0+11:00"
+updated: "2009-11-18T13:32:56.759+11:00"
+---
+
+<p><a href="http://twitter.com/RoyOsherove">Roy Osherove</a> has posted his take on <a href="http://weblogs.asp.net/rosherove/archive/2009/11/12/test-driven-design-willed-vs-forced-designs.aspx">Willed vs. Forced Designs</a> with TDD. I'd like to take a quick look at his argument (or at least my interpretation of it), and then go through why I whole-heartedly disagree. :)</p>
+
+<h2>Letting a tool dictate your design?</h2>
+
+<p>TDD gives you feedback on your design. Roy separates this feedback into "willed design", where you write a test for the design you would like to have, and "forced design", where you write the test that your tools allow. Roy makes the point that because many mocking tools like Rhino Mocks and Moq are proxy-based, you can't mock some classes/members (like statics, non-virtuals etc). He argues that letting those tool limitations drive your design is bad. After all, mocking tools like TypeMock (Roy's employer, although I am pretty confident he wouldn't post this line unless he believed it) can mock these members, so aren't you just constraining your design unecessarily?</p>
+
+<p>Roy also makes the point that in languages like Ruby, Javascript and Python you can mock absolutely anything due to the way the languages work, and yet good design still seems possible in these languages. So why not get the same advantages using TypeMock?</p>
+
+<h2>Or the limitations of the language?</h2>
+
+<p>Now without debating the actual merits of TypeMock (I really don't mind what you framework you use. None of my business really :)), I do disagree with the argument Roy is making.</p>
+
+<p>Firstly, in these instances I don't feel it is the limitations of proxy-based mocking frameworks that are driving your design. That is just a symptom -- they are exposing a genuine limitation of your design. Proxy-based mocking relies on techniques that are available to the developer writing the code -- inheritance, overriding virtuals, and implementing interfaces to add different behaviour. We could easily write hand coded mocks to do this. The significance of this is that we are able to change the behaviour or our software using the <b>features built into the language</b>. The same flexibility that is useful for mocking dependencies in unit tests is the very same flexibility we can exploit to change our software without having to alter lots of related, tightly coupled classes.</p>
+
+<p>TypeMock enables the mocking of pretty much anything because it doesn't use proxy generation -- it hooks into the profiler API instead. As we have removed the limitation of using interfaces or non-sealed classes with virtual methods, we can write our tests without having to worry about using those in our design. My problem with this is that when it comes to change your software. Are you going to use the profiler API to change the behaviour? You can't necessarily use the normal language features, because you have had no feedback on what is changeable and therefore may not have seen any need for interfaces or virtual methods. What Roy has initially attributed to a tool limitation is actually a limitation of the language itself. (Usual disclaimers: of course you can get good design using TypeMock. You miss out on some feedback but you can always just pay attention instead ;))</p>
+
+<p>This also explains Roy's point about languages like Ruby, Javascript and Python not causing design problems. With these languages you can change any behaviour at any time -- it is a built-in language feature! So any behaviour you can change via mocking you have equal access to change via standard code. Unless we want hooking in to the .NET profiler API to become a standard way of altering the behaviour of production code (interesting idea perhaps :)), we don't really have that liberty.</p>
+
+<h2>Summary</h2>
+<p>So to wrap up, I've interpreted Roy's opinion as saying you shouldn't let the limitations of your tools dictate your design, specifically, proxy-based mocking tools. While I don't disagree with the general point, I do feel the perceived limitations of proxy-based mocking tools mirror the limitations of many statically typed languages, and as such give valuable design feedback when you will be unable to easily change your software using standard language features. I'd recommend you don't discount this feedback, but if you are finding mocking in C# or similar to be too high friction, maybe you should look instead to a dynamic language. IronPython and IronRuby are, after all, a great starting point if you want to stick with .NET. :)</p>

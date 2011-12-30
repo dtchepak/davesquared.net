@@ -1,0 +1,27 @@
+---
+layout: "post"
+title: "Lexical scope for closures in JavaScript"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4964286182961662366"
+categories: ["javascript"]
+date: "2007-12-13T12:11:00.0+11:00"
+updated: "2007-12-13T12:11:14.902+11:00"
+---
+
+<p>Ayende has a post on <a href="http://ayende.com/Blog/archive/2007/12/13/Javascript-lexical-scopes-and-what-your-momma-thought-you-about.aspx">working with closures in JavaScript</a>. Basically, when looking at capturing variables in a closure, you need to be careful with lexical scope. In JS the scope is a function, so if you want to capture a variable that will change values during&nbsp;the scope of the function, you will need to reference it via another function.</p> <p>From Ayende's example, where i is set in a loop, this:</p><pre>if( nums[i] % 2 == 0)
+    {
+      var tmpNum = nums[i];
+      <b>alertLink.onclick = function() { alert('EVEN: '+ tmpNum ); };</b>
+      //tmpNum will be bound to its value when the loop exits.
+    } ...
+</pre>
+<p>Needs to become this:</p><pre>if( nums[i] % 2 == 0)
+    {
+      <b>var act = function(tmpEVEN)
+      {
+        alertLink.onclick = function() { alert('EVEN: '+tmpEVEN); };
+      };
+      act(nums[i]);</b>
+      //tmpEVEN will be bound to nums[i] at the point where act(nums[i]) is called.
+    } ...
+</pre>
+<p>Ayende notes that in C#, the first example will work as its lexical scope is the current block (I think :S). In JavaScript, we need to use a function to get the correct scope.</p>

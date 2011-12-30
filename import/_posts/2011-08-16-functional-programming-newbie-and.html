@@ -1,0 +1,182 @@
+---
+layout: "post"
+title: "Functional programming newbie and something something monad something"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1892024991464885752"
+categories: ["functional programming", "patterns", "python"]
+date: "2011-08-16T01:30:00.0+10:00"
+updated: "2011-08-16T01:33:07.0+10:00"
+---
+
+
+<p>Let me get one thing straight: I know absolutely nothing about monads. I have never <a href="http://devhawk.net/2008/07/30/monadic-philosophy-part-2-the-linq-monad/">intentionally used something I've recognised as a monad</a>. I am dangerously unqualified to enhance your understanding of monads in any way. In fact <em><b>reading this may damage you and prevent you from ever learning what a monad actually is!!!</b></em></p>
+
+<p>The first reason I'm posting anything about monads at all is that I watched one of <a href="http://www.ndc2011.no/index.aspx?cat=1070&amp;id=1300">Robert "Uncle Bob" Martin's entertaining NDC 2011 talks</a> titled "WTF is a monad" (<a href="http://www.ndc2011.no/index.aspx?id=361621&amp;cat=1069">video available from the NDC site</a>). I'm unsure how approximated or mathematically correct he was intending the presentation to be, but I found it really interesting and was able to implement something I can only hope was vaguely monadic based on my interpretation of the information he presented. So I thought I'd share it with you in case you could correct me (it should go without saying, but any mistakes here are mine and have nothing to do with Bob or his presentation). Worst case is it gets you interested enough to look into the topic and find out all the stuff I got wrong. (<a href="https://twitter.com/#!/TheColonial/status/100725544697593859">Was that alright OJ?</a> ;))</p>
+
+<p>The second reason is that I like writing words like monad, monadic, and monoid because for a brief, shining moment it makes me feel like a real computer scientist. This moment generally comes crashing down as soon as I realise I have no idea what any of these terms mean, but it is a good couple of milliseconds. :)</p>
+
+<p>Did I mention I don't know what I'm talking about? For this post especially I mean. Yes? Good, you should be safe to read on then...</p>
+
+<h2>Something something monad something</h2>
+
+<p>As far as I can gather, a <a href="http://en.wikipedia.org/wiki/Monad_(functional_programming)">monad</a> is a structure that will let you use functions that take arguments of a certain type, and apply it to values from an another type (I'll call this the <em>monadic type</em>, but I could be misusing the term). We need to be able to map back and forth between these types. Bob roughly approximates a monad to an <em>adapter</em>; a monad is a way of adapting one type to another.</p>
+
+<p>It is the form of this adapter that makes it a monad. A monad can be expressed as two functions: the <em>unit function</em>, normally called <code>return</code> or <code>result</code>, that takes an argument of the original type and returns the monadic type; and a <code>bind</code> function that takes the monadic type and a function that works on original types. (Technically monads should also obey the <a href="http://www.haskell.org/haskellwiki/Monad_Laws">monad laws</a>. I'm sure I've missed other important points about them too, but let's run with this for now.)</p>
+
+<p>This structure has a few useful properties, mainly to do with being able to chain a sequence of functions that take arguments of the original type, then apply arguments of the monadic type to that chain. I think.</p>
+
+<h2>A dot monad?</h2>
+
+<p>Uncle Bob's first example was using a monad to manipulate a dots type using functions that normally work with integers. The dots type is simply a representation of an integer using '.' characters, so 5 maps to '.....' and back again. We'd like to be able to be able to use dots with standard integer operations like <code>add</code>, so that '..' + '...' gives '.....'.</p>
+
+<p>Let's look at an example in Python:</p>
+
+<pre class="brush:python">
+class DotMonad:
+    def result(self, i):
+        return '.' * i
+    def bind(self, dots, f):
+        return f(len(dots))
+</pre>
+
+<div class="note"><b>Aside:</b> If you haven't used Python before, the <code>self</code> arguments to the functions is required due to how instance methods work in Python. You can safely ignore them for this post, but if you know C# or Java <code>self</code> basically becomes like <code>this</code> in the context of an instance method.</div>
+
+<p>Here our <code>result</code> function just translates integers (<code>i</code>) into dots. The <code>bind</code> function takes some dots and a function <code>f</code> that takes an integer. First it converts <code>dots</code> to integers (using the length of the string of <code>dots</code>) then calls <code>f</code> using the result.</p>
+
+<p>This means that if we have an <code>add</code> function which takes integers, we can use our monad to adapt that function to take dots.</p>
+
+<pre class="brush:python">
+# Integer add function
+def add(a, b):
+    return a+b
+
+# Monadic add function for dots
+def addM(dotsA, dotsB):
+    m = DotMonad()
+    return m.bind(dotsA, 
+        lambda a: m.bind(dotsB, 
+        lambda b: m.result(a+b)
+        )
+    )
+</pre>
+
+
+<p>I've used <code>a</code> and <code>b</code> as the plain integer types, and <code>dotsA</code> and <code>dotsB</code> to represent our monadic dots type. We can now call <code>addM('..', '...')</code> and get <code>'.....'</code>.</p>
+
+<p>So how's this work? Well remember that <code>bind</code> takes a dot for a first argument, and calls the function provided as a second argument after converting the dot to an <code>int</code>. The function we provide will be called with <code>dotsA</code> converted to integer <code>a</code>, then recursively call <code>bind</code> to convert <code>dotsB</code> in the same way. The last function in the chain is to the monad's <code>result</code> method which will convert the result of <code>a+b</code> back to dots.</p>
+
+<p>Let's expand out and trace through the <code>addM('..', '...')</code> example to make sure we've got a handle on this:</p>
+
+<pre class="brush:python">
+return m.bind(dotsA,    # dotsA is '..', which is converted to int and passed to fn in 2nd arg
+    lambda a:           # bind calls function with a = len('..'), which is 2 
+        m.bind(dotsB,   # dotsB is '...', which is converted to int and passed to fn in 2nd arg
+    lambda b:           # 2nd bind calls function with b = len('...'), which is 3 
+        m.result(a+b)   # a+b is 2+3=5. m.result converts this back to '.....'
+)
+</pre>
+
+<p>I think this is called <a href="http://www.haskell.org/haskellwiki/Lifting">lifting</a> the add (<code>+</code>) function to work with our monad.</p>
+
+<h2>Lifting functions using monads</h2>
+
+<p>So we've now got a version of the basic integer <code>add</code> function that can work with our monadic dots type. But we'd like to be able to apply all integer functions to work with dots. In fact, we can generalise our <code>addM</code> function from before to lift any function which takes two arguments using a monad that can bind to that function's argument type .</p>
+
+<div class="note"><b>Aside:</b> We could also generalise to support functions with any number of arguments, but I'm struggling to keep up as it is. :\ :)</div>
+
+
+<p></p>
+
+<pre class="brush:python">
+def liftm(m, op):
+    return lambda a,b: m.bind(a,
+            lambda ax: m.bind(b,
+            lambda bx: m.result(op(ax, bx))
+            )
+    )
+</pre>
+
+
+<p>This is pretty much identical to our <code>addM</code> function, but we can now do some neat stuff. Let's import some standard Python operators and dot-erise them:</p>
+
+<pre class="brush:python">
+import operator
+
+addM = liftm(DotMonad(), operator.add)
+subM = liftm(DotMonad(), operator.sub)
+divM = liftm(DotMonad(), operator.div)
+mulM = liftm(DotMonad(), operator.mul)
+
+#Interactive python session
+&gt;&gt;&gt; addM('..', '.')
+'...'
+&gt;&gt;&gt; subM('....', '...')
+'.'
+&gt;&gt;&gt; divM(mulM('..', '...'), subM('...', '.'))
+'...'
+</pre>
+
+
+<h2>Should we try again? Maybe...</h2>
+
+<p>Let's try another monad (again, from one Bob showed in his talk). This time we're going to try and represent a type that can either have or be missing a value as a monadic type. So something very similar to .NET's <em>nullable types</em>, <code>Nullable&lt;T&gt;</code>. The difference with the monadic form is that, because of the way we chain sequences of <code>bind</code> operations, we can actually perform operations involving missing values without throwing null reference exceptions everywhere.</p>
+
+<pre class="brush:python">
+class MaybeMonad:
+    def result(self, x):
+        return x
+    def bind(self, maybe, f):
+        if (maybe is None):
+            return None
+        else:
+            return f(maybe)
+</pre>
+
+
+<p>Here our <code>result</code> function just returns whatever value it is given. If it has a value it will return that value; otherwise it will return <code>None</code> (Python's <code>null</code> or <code>nil</code> value).</p>
+
+<p>Now we can lift our standard operators to work with our <code>Maybe</code> type:</p>
+
+<pre class="brush:python">
+&gt;&gt;&gt; addm = liftm(MaybeMonad(), operator.add)
+&gt;&gt;&gt; mulm = liftm(MaybeMonad(), operator.mul)
+&gt;&gt;&gt; addm(2, 3)
+5
+&gt;&gt;&gt; addm(4, None)
+&gt;&gt;&gt; mulm(6, 7)
+42
+&gt;&gt;&gt; mulm(None, None)
+</pre>
+
+
+<p>Or we can lift null-safe versions of other functions:</p>
+
+<pre class="brush:python">
+def string_lens(a, b):
+    return len(a) + len(b)
+
+#Interactive python session
+&gt;&gt;&gt; string_lens("Hello", "World")
+10
+&gt;&gt;&gt; string_lens("Hello", None)
+Traceback (most recent call last):
+  File "&lt;stdin&gt;", line 1, in &lt;module&gt;
+  File "&lt;stdin&gt;", line 2, in string_lens
+TypeError: object of type 'NoneType' has no len()
+
+&gt;&gt;&gt; safe = liftm(MaybeMonad(), string_lens)
+&gt;&gt;&gt; safe("Hello", "World")
+10
+&gt;&gt;&gt; safe("Hello", None)
+</pre>
+
+
+<p>Here <code>string_lens</code> throws when we pass in <code>None</code>, but our <code>safe</code> lifted version takes them in its stride.</p>
+
+<h2>Real-world monads</h2>
+
+<p>Monads can actually be spotted out in the wild. They particularly enjoy frolicking with pure functional languages, where they can be used for (among other things) getting around the pesky limitation of not allowing side-effects in functions. Mutable state can be simulated by passing a State monad between functions. The I/O monad is used to encapsulate the side-effects of reading and writing from input and output.</p>
+
+<p>Reading through the <a href="http://en.wikipedia.org/wiki/Monad_(functional_programming)#Examples">examples in the Wikipedia entry</a> shows some collections can even be regarded as monads (for example, <code>result</code> can return a list from a single item, <code>bind</code> can map a function to each element in a list). In some instances <a href="http://tomasp.net/blog/idioms-in-linq.aspx">LINQ statements can also be used as monads</a>. I've even seen <a href="http://importantshock.wordpress.com/2009/01/18/jquery-is-a-monad/">JQuery accused on monadishness</a> (yes, I just made up a word).</p>
+
+<p>So where's this leave us? If you're like me: dazed, confused, craving a cup of tea, and also quite eager to resume working through the excellent <a href="http://learnyouahaskell.com/">Learn you a Haskell</a> tutorial. :)</p>
+

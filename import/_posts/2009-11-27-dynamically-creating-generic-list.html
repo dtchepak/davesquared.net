@@ -1,0 +1,40 @@
+---
+layout: "post"
+title: "Dynamically creating a generic list"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6622695191584503805"
+categories: [".net"]
+date: "2009-11-27T21:15:00.0+11:00"
+updated: "2009-11-27T21:23:50.929+11:00"
+---
+
+<p>I overheard an interesting question today: how to create a generic list instance when we don't know the type at compile time? I'm sure there are lots of great answers to this out there on the intrawebs (this won't be one of them), but I thought I'd give it a quick go myself as it doesn't sound too tricky to get working for the most basic of cases, and it would also help my reflecton-fu which is fairly lacking.</p>
+
+<p>Here is the test I would like to pass:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void CreateAGenericListFromAType() {
+    var list = (IList&lt;int&gt;) CreateList(typeof (int), new object[] {1, 2, 3});
+    Assert.That(list, Is.EquivalentTo(new[] {1,2,3}));
+}
+</pre>
+
+<p>So given a <code>Type</code> (in this case an <code>int</code>), we want <code>CreateList(...)</code> to return the equivalent of an <code>IList&lt;Type&gt;</code>. Of course the compiler won't have a reference to the exact type when compiling <code>CreateList(...)</code>, and generic types have to be closed at compile time for us to work with them normally. This means we will have to resort to reflection. Here's one way of passing the test:</p>
+
+<pre class="brush:csharp">
+IList CreateList(Type type, object[] objects) {
+    var genericListType = typeof (List&lt;&gt;);
+    var specificListType = genericListType.MakeGenericType(type);
+    var list = (IList) Activator.CreateInstance(specificListType);
+    foreach (var o in objects) {
+        list.Add(Convert.ChangeType(o, type));
+    }
+    return list;
+}
+</pre>
+
+<p>Here we close the list type down using <code>MakeGenericType()</code>, then use <code>Activator.CreateInstance()</code> (yuk) to instantiate our dynamically, generically-typed list. I'm also choosing to work with the non-generic <code>IList</code> interface, as this means I don't need to resort to reflection to call the <code>Add(T)</code> method.</p>
+
+<p>I'm probably overlooking lots of details, but at least this basic approach passed the test.</p>
+
+<p><b>Update:</b> As expected, a StackOverflow answer has <a href="http://stackoverflow.com/questions/307984/declare-a-generic-type-instance-dynamically/308040#308040">a neater way</a> that avoids using <code>Activator</code>.</p>

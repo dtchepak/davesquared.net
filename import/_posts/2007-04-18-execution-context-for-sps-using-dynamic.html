@@ -1,0 +1,21 @@
+---
+layout: "post"
+title: "Execution context for SPs using dynamic SQL in SQL Server 2005"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4988614705688430269"
+categories: ["imho", "database"]
+date: "2007-04-18T10:52:00.0+10:00"
+updated: "2007-10-16T21:24:29.708+10:00"
+---
+
+<p><a href="http://searchsqlserver.techtarget.com/originalContent/0,289142,sid87_gci1102100,00.html">This book excerpt</a> discusses specifying execution context for stored procedure code, which allows dynamic SQL in an SP to execute as the SP owner (among other contexts). The basic syntax is:</p>
+<code>
+CREATE PROCEDURE dbo.usp_DoSomething( @someParameter nvarchar(10) )
+<b>WITH EXECUTE AS OWNER</b>
+AS
+...
+</code>
+<p>Where <code><b>OWNER</b></code> can be a number of different values. Obviously this does not in itself provide any security (in fact, it allows you to circumvent it by elevating privileges), but it does allow you to build some on top of this. The caller's account can be denied SELECT access on a certain table, but can still run the SP as the owner to get back a controller result from a SELECT operation, just as in static SQL.</p>
+
+<p>Potential damage from SQL injection can be minimised by having the owner (or the context in which the SP is executing) only having SELECT access (and therefore unable to inject fun things like <code>DROP TABLE</code>, for example). Of course, this is no excuse for not exercising appropriate levels of caution when using dynamic SQL :-)</p>
+
+<p>At work we found this approach useful for simplifying complex static queries by building more efficient dynamic SQL, but still using static SQL-style security and not requiring the caller to have SELECT access on all the referenced tables.</p>

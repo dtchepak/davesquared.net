@@ -1,0 +1,44 @@
+---
+layout: "post"
+title: "Random software dev thoughts (June 2011 edition)"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5993247528718544821"
+categories: ["imho", "dev practices"]
+date: "2011-06-03T21:13:00.0+10:00"
+updated: "2011-06-03T21:19:26.193+10:00"
+---
+
+<p>I've been struggling with a few thoughts on software development lately, and <a href="https://twitter.com/davetchepak/status/76402646948380674">said as much</a> on Twitter. <a href="http://twitter.com/thecolonial">OJ</a> suggested I blog it, so here goes a rambling, incoherent post (even more so than usual). Entirely OJ's fault. ;)</p>
+
+<h2>Abstraction</h2>
+
+<p>Back in the old days I spent more time than I care to admit writing procedural code in classes. More recently I've also played around with <a href="http://www.davesquared.net/2010/09/wrap-up-from-tdd-and-ooo-at-sydney.html">Over-enthusiastic OO (OOO)</a>, using insanely fine-grained objects for everything. These approaches roughly correspond to not enough and too much abstraction.</p>
+
+<p>And so begins my hunt for the right amount of abstraction. I find fine-grained objects with single responsibilities really nice to work with at a micro level, but at a macro level the weight of useless abstractions can be crushing.</p>
+
+<p>This weight is a symptom of violating the <a href="http://www.codemanship.co.uk/parlezuml/blog/?postid=934">Reused Abstractions Principle (RAP)</a>, which Mark <a href="http://blog.ploeh.dk/2010/12/02/InterfacesAreNotAbstractions.aspx">explains very nicely</a>. (I've also experienced this as the NAF problem, or "Not Another Factory". Anyone else felt this?) The trick is finding the "right" abstraction that captures a reusable aspect of the system. This is made harder in C# by the fact(?) that it makes effective unit testing difficult without creating abstractions everywhere.</p>
+
+<p>So my options include hoping to drive out the right abstractions and assume that this will magically make it easy to test without using otherwise useless abstractions, or starting to use more real stuff in unit tests (having larger units, with potentially more suitable abstractions), in which case my tests get messier as I <a href="http://www.davesquared.net/2009/11/favour-test-driving-logic-over-data.html">throw loads of data through my tests</a> to exercise all the code paths.</p>
+
+<p>One thing I'll definitely rule out is going back to procedural code where classes are little more than a namespace, as I found this quickly became unmanageable; difficult to change, impossible to test effectively, and a nightmare to build on. At least my poorly chosen, testable abstractions are better than untestable spaghetti.</p>
+
+<h2>Refactoring</h2>
+
+<p>Another thing I'm struggling with is refactoring. I find the distinction between <a href="http://www.davesquared.net/2010/02/refactor-or-redesign.html">refactoring and redesign</a> helps, but it's not always quite that simple. Sometimes despite refactoring the little section of the code you're currently working in and around, the tendrils of previous design decisions still reach out across many other classes. Once you have coupling like this, when can you ever clean it up by refactoring alone?</p>
+
+<p>Contrived example: if you have ye olde layered architecture and are passing data (or transformations of the same data) through the layers and through multiple classes, untangling all the places this data has spread can only really be tackled in a redesign. And, as described in my original post, once you are in the territory of redesign you are optimising for today's cases and possibly making your next change harder if it tries to flex in a different direction. On the other hand, the overall design is getting increasingly bloated and harder to understand as you continue to build on it while making localised design changes using refactoring.</p>
+
+<p>Is it possible to gradually refactor even these wide-spread problems? Or are there times when you just have to bite the bullet and redesign? Is it just a case of writing off the redesign time that could otherwise be spent on features your customers care about, in the hope it will speed you up later? Or is it a case of admitting defeat; the design can actually become too compromised to completely fix if we miss too many cues to refactor, and we just have to go into legacy code mode and keep making local improvements in the hope that these isolated changes will eventually link up and restore a fairly clean, usable design?</p>
+
+<h2>End rant</h2>
+
+<p>So those are the problems that are currently weighing on my mind.</p>
+
+<p>On one hand, I can see an incredible amount of value in using very fine abstractions, but on the other abstractions can quickly turn into a dead weight that impedes progress. I'm torn between continuing to get the benefit of lots of small classes, and trying to reduce the amount of weight and noise contributed by the less-useful of my abstractions.</p>
+
+<p>On the refactoring side, I've advocated small, localised refactoring in the hope of gradually pushing a design into good shape, but I've also observed times when this just doesn't seem possible. In these cases the only options seem redesigning larger areas of code, or just capitulating to entropy and keeping small islands of cleanliness within the mess (this is in keeping with Eric Evans' somewhat depressing observation that "the natural state of all software is a big ball of mud"). The problem here is trying to decide what approach to take, and balancing time invested now versus the future cost of not making that investment. I'm also bothered by the idea that the only evidence we have to base this decision on is poorly-informed guesswork and gambling based on that.</p>
+
+<p>Experience over multiple projects would most definitely help this, but as the real pain of this stuff seems to be felt in large-ish, multi-year projects, this experience and chances to experiment with different approaches is hard to come by.</p>
+
+<p>As a quick aside, I'm pretty sure these two problems I'm having are closely related.</p>
+
+<p>Appreciate any thoughts or counselling on offer. :)</p>

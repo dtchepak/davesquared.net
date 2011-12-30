@@ -1,0 +1,68 @@
+---
+layout: "post"
+title: "Occasional trouble mocking generic methods"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8937032772400976910"
+categories: [".net", "testing"]
+date: "2009-06-17T00:00:00+10:00"
+updated: "2009-06-17T00:00:21.486+10:00"
+---
+
+<p>I've seen a few people get bitten by an edge case of using generics with mocking frameworks. Let's look at a contrived example and see what's going on. We're using Rhino Mocks 3.5 in this case, but the symptoms described here are not specific to that mocking framework, but rather are related to how generics work in .NET.</p>
+
+<pre class="brush:csharp">
+public interface IFish{}
+public class Eric : IFish{}
+public interface IAquarium {
+    IEnumerable&lt;T&gt; FindEverythingLike&lt;T&gt;(T thisThing);
+}
+
+[Test]
+public void LookingForALicenceForMyPetFishEric() {
+    var petFish = new Eric();
+    var expectedErics = new[] {petFish};
+
+    IAquarium stubAquarium = MockRepository.GenerateStub&lt;IAquarium&gt;();
+    stubAquarium
+        .Stub(aquarium =&gt; aquarium.FindEverythingLike(Arg&lt;IFish&gt;.Is.Anything))
+        .Return(expectedErics);
+
+    var actualErics = stubAquarium.FindEverythingLike(petFish);
+    Assert.That(actualErics, Is.EqualTo(expectedErics));
+}
+</pre>
+
+<p>Here we're asking our stubbed <code>IAquarium</code> to return an <code>expectedErics</code> array whenever it gets any <code>IFish</code> as an argument to the generic <code>FindEverythingLike&lt;T&gt;()</code> method. We then pass our <code>petFish</code> to the method and get the actual enumerable returned from our stub. So what does this assertion give us?</p>
+
+<pre>
+MockingGenerics.LookingForALicenceForMyPetFishEric : FailedNUnit.Framework.AssertionException:   Expected: &lt; &lt;Workshop.Tests.Eric&gt; &gt;
+  But was:  null
+</pre>
+
+<p>Oops, our stubbed value hasn't been returned. Our <code>petFish</code> is an instance of class <code>Eric</code>, which implements <code>IFish</code>, so why isn't our stub returning our <code>expectedErics</code>?</p>
+
+<p>The reason for this is that we are actually stubbing out <code>FindEverythingLike&lt;IFish&gt;()</code>, but are calling <code>FindEverythingLike&lt;Eric&gt;()</code>. While we declare this as a single generic method, the CLR actually calls these as two completely different method instances. This is obscured a bit by the fact that type inference is used to determine which method instance is called. If we don't rely on type inference we can get the test to pass:</p>
+
+<pre class="brush:csharp">
+    var actualErics = stubAquarium.FindEverythingLike&lt;IFish&gt;(petFish);
+    Assert.That(actualErics, Is.EqualTo(expectedErics));
+</pre>
+
+<p>In the real examples where I've seen errors like this we generally have more collaborators involved and the problem becomes harder to detect. It's not a common case, requiring us passing different static types to a generic method where at first glance it looks reasonable to expect our call to resolve to the one method.</p>
+
+<p>Just to belabour the point for one more example, let's just confirm that it is the static type of our reference that determines which method instance is called, rather than the actual instance type:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void GenericsAndMockingCanBeTroublesome() {
+    IAquarium mockAquarium = MockRepository.GenerateMock&lt;IAquarium&gt;();    
+    Eric petFish = new Eric();
+    IFish sameFish = petFish;
+
+    mockAquarium.FindEverythingLike(petFish);
+    mockAquarium.AssertWasCalled(aquarium =&gt; aquarium.FindEverythingLike(sameFish));
+}
+</pre>
+
+<p>This case fails, as we are calling <code>mockAquarium.FindEverythingLike&lt;Eric&gt;()</code>, but asserting that <code>FindEverythingLike&lt;IFish&gt;()</code> was called. Even though it is the same instance, the declared types of each reference at compile time are the ones that are used to dispatch to our generic method instance.</p>
+
+<p>Hope this helps save someone a couple of minutes of frustration. :)</p>

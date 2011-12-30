@@ -1,0 +1,63 @@
+---
+layout: "post"
+title: "Friends don't let friends test-drive while refactoring"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1115304002668896321"
+categories: ["tdd", "dev practices"]
+date: "2010-05-06T22:25:00.0+10:00"
+updated: "2010-05-06T23:07:57.382+10:00"
+---
+
+<p>I've generally tended to think about refactoring purely in the context of Test Driven
+Development. You write a failing test, make it pass, then refactor to
+tidy up. The main stimulus for the refactoring has been feedback from
+the tests.</p>
+
+<p>It was only very recently I realised that I should probably think about refactoring separately from TDD. Although it is obviously an essential part of the TDD process, it is also a powerful technique in its own right. As I discovered, treating them interchangeably can lead to trouble.</p>
+
+<h2>Refactoring into a test-driven hole</h2>
+
+<p>I had a class that had grown too big. I wasn't sure of the right design to split up this class, so my
+first approach was to fall back on writing tests. I adjusted the tests for the class in question and drove out some new collaborators. This broke a whole lot of my acceptance tests, but I figured that was ok because my unit tests were passing. I continued driving myself deeper and deeper into
+a mess. My unit tests were giving me feedback as to the design I was
+driving out, but because I had lost the feedback of my acceptance
+tests I had no idea how far I had strayed from a correct, functioning
+implementation. I knew that I had lots of broken tests, and no matter
+how much I drove out the green bar remained painfully elusive.</p>
+
+<p>A few hours later I took stock. The design direction seemed to be
+workable although unreasonably complex. I was fairly confident it would only take a little longer to polish off the final pieces, and I had reduced the failing
+acceptance tests from 30 to about 19, but the whole thing just didn't
+seem right. For one, I hadn't been able to check in with tests failing
+so this was going to be a huge change. For another, I'd been driving
+out all this testable design without the strong link the
+acceptance tests provide to the actual result I was trying to achieve.</p>
+
+<p>I had pretty much turned from a developer into an abstraction factory. Time to revert. (Actually, <code>git checkout -b garbage</code> and commit to the new branch, just in case... :))</p>
+
+<h2>Refactoring without thinking about TDD</h2>
+
+<p>The second time I tried this I was determined to take little steps. I
+had no unit tests to guide these steps, just the <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">SOLID principles</a> and the feedback from my existing test suite, which mainly showed my class was too big and
+was going to grow bigger with future changes (apparently gravity applies to code,
+too :)).</p>
+
+<p>So I started extracting small bits of behaviour and pushing them down
+into collaborators (which my existing class new'ed up, violating DI but keeping my code functional). My unit tests now became integration tests (or at least covered a bigger unit), but most importantly I still had my acceptance tests telling me the software still worked. I found it very
+useful to keep testability in mind for all new classes I was creating,
+but the design I was refactoring toward was just based on isolating
+some of the responsibilities my class had accrued.</p>
+
+<p>Once I had pushed down the messiest stuff into a few new classes at varying levels
+of abstraction, being careful to keep the tests green all the time, I went and back-filled some unit tests for the original class and its interaction with its new collaborators (replacing the poor man's DI with real DI). This left the new stuff uncovered by unit tests, but still safe due to the integration tests. I could then go back to my standard TDD approach for the final push from the new class down to a finished implementation.</p>
+
+<p>The style of TDD I use helps me to decompose problems and abstract and encapsulate data and behaviour in a way that appeals to my limited sense of aesthetics. This meant that before I started the refactoring I was relatively happy with how the design broke the problem down. Switching to purely refactoring mode meant I could keep the same basic problem decomposition and just tinker with the implementation. I didn't really need TDD to drive the change; it was more a case of rephrasing the existing problem breakdown.</p>
+
+<h2>Lessons learned</h2>
+
+<p>I (re-)learned a few important lessons from this experience. The first was that small steps are absolutely essential whenever you're not 100% confident with what you're doing. Whenever you've taken a big step away from the green bar, it's time to revert and try smaller steps. (A big step from one green to another is fine if you can manage it.)</p>
+
+<p>The second is that I really need to separate my test-driving from refactoring. I'm either wearing my test-driven design hat, or my refactoring hat. Once I've passed my failing test and can see the green test runner bar of happiness, then I really need to stop thinking about tests and start driving using the refactoring process: small, non-breaking, non-behaviour-altering changes.</p>
+
+<p>Come to think of it, refactoring probably shouldn't involve changing tests at all (unless I've made the mistake of having my tests overly-specify an implementation). As refactoring doesn't change behaviour, and our tests are covering the behaviour or result of that behaviour, then our tests shouldn't need to change. Once we switch to altering tests as a part of a big change we're really in the realms of <a href="http://www.davesquared.net/2010/02/refactor-or-redesign.html">redesign rather than refactoring</a>. Of course, once we've finished refactoring and our tests are still green, we then have some confidence our code is correct and can resume the test-driven cycle and change our tests however we like.</p>
+
+<p>When I asked a question about this on Twitter, <a href="http://twitter.com/JakCharlton/status/13104500312">Jak Charlton summarised it perfectly</a>: "You can change tests or implementations, but not both at the same time". (That's right, it takes me 1,000 words to say what most people can say with 140 characters. I'd appreciate any verbosity-cures donated to the comment box below. Thanks. :))</p>

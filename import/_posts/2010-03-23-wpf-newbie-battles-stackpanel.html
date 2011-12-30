@@ -1,0 +1,116 @@
+---
+layout: "post"
+title: "A WPF newbie battles the StackPanel"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6190001758623688760"
+categories: ["wpf", ".net"]
+date: "2010-03-23T23:30:00.0+11:00"
+updated: "2010-03-24T10:36:49.178+11:00"
+---
+
+<p>I had a number of prospective titles dreamed up for this post, including:</p>
+
+<ul>
+<li>I fought the StackPanel and the StackPanel won</li>
+<li>StackPanel: you keep using that word. I do not think it means what you think it means</li>
+<li>Why the !@#$ isn't my TextBox scrollbar appearing?</li>
+<li>Everytime you use a StackPanel the CLR drowns a kitten</li>
+<li>Pure evil and StackPanels: BFFs</li>
+</ul>
+
+<p>In the end, I decided to curb my hatred for this loathesome WPF control, and simply continue along the same vein as my previous <a href="http://www.davesquared.net/2010/03/wpf-newbie-styles-listbox.html">WPF newbie</a> post. After all, StackPanels don't <i>really</i> kill kittens; VB programmers do. (joking! Unless there are no VB coders reading... ;) :P)</p>
+
+<h2>An innocent request</h2>
+
+<p>I only wanted to do something really simple. I didn't think I was being at all demanding. I just wanted a <code>TextBox</code> with a scrollbar. This had always just worked for me before. To see what I mean, let's start a new WPF project and create a new WPF Window XAML file. We'll just whack in a <code>TextBox</code> with vertical scroll bar enabled and bask in the XAMLily glory of WPF:</p>
+
+<pre>
+&lt;Window x:Class=&quot;WpfApplication1.MainWindow&quot; 
+        xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+        xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;
+        Title=&quot;MainWindow&quot; Height=&quot;350&quot; Width=&quot;525&quot;&gt;
+    &lt;TextBox VerticalScrollBarVisibility=&quot;Auto&quot; AcceptsReturn=&quot;True&quot; /&gt;
+&lt;/Window&gt;
+</pre>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://3.bp.blogspot.com/_wEsHWMWy090/S6iztlRJxuI/AAAAAAAABhE/c4EPbbtfBcA/s1600-h/textbox_resizing.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="300" src="http://3.bp.blogspot.com/_wEsHWMWy090/S6iztlRJxuI/AAAAAAAABhE/c4EPbbtfBcA/s320/textbox_resizing.PNG" width="320" /></a></div>
+
+<p>You can see that as I resize the window, our <code>TextBox</code> resizes to fit the area, and the scrollbar appears as required.</p>
+
+<p>Now we want to add a simple label on top. We don't need a <code>Grid</code> for this right? We just want to <i>stack</i> a <code>Label</code> or <code>TextBlock</code> on top of our <code>TextBox</code>. Stack, huh? This handy <code>StackPanel</code> thing should be just what we need! There's absolutely no way this will be able to waste the better part of our day...</p>
+
+<h2>The problem</h2>
+
+<pre>
+&lt;!-- Window cruft omitted --&gt;
+&lt;StackPanel Orientation=&quot;Vertical&quot;&gt;
+    &lt;TextBlock&gt;Enter stuff in here:&lt;/TextBlock&gt;
+    &lt;TextBox VerticalScrollBarVisibility=&quot;Auto&quot; AcceptsReturn=&quot;True&quot; /&gt;
+&lt;/StackPanel&gt;
+</pre>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S6iztjRpY_I/AAAAAAAABhI/lrKdAAlIsd4/s1600-h/textbox_in_stackpanel.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://4.bp.blogspot.com/_wEsHWMWy090/S6iztjRpY_I/AAAAAAAABhI/lrKdAAlIsd4/s320/textbox_in_stackpanel.PNG" width="320" /></a></div>
+
+<p>After running this the first thing we notice is that without text in it, our <code>TextBox</code> does not fill up all the remaining space in the window. When we paste in a chunk of text the box resizes to fit it in, but what happens when we try and resize the window? Hey, where's our scrollbar?!?!</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S6izt9iVrEI/AAAAAAAABhM/EWkpG736g0c/s1600-h/dudeWheresMyScrollbar.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="163" src="http://4.bp.blogspot.com/_wEsHWMWy090/S6izt9iVrEI/AAAAAAAABhM/EWkpG736g0c/s320/dudeWheresMyScrollbar.PNG" width="320" /></a></div>
+
+<h2>StackPanel size</h2>
+
+<p>I have read up a number of times on how WPF layout passes work. I have also promptly forgotten this information each time I've read it. So if you want to know the real reason for this behaviour then it would be a great idea to read up on this from a reliable source. If instead you want to get a vague idea from the ignoramous pounding dumbly away on the keyboard to bring you this post, then read on! :)</p>
+
+<p>As I understand it the problem is the <code>StackPanel</code> (delightful little control that it is) is happy to expand indefinitely in whatever direction it is oriented. In the case of our vertically aligned panel, the child controls will fill out to the horizontal size of the <code>StackPanel</code>, but the <code>StackPanel</code> will not constrain their vertical size.</p>
+
+<p>Instead the vertical size of the child controls will be determined by their own contents, rather than using height available to the parent panel. The minimum height of the <code>StackPanel</code> will in turn be determined by the heights of its child controls. When the <code>StackPanel</code> is rendered within the space available from its parent, any overflow will be clipped, rather than the <code>StackPanel</code> resizing and passing on its size to its children.</p>
+
+<p>In our case, this means that when we resize the window, our <code>StackPanel</code> and its children will keep their actual heights and the overflow (like half our <code>TextBox</code>) will get clipped. The <code>TextBox</code> can't know to display a scrollbar, because it is still the same height: a height which has expanded to fit its contents. (You can see this in action if you <a href="http://snoopwpf.codeplex.com/">Snoop</a> the actual height of the <code>StackPanel</code> and its parent as you resize the window.)</p>
+
+<div class="note"><b>Note: </b> Before you suggest trying to set <code>VerticalAlignment</code> or <code>VerticalContentAlignment</code> to stretch somewhere in the hierarchy, forget it. The <code>StackPanel</code> will keep expanding indefinitely, so you can't stretch its child controls to take up all the available space. Learning that took several hours of setting everything I could find to stretch. (It was a more complex example, I should have tried a minimal case like this one over trial and error. :-\)</div>
+
+<h2>Ditching the StackPanel</h2>
+
+<p>One way to semi-fix this is to wrap our <code>StackPanel</code> in a <code>ScrollViewer</code> control:</p>
+
+<pre>
+&lt;ScrollViewer VerticalScrollBarVisibility=&quot;Auto&quot;&gt;
+  &lt;StackPanel ... /&gt;
+&lt;/ScrollViewer&gt;  
+</pre>
+
+<p>The <code>ScrollViewer</code> will try and cover-up the <code>StackPanel</code>'s refusal to resize by scrolling the <code>StackPanel</code> and its contents instead of clipping the overflow. This doesn't work that well in our case, as it will also scroll our "Enter stuff in here:" prompt that is within the <code>StackPanel</code>.</p>
+
+<p>The other solution is to use a decent layout container instead:</p>
+
+<pre>
+&lt;Grid&gt;
+    &lt;Grid.RowDefinitions&gt;
+        &lt;RowDefinition Height=&quot;Auto&quot;/&gt;
+        &lt;RowDefinition Height=&quot;*&quot; /&gt;
+    &lt;/Grid.RowDefinitions&gt;        
+    &lt;TextBlock Grid.Row=&quot;0&quot;&gt;Enter stuff in here:&lt;/TextBlock&gt;
+    &lt;TextBox Grid.Row=&quot;1&quot; VerticalScrollBarVisibility=&quot;Auto&quot; AcceptsReturn=&quot;True&quot; /&gt;
+&lt;/Grid&gt;
+</pre>
+
+<p>Sure, it's a bit more work to use a <code>Grid</code>, but it has the added advantage of working. :) Our first row definition is set to automatically determine the height (which will use the height of the row contents), while the second definition uses a star (*), which tells the grid we want to use whatever height is available for this row.</p>
+
+<div class="note"><b>Note: </b> There is lots more you can do with <code>Grid</code> row and column sizing., such as proportionally distributing available space between rows and columns. But for this example, the explanation above is close enough to correct.</div>
+
+<p>And now everything works as expected:</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://1.bp.blogspot.com/_wEsHWMWy090/S6izt-Izy3I/AAAAAAAABhQ/5WHy8Un_vG4/s1600-h/happiness_is_a_vertical_scrollbar.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="121" src="http://1.bp.blogspot.com/_wEsHWMWy090/S6izt-Izy3I/AAAAAAAABhQ/5WHy8Un_vG4/s320/happiness_is_a_vertical_scrollbar.PNG" width="320" /></a></div>
+
+<div class="note"><b>Update: </b> <a href="http://kevin-berridge.blogspot.com/">Kevin Berridge</a> wrote in to note that <a href="http://www.davesquared.net/2010/03/wpf-newbie-battles-stackpanel.html?showComment=1269351754877#c8207778472298731109">a <code>DockPanel</code> will work here too</a>. And he is quite right. The reason I'm using a <code>Grid</code> is I want to get <code>StackPanel</code>-like ability to stack any number of items. The example presented here is a simplified version of the problem I encountered which had 7 stacked controls, each containing 2 other stacked controls. For this case I used a <code>DockPanel</code> for the inner 2 controls, and a <code>Grid</code> for the 7 outer controls. The important thing here is that regardless of what container you choose, just make sure it's not a <code>StackPanel</code>! ;)</div>
+
+<h2>Conclusion</h2>
+
+<p>The <code>StackPanel</code> isn't really evil; it's just fairly useless for the layout I was trying to achieve. In fact, I'd go so far to say that in many (most?) cases it is pretty useless (how often will you want your controls to clip?).</p>
+
+<p>From now on my default choice for stacked layouts will be a <code>Grid</code> with a single row or column. I find the cell assignments (<code>Grid.Row=&quot;0&quot;</code>) to be annoying noise, but at least I know my contents should generally resize sensibly.</p>
+
+<p>Funny thing was that I had come across this months ago when first spiking a WPF application, but it took almost a day of battling the <code>StackPanel</code> again today before I remembered it. This time I'm blogging it to make sure it sticks! :) </p>
+
+<p>Hope this spares you from experiencing the same pain. :)</p>

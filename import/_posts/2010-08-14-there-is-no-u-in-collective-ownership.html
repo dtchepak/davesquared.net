@@ -1,0 +1,52 @@
+---
+layout: "post"
+title: "There is no U in Collective Ownership"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2913571841167955157"
+categories: ["imho", "agile"]
+date: "2010-08-14T23:05:00.0+10:00"
+updated: "2010-08-14T23:14:08.752+10:00"
+---
+
+<p>
+One of the practices of Extreme Programming (XP) is <a href="http://www.extremeprogramming.org/rules/collective.html">collective ownership</a>. The general idea is that everyone can contribute to any part of the code or design: the entire team owns and is responsible for all segments of the project.</p>
+
+<p>I tend to extend this idea to even more extreme lengths (even by XP standards ;)): a team that works together takes joint ownership of and responsibility for the work done, including the decisions made along the way. If everyone is free to contribute to any part of the project, then everyone shares responsibility for the outcome. An &quot;incorrect&quot; decision made by an individual is made in the context of an environment created by the team: the team's coding standards and conventions, the existing design, the way architecture and coding practices have been communicated and taught to the team members.
+</p>
+
+<h2>Eroding collective ownership</h2>
+<p>The practice of collective ownership is one that is easy to pay lip service to, but I find that even in teams with the best of intentions it is quick to disintegrate in the face of pressure. Here's some examples of collective ownership breaking down:</p>
+
+<ul>
+<li>I've no idea what this is; Bob was working on that.</li>
+<li>Jane, you need to stop writing duplicate setup methods.</li>
+<li>Rob made that decision.</li>
+<li>I told you we shouldn't use a factory there, but you wouldn't listen to me.</li>
+</ul>
+
+<p>All these statements may be correct, or even said in good humour and with good intentions, but they all undermine the practice of collective ownership. The moment someone says &quot;you/him/her/them&quot;, rather than &quot;we&quot; or &quot;us&quot;, they are no longer taking collective ownership. They have moved responsibility to an individual or subset of the team, and away from the team as a whole.</p>
+
+<h2>What's the big deal?</h2>
+<p>So why is this a problem? Surely saying &quot;we&quot; instead of &quot;you&quot; is just unecessary political correctness; yet another symptom of a culture that seeks to diminish personal responsibility and accountability? In life and relationships-in-general I agree, but for a project team I've found a less-than-whole-of-team approach to be surprisingly damaging.</p>
+
+<p>What happens the moment someone says &quot;You did this&quot;? It is human nature to explain why; to explain the context in which the decision was made and why it made sense. In that instant the focus has moved from a legitimate issue to a discussion about the past, possibly to being defensive, or apologetic, or aggressive. This is valuable time that could be used to actually make progress on the issue. That's not to say the causes or context should be ignored, just that it should not be an individual justifying it, but the team examining it. The fact that Rob or Jane made the decision is largely irrelevant. They made it in the context of the time with, we trust, the best of intentions. It is with this trust that the team commits to take collective ownership for decisions. Instead of singling out individuals, the discussion should focus on how to fix the issue and prevent it from reocurring. In short: to improve as a team.</p>
+
+<p>Even writing this it sounds ridiculous that something that sounds so semantic should make a difference, but <i>I have seen this happen</i>. Many, many times. And it chokes momentum, it stifles creativity, it stops people from taking the chance and the opportunity to be wrong and to learn. And in extreme cases it can damage the team, creating different alliances and politicking between team members, which is time better spent working together to get this iteration done.</p>
+
+<h2>Keeping it collective</h2>
+<p>The key to keeping collective ownership alive and well is to remember there is no U in collective ownership. There is &quot;we&quot; and &quot;us&quot;.</p> 
+
+<p>Rather than singling out work that Bob did that you don't understand, tell the team that you are having trouble understanding this section of code and so it might be worth refactoring, or at least get the team to look at it together. Chances are you are not the only one struggling with it, so it becomes a good opportunity for the team to learn and share knowledge. If you are the only one struggling with it, then pairing will help spread the knowledge more effectively around the team.</p>
+
+<p>Instead of telling Jane to stop writing duplicate setup methods, tell the team you've found duplication in setup methods and show some refactorings to remove it. Maybe hold a lunch time brown-bag session on it if you feel it could benefit the team. The key is to avoid viewing the problem as Jane's, but instead as a problem with the team communicating how to keep the tests <a href="http://en.wikipedia.org/wiki/Don't_repeat_yourself">DRY</a>, or possibly that the test fixtures aren't organised in a way that makes the duplication obvious. Either of these approaches will lift the entire team, rather than just talking to Jane about it which only helps her.</p>
+
+<p>While simply changing the language used will help and is a very good place to start, it is more important to actually value and commit to collective ownership within the team. This is most challenging when the team is debating several approaches and having difficulty reaching a consensus. You may really strongly disagree with a particular approach, but if you can't convince your team of that and the team decides to pursue it, then you own this decision as part of your team. That means no gloating if things blow up; no &quot;I told you so&quot;; and definitely no sulky, half-hearted work on that section, which effectively amounts to sabotaging the team's choice. The team owns the decision, it is your job as part of the team to make it work. If it doesn't, then the team will come together to fix it.</p> 
+
+<p>If you don't have the expertise to make a decision, then you put your trust in the team members that do, and again once the decision is made, you own the responsibility for that decision along with the rest of the team.</p>
+
+<h2>When collective ownership is a waste of time...</h2>
+<p>There are times when collective ownership is never going to work. First, when it isn't real. If all the decisions get made by business analysts that hand requirements to an architecture team, that give a design to some code monkeys, then pretending everyone owns the decision is a completely useless lie. Similarly if you have a few team members that all work on separate modules then it will be the individuals that own those modules. Collective ownership relies on having a single, cohesive project team.</p>
+
+<p>Second, it won't work when the team does not commit to it. If you are in a poisonous team or environment, where people are more concerned with their career prospects, company politics or their own prestige, then trying to share both successes and failures is also going to be a waste of time. Less dramatically, if you have a dramatic power differential between parts of the team (real or imagined) then it is going to be very difficult for those with less power to feel responsible for the decisions, or in fact to offer their own contributions. There are ways to deal with this, but the power difference will need to be sorted out before the team can commit to practice collective ownership.</p>
+
+<h2>Conclusion</h2>
+<p>I may have an atypical view of collective ownership, but to me it is more than just letting everyone contribute ideas to the design. To me it actually involves a fairly big shift in how we normally think and work in teams; from individuals all making their own contributions to a result, to a highly cohesive unit whose successes and failures are attributed to the entire entity, not to any individual. This can be tough to do as it involves everyone putting their egos aside, but I believe there is a lot of benefit in this ideal. I hope this has given you something to think about and potentially take back to your own team, even it is something as simple as saying &quot;we&quot; the next time you were going to say &quot;you&quot;.</p>

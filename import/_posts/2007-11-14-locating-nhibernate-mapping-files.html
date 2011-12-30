@@ -1,0 +1,17 @@
+---
+layout: "post"
+title: "Locating NHibernate Mapping Files"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8449794890278800971"
+categories: ["orm", ".net", "nhibernate"]
+date: "2007-11-14T16:24:00.0+11:00"
+updated: "2008-08-26T16:53:06.284+10:00"
+---
+
+<p>I have an assembly full of data objects (say, MyGreatApp.Objects.dll), and an assembly that manages data access (say, MyGreatApp.DataAccess.dll). As the data access DLL is handling persistence, it should have the embedded NHibernate mapping files (*.hbm.xml). I tried to configure a session factory from MyGreatApp.DataAccess.dll like this:</p><pre>Configuration config = new Configuration();
+<strong>config.AddClass(typeof(MyGreatApp.Objects.Widget));</strong>
+SessionFactory = config.BuildSessionFactory();</pre>
+<p>I thought this would search the current assembly for the Widget.hbm.xml file, and possible the assembly containing the referenced type as well. I was quickly proved wrong as it threw <code>NHibernate.MappingException: Resource not found</code>. NHibernate is only looking for the Widget mapping file in the same place as the type itself, which is MyGreatApp.Objects.dll. Instead we just need to explicitly add the assembly that contains the embedded mapping files:</p><pre>Configuration config = new Configuration();
+<strong>config.AddAssembly("MyGreatApp.DataAccess");</strong>
+SessionFactory = config.BuildSessionFactory();
+</pre>
+<p>And this works great! I noticed <a title="Jim Holmes is years ahead of me here" href="http://frazzleddad.blogspot.com/2005/10/nhibernate-tricks-locating-mapping.html">Jim Holmes is years ahead of me here</a>, but I didn't have much Google-luck with my initial choice of keywords and so thought I'd post my experience.</p>

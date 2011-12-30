@@ -1,0 +1,10 @@
+---
+layout: "post"
+title: "MSBuild task library links"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1274365272687810357"
+categories: ["deployment", ".net"]
+date: "2007-08-14T11:04:00.0+10:00"
+updated: "2007-08-22T15:23:13.85+10:00"
+---
+
+<p>I have been having a look at using MSBuild for deployment, including things like setting up IIS webs and application pools. <a href="http://www.guysmithferrier.com/">Guy Smith-Ferrier</a> has a nice <a href="http://www.guysmithferrier.com/downloads/MSBuild.pdf">PDF</a> introducing the basic concepts like properties, items, targets etc. There is also the <a href="http://msdn2.microsoft.com/en-us/library/0k6kkbsd.aspx">MSBuild Reference on MSDN</a>&nbsp;to help get you started.</p> <p>That's fine for building projects using the standard MSBuild tasks, but how about configuring IIS during deployment? It should not be too awful implementing your own custom task, but there already seems to be a decent number of task libraries floating around, such as <a href="http://msbuildtasks.tigris.org/">MSBuild Community Tasks Project</a>&nbsp;and <a href="http://www.codeplex.com/sdctasks">SDC Tasks</a>.</p> <p>Using these it <em>should</em> be fairly straight forward to do things like pulling code from source control, building, running unit tests, then deploying to a server along with the relevant configuration.</p> <p><strong>UPDATE:</strong> Microsoft's <a href="http://davesquared.blogspot.com/2007/08/web-deployment-projects.html">Web Deployment Projects</a> also provide some additional MSBuild tasks relating to deploying web applications.</p>

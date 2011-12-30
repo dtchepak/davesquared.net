@@ -1,0 +1,33 @@
+---
+layout: "post"
+title: "Calling your shots"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5252171099228105171"
+categories: []
+date: "2010-08-29T22:29:00+10:00"
+updated: "2010-08-29T22:29:08.687+10:00"
+---
+
+<p>I'm not sure where I first heard the term, but I remember reading Mark Needham's post titled <a href="http://www.markhneedham.com/blog/2010/07/28/tdd-call-your-shots/">TDD: Call your shots</a> (Mark publishes loads of interesting stuff. If you're not subscribed, <a href="http://feeds2.feedburner.com/MarkNeedham">do so now</a>! :)).</p>
+
+<p>The idea is that before every test run you call what the result will be in advance. So rather than just writing your failing test and waiting for the error message to tell you what to do next, you should have thought through the problem and know (or at least expect) it to fail the <code>Assert.AreEqual</code> assertion because you haven't wired up the code to return the value from the <code>WidgetFactory</code> yet.</p>
+
+<h2>Calling shots for increased understanding</h2>
+
+<p>Now I've found it very easy to fall into the trap of thinking through just enough to flesh out some design via my test, then switching off and assuming a state not unlike semi-sentient vegetable matter while I run the test and mash intellisense combinations until the test goes green and I can resume normal thought. It's almost Pavlovian: green light means thoughtful Dave; red light means rutabaga Dave.</p>
+
+<p>Calling my shots has really helped me fix this, and it has made a quick and significant difference to my coding. It forces me to keep focused, and because I'm concentrating on both red and green parts of the TDD cycle I find I build up a lot more context and understanding of the entire code base.</p> 
+
+<p>A common complaint I hear when people first start moving to OO code (as opposed to procedural code in an OO language) is that the amount of abstraction makes it quite difficult to keep much of the object graph in mind at once. Calling my shots has definitely improved my ability to do this, not just for code I am working on, but even for unfamiliar codebases. It's as if the additional exercise of keeping both the test and production code in mind at once makes it easier to think in multiple levels of abstraction.</p>
+
+<h2>Calling Intellisense shots</h2>
+
+<p>I was reading through Davy Brion's post on how <a href="http://davybrion.com/blog/2010/08/the-downside-of-providing-an-api-through-extension-methods/">extensions methods bloat Intellisense</a> (again, if you're not subscribed, do so <a href="http://feedproxy.google.com/davybrion">now</a>)  and it occurred to me I've been extending the &quot;calling your shots&quot; idea to Intellisense as well, which is probably why the extension method bloat hasn't really bothered me.</p>
+
+<p>Rather than compulsively mashing Intellisense (wow R# smart code completion can be addictive), I try to make sure I know exactly which member I'm after before calling up the Intellisense popup.</p>
+
+<p>Again, this has had a very positive impact on my coding. First, as with calling test results, it helps me recall and understand more details about the code I'm working with. Second, I think I'm actually going faster. How many times have you called up Intellisense to complete something like <code>.ToString()</code>? By the time you've moved off the home row to select the method you could have typed it two times over. And thirdly, being able to recall your code's API or standard library calls comes in handy for times when you don't have as advanced Intellisense, like when working with dynamic languages.</p>
+
+<div class="note"><b>Aside:</b> Back in my uni days I used to code Java in Emacs. And I <i>knew</i> those APIs. I would look up Javadoc the first couple of times, then I'd just type the right calls by reflex. I miss being able to do that, but calling the shots is now giving me a bit of the best of both worlds: I learn the APIs, but also get quick access to the member list in code I'm not familiar with.</div>
+
+<h2>Start calling today!</h2>
+<p>I definitely recommend calling your shots with TDD; you've got nothing to lose and loads to gain. Weaning yourself off Intellisense-addiction may be substantially more challenging, and probably won't suit everyone, but if you're a fairly fast typer and have every caught yourself longing for a simpler IDE experience then give it a go.</p>

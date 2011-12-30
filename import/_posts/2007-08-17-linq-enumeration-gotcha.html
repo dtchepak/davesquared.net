@@ -1,0 +1,10 @@
+---
+layout: "post"
+title: "LINQ enumeration gotcha"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3645760558081019612"
+categories: [".net", "linq"]
+date: "2007-08-17T09:13:00.0+10:00"
+updated: "2007-08-17T09:13:08.572+10:00"
+---
+
+<p>Rick Strahl has posted&nbsp;about <a title="enumerating over LINQ to SQL results" href="http://www.west-wind.com/weblog/posts/136325.aspx">enumerating over LINQ results</a>. Essentially, each item enumerated in a LINQ-to-SQL <code>select</code> fires off a new DB query. This means that modifying the result will not affect the resultset on the next enumeration (which probably sounds obvious, but is easy to code without noticing. Especially if you are working on a result and then databinding as in Rick's example). It also means that repeated traversals will incur a repeated overhead, rather than repeating the work in-memory.</p> <p>Good to watch out for. Rick suggests using <code>ToList</code>, <code>ToArray</code>, or <code>ToDictionary</code> methods if you want to grab a single, in-memory copy of the result (obviously being mindful of the result size :)).</p>

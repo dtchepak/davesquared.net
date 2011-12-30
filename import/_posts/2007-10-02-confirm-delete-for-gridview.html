@@ -1,0 +1,20 @@
+---
+layout: "post"
+title: "Confirm delete for GridView's CommandField using JavaScript"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3928048849375808050"
+categories: ["imho", ".net"]
+date: "2007-10-02T16:30:00.0+10:00"
+updated: "2007-10-16T21:24:11.376+10:00"
+---
+
+<p>Been a while since I have had to do this, and to describe my memory as "sieve-like" is probably being generous. After vainly looking for the non-existent OnClientClick property of the CommandField (still can't quite believe they don't have that), I tried to recall the best way of wiring this up. </p> <p>One way is to use a use a TemplateField instead with an ImageButton control or similar and take advantage of its OnClientClick property. If you give it an appropriate CommandName (i.e. "delete")&nbsp;the GridView will automatically fire the OnRowDeleting event if you have wired it up:</p><pre>&lt;asp:TemplateField&gt;
+  &lt;ItemTemplate&gt;
+    &lt;asp:ImageButton runat="server" ID="DeleteButton" 
+      CommandName="delete"  
+      ImageUrl="~/Images/icon-delete-12x12.png"
+      <strong>OnClientClick="if (!window.confirm('Are you sure you want to delete this item?')) return false;"</strong> /&gt;
+  &lt;/ItemTemplate&gt;
+&lt;/asp:TemplateField&gt;                
+</pre>
+<p>Another option is to hook into the RowDataBound event in code behind to attach the required JavaScript to the button in the CommandField, as is suggested in one of Scott Mitchell's great <a title="ASP.NET 2.0 data access tutorials" href="http://asp.net/learn/data-access/tutorial-22-cs.aspx">ASP.NET 2.0 data access tutorials</a> (see Step 3):</p><pre>protected void MyGridView_RowDataBound(object sender, GridViewRowEventArgs e) {<br>  if (e.Row.RowType != DataControlRowType.DataRow) return;<br><br>  int lastCellIndex = e.Row.Cells.Count - 1;<br>  ImageButton deleteButton = (ImageButton) e.Row.Cells[lastCellIndex].Controls[0];<br>  deleteButton.OnClientClick = <br>    "if (!window.confirm('Are you sure you want to delete this item?')) return false;";<br>}<br></pre>
+<p>In this case the last cell is an <code>asp:CommandField</code> with <code>ButtonType="Image"</code>. Be wary of the <a href="http://davesquared.blogspot.com/2007/10/gridview-commandfield-of-type-image.html">double submit issue</a> if you use this approach. Also note that we only return false if the user cancels (i.e. <code>window.confirm</code> returns false). If we just return the result of <code>window.confirm</code> we might end up skipping the JavaScript-triggered postback even if the user wants to go ahead!</p>

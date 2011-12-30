@@ -1,0 +1,444 @@
+---
+layout: "post"
+title: "Garden Race Pt 3: It's GUI time!"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7750891187469413466"
+categories: ["+Garden Race", ".net", "worstpostever", "tdd"]
+date: "2009-03-15T22:15:00.0+11:00"
+updated: "2009-03-16T16:49:58.77+11:00"
+---
+
+<p><i>This post is <a href="http://davesquared.blogspot.com/2008/05/garden-race-series.html">part of a series</a> exploring the (very) basics of iterative development using the example of a simple <a href="http://en.wikipedia.org/wiki/Snakes_and_ladders">Snakes and Ladders</a>-like game. Links to each post in the series will be added to the <a href="http://davesquared.blogspot.com/2008/05/garden-race-series.html">index page</a>.</i></p>
+
+<p>After having a think about <a href="http://davesquared.blogspot.com/2008/05/top-down-vs-bottom-up-design.html">top-down and bottom-up design</a>, I concluded that delivering complete vertical slices was more important than whether you started at the top or bottom of the slice. As most of the work in previous iterations has been closer to the bottom of our design, it now seems a good time to start writing some tests around the GUI. This work will form the basis of this iteration.</p>
+
+<div class="note"><b><i>Confession</i></b>: I had about 3 attempts at this installment of the series over the last year or so, each time having something crop up that stopped me working on it. Some of this post may be biased by previous attempts, although with my poor memory there shouldn't be too much chance of that. :) </div>
+
+<h2>Project status and work for iteration 3</h2>
+
+<p>Based on the previous two iterations, all we have left from the original list is the "feature squares" (the snakes and ladders style squares):</p>
+
+<ol>
+<li><strike>A player can roll the die, and then move that many spaces along the board.</strike></li>
+<li>A player that ends his or her turn on a "feature square" (a square containing a creature or obstacle), will be moved to the square connected with that feature.</li>
+<li><strike>There can be 1-4 players, and each player has their turn in sequence.</strike></li>
+<li><strike>A player that reaches the final square wins the game.</strike></li>
+</ol>
+
+<p>We'll leave the pending story on hold for now so we can get to the GUI bits. One thing to notice is that none of these stories, strictly speaking, demand a GUI. So let's add one, in consultation with our customers (i.e. firstborn and I):</p>
+<ol start="5">
+<li>Each player's position will be displayed on an 8 x 8 grid of squares.</li>
+</ol>
+
+<p>This should give us enough to get rid of the command line demo code and give the customer something closer to a usable product. It will probably be enough to fill the whole iteration as well, as we may have to revisit some of the original stories and make sure we have exposed them all through our GUI (story 1 for example). I've also managed to miss a fairly major part of story 3 -- there is currently no way to choose how many players there are in the game.</p>
+
+<p>I think this indicates a problem with the approach so far. Imagine having to revisit every story after implementing 50 or so due to a change to the front end. One big thing we are missing that could help us avoid this are acceptance tests. If we had those, the relevant ones would fail and we could test drive out our way back to green. It could also be an indication that we have too much logic in the untested demo app. We were aware of this when we wrote the demo app though, and never intended to keep it around long enough for it to become a problem, so manually rechecking our 3 finished stories shouldn't be too big a deal.</p>
+
+<p>Let's start off using WPF for this, as it's shiny and new (well, compared with standard WinForms), and comes standard with our current .NET 3.5 platform. We'd obviously want to do some more research if doing this for real. I've done practically nothing with WPF to date, so I'm looking forward to publicly humiliating myself throughout the remainder of this post. (Why don't my regular readers look surprised? ;))</p>
+
+<h2>Where to start?</h2>
+<p>I'd like to replace our untested demo code with tested, production code that we can use as a foundation for a GUI. We need to make sure the functionality of our original stories are exposed via the GUI, rather than the demo app. The two things that jump out at me is that we need a way for a player to roll a die, and we also need some way to indicate the end of the game. The actual rules of the game are hopefully captured in our <code>Game</code> class, so with a bit of luck we'll only need to verify our UI's interaction with that class. Then to complete our story we'll need to make sure each player's position is displayed on the game board.</p>
+
+<p>I'd love to avoid jumping straight to an MVP-style pattern here, in favour of starting from first principles and refactoring to patterns like that when it becomes painfully obvious we need to. However I have absolutely no idea how to do that test-first, so let's try the standard route of creating a <code>GamePresenter</code> that will mediate between our <code>Game</code> model and our UI. We'll start off with the basics of rolling the die and move on from there.</p>
+
+<h2>Rollin', rollin', rollin'</h2>
+
+<p>What should happen when a player interacts with the view to roll the die? Well for starters our model class, <code>Game</code>, should probably be updated to reflect the fact the player is having their turn. We don't have an actual GUI button to press, but we know that we can fire off an event when a GUI button is clicked. If we add this event to a view interface, and our real GUI implements that interface, then we'll be able to write automated tests for large number of interactions with our GUI via its interface. Our GUI implementation itself should be fairly basic and concentrate on rendering and widgets rather than application logic (see the <a href="http://www.objectmentor.com/resources/articles/TheHumbleDialogBox.pdf">Humble Dialog Box</a> [PDF]).</p>
+
+<pre>
+public class GamePresenterSpec {
+    [Fact]
+    public void Game_should_update_when_roll_die_is_clicked() {
+        var fakeGameView = MockRepository.GenerateStub&lt;IGameView&gt;();
+        var fakeGame = MockRepository.GenerateMock&lt;IGame&gt;();
+        var gamePresenter = new GamePresenter(fakeGameView, fakeGame);
+
+        fakeGameView.Raise(view =&gt; view.RollClicked += null, this, EventArgs.Empty);
+        fakeGame.AssertWasCalled(game =&gt; game.Roll(Arg&lt;int&gt;.Is.Anything));
+    }
+}
+</pre>
+
+<p>This test isn't really saying much, just that <code>game.Roll(...)</code> should be called with any argument, which is how a player currently has their turn in our model. We need to extract an <code>IGame</code> interface for this, and also create an <code>IGameView</code> and a <code>GamePresenter</code>.</p>
+    
+<pre> 
+public class GamePresenter {
+    public GamePresenter(IGameView view, IGame game){}
+}
+
+public interface IGameView {
+    event EventHandler RollClicked;
+}
+
+public interface IGame {
+    void Roll(int dieValue);
+}
+</pre>
+
+<p>Our test compiles, but fails. We'll fix that now.</p>
+
+<pre>
+public class GamePresenter {
+    private readonly IGame _game;
+    public GamePresenter(IGameView view, IGame game) {
+        _game = game;
+        view.RollClicked += view_RollClicked;
+    }
+    void view_RollClicked(object sender, EventArgs e) {
+        _game.Roll(1);
+    }
+}
+</pre>  
+
+<p>Our test now passes, and as I can't see much refactoring to do, let's try the next test. Looking at what we have so far, the most obvious deficiency to me seems to be that we are just rolling 1 in the game. We really need a die roll here (1d6 :)), but that would involve random numbers running around our tests causing havoc. So let's fake a <code>DieRoller</code> that we can use to get known values during tests, and random values during the actual game.</p>
+
+<pre>
+ public class GamePresenterSpec {
+    private IGameView fakeGameView;
+    private IGame fakeGame;
+    private IDieRoller fakeDieRoller;
+
+    private GamePresenter CreateGamePresenterAndDependencies() {
+        fakeGameView = MockRepository.GenerateStub&lt;IGameView&gt;();
+        fakeGame = MockRepository.GenerateMock&lt;IGame&gt;();
+        fakeDieRoller = MockRepository.GenerateStub&lt;IDieRoller&gt;();
+        return new GamePresenter(fakeGameView, fakeGame, fakeDieRoller);            
+    }
+    /* ... snip ... */
+    [Fact]
+    public void Game_should_roll_value_from_die_when_roll_die_is_clicked() {
+        CreateGamePresenterAndDependencies();
+        int dieFace = 3;
+        fakeDieRoller.Stub(die =&gt; die.Roll()).Return(dieFace);
+
+        RaiseRollClickedEventOnView();
+        fakeGame.AssertWasCalled(game =&gt; game.Roll(dieFace));
+    }
+
+    private void RaiseRollClickedEventOnView() {
+        fakeGameView.Raise(view =&gt; view.RollClicked += null, this, EventArgs.Empty);
+    }
+}
+</pre>
+
+<p>The new test stubs out a known value for <code>IDieRoller.Roll()</code>, then makes sure that will get passed to our <code>Game</code>. I've also shown that we've extracted the common fixture setup code into a <code>CreateGamePresenterAndDependencies()</code> method, although we'd normally do this refactoring after all the tests get to green (unfortunately this stuff is surprisingly difficult to get into blog-form, so please excuse me taking some licence with presentation).</p>
+
+<pre>
+public class GamePresenter {
+    private readonly IGame game;
+    private readonly IDieRoller roller;
+
+    public GamePresenter(IGameView view, IGame game, <b>IDieRoller roller</b>) {
+        this.game = game;
+        this.roller = roller;
+        view.RollClicked += view_RollClicked;
+     }
+
+    void view_RollClicked(object sender, EventArgs e) {
+        <b>game.Roll(roller.Roll());</b>
+    }
+}
+
+public interface IDieRoller {
+    int Roll();
+}
+</pre>
+
+<p>And we're back at green. What else can we look at? Well we should probably display the result of the roll to the player. Like our <code>view.RollClicked</code> event, we'll just make our view interface have a method for setting the result of a die roll (say, <code>ShowRollResult(dieFace)</code>), and we'll let our actual GUI implementation worry about translating this message to the display.</p>
+
+<pre>
+[Fact]
+public void View_should_show_result_of_roll() {
+    CreateGamePresenterAndDependencies();
+    int dieFace = 2;
+    fakeDieRoller.Stub(die =&gt; die.Roll()).Return(dieFace);
+    RaiseRollClickedEventOnView();
+    fakeGameView.AssertWasCalled(view =&gt; view.ShowRollResult(dieFace));
+}
+</pre>
+
+<pre>
+public class GamePresenter {
+    private readonly IGameView view;
+    /* ... snip ... */
+    void view_RollClicked(object sender, EventArgs e) {
+       <b>var dieValue = roller.Roll();</b>
+       game.Roll(dieValue);
+       <b>view.ShowRollResult(dieValue);</b>
+    }
+}
+</pre>
+
+<h2>Whose turn is it anyway?</h2>
+<p>Tests pass, and can't see any refactoring to do. It is probably important to show whose turn it is, so let's try that now. First up, we need to show the current player when the game is first started.</p>
+
+<pre>
+[Fact]
+public void View_should_show_current_player_when_game_is_created() {
+    CreateGamePresenterAndDependencies();
+    var currentPlayer = 1;
+    fakeGame.Stub(game =&gt; game.CurrentPlayer).Return(currentPlayer);
+    fakeGameView.AssertWasCalled(view =&gt; view.SetCurrentPlayer(currentPlayer));
+
+}
+</pre>
+
+<p>Oops, this won't work. We are using <code>CreateGamePresenterAndDependencies()</code> to create everything in one step, but then we go on to stub out the <code>game.CurrentPlayer</code> call. Let's separate the dependency creation from the creation of the subject under test.</p>
+
+<pre>
+[Fact]
+public void View_should_show_current_player_when_game_is_created() {
+    <b>CreateGameDependencies();</b>
+    var currentPlayer = 1;
+    fakeGame.Stub(game =&gt; game.CurrentPlayer).Return(currentPlayer);
+    <b>new GamePresenter(fakeGameView, fakeGame, fakeDieRoller);</b>
+    fakeGameView.AssertWasCalled(view =&gt; view.SetCurrentPlayer(currentPlayer));
+}
+</pre>
+
+<div class="note"><b>Note:</b> this kind of mucking around with the fixture is a drawback of using a fixture-per-class style of test organisation. This seems to be how most people start TDD (myself included), but I think using a fixture-per-scenario approach (more of a BDD style) is easier to use and probably to learn from. I'm using a more BDD-like approach for my real code now, and am finding it generally makes TDD much easier. I still haven't got it right yet though, so both for that reason and for consistency I'll stick with fixture-per-class for this post.</div>
+
+<p>To get this passing we'll need to pull up <code>Game.CurrentPlayer</code> to the <code>IGame</code> interface, then update the <code>GamePresenter</code> constructor to pass this information to the view.</p>
+
+<pre>
+public GamePresenter(IGameView view, IGame game, IDieRoller roller) {
+    this.view = view;
+    this.game = game;
+    this.roller = roller;
+    view.RollClicked += view_RollClicked;
+    <b>view.SetCurrentPlayer(game.CurrentPlayer);</b>
+}
+</pre>
+
+<p>That handles the start of the game, but we also need to change whose turn it is after each roll.</p>
+
+<pre>
+[Fact]
+public void View_should_show_current_player_after_a_roll() {
+    CreateGamePresenterAndDependencies();
+    var player = 2;
+    fakeGame.Stub(game =&gt; game.CurrentPlayer).Return(player);
+    RaiseRollClickedEventOnView();
+    fakeGameView.AssertWasCalled(view =&gt; view.SetCurrentPlayer(player));
+}
+
+/* In GamePresenter: */
+void view_RollClicked(object sender, EventArgs e) {
+    var dieValue = roller.Roll();
+    game.Roll(dieValue);
+    view.ShowRollResult(dieValue);
+    <b>view.SetCurrentPlayer(game.CurrentPlayer);</b>
+}
+</pre>
+
+<div class="note"><b>Ugh:</b> Looking back through my notes while I'm typing this up, I have something to the effect of &quot;Seems ugly. Using WPF, shouldn't I be binding to the ViewModel/PresentationModel?&quot;. This is fairly important -- I'm going to blatantly end up misusing WPF in this case because I'm not taking advantage of any of the nice databinding features it has. Let's press on though, if for no reason other than to point at the author and laugh at his incompetence. Maybe we can salvage what we have later on.</div>
+
+<h2>Where am I?</h2>
+
+<p>Ostensibly the story we are working on is to display each player's position on the grid. It should not be too hard to update each player's position after they take their turn. Because I haven't done enough of a spike to see how our view should work, let's just assume we have a <code>MovePlayerMarker(...)</code> method on the view that will handle any animation or display stuff we need.</p>
+
+<pre>
+[Fact]
+public void Should_update_players_position_after_roll() {
+    CreateGamePresenterAndDependencies();
+    var player = 1;
+    var newSquare = 10;
+    var oldSquare = 5;
+    fakeGame.Stub(game =&gt; game.CurrentPlayer).Return(player);
+    fakeGame.Stub(game =&gt; game.GetSquareFor(player)).Return(oldSquare);
+    fakeGame.Stub(game =&gt; game.GetSquareFor(player)).Return(newSquare);
+    RaiseRollClickedEventOnView();
+
+    fakeGameView.AssertWasCalled(view =&gt; view.MovePlayerMarker(player, oldSquare, newSquare));
+}
+
+/* In GamePresenter: */
+void view_RollClicked(object sender, EventArgs e) {
+    var dieValue = roller.Roll();
+    <b>var player = game.CurrentPlayer;</b>
+    <b>var startingSquare = game.GetSquareFor(player);</b>
+    game.Roll(dieValue);
+    view.ShowRollResult(dieValue);
+    view.SetCurrentPlayer(player);
+    <b>view.MovePlayerMarker(player, startingSquare, game.GetSquareFor(player));</b>
+}
+</pre>
+
+<p>We are really starting to run into some of the limitations of our <code>Game</code> class now. As soon as a player rolls the die in the game, the positions and current player changed, so we need to save this information prior to calling <code>game.Roll(...)</code>. This may indicate we may have an overly intimate implementation. We need to know all kinds of stuff about the <code>Game</code> implementation to use it, which is making our  <code>view_RollClicked(...)</code> code fairly ugly as it steps through the procedure of running the game. Maybe we should instead expose a list of player positions that we could bind to instead?</p>
+
+<p>It looks like we are due for some refactoring, but I'm not really sure how to proceed with that. Instead of letting that hold us up as we worry about all the potential solutions we could pick, let's put that off and whack up a quick view implementation and see if that helps at all.</p>
+
+<h2>This time I'm playing to win!</h2>
+
+<p>Before we make that final step to the GUI implementation we still need to handle one more  case from our original console app -- winning the game. Here's two tests and an implementation that passes them both (although written one at a time, of course!).</p>
+
+<pre>
+[Fact]
+public void Should_show_winner_when_game_is_finished() {
+    CreateGamePresenterAndDependencies();
+    int player = 3;
+    fakeGame.Stub(game =&gt; game.CurrentPlayer).Return(player);
+    fakeGame.Stub(game =&gt; game.IsFinished).Return(true);
+    RaiseRollClickedEventOnView();
+    fakeGameView.AssertWasCalled(view =&gt; view.ShowWinner(player));
+}
+
+[Fact]
+public void Should_disable_die_roll_when_game_is_finished() {
+    CreateGamePresenterAndDependencies();
+    fakeGame.Stub(game =&gt; game.IsFinished).Return(true);
+    RaiseRollClickedEventOnView();
+    fakeGameView.AssertWasCalled(view =&gt; view.DisableDieRolls());
+}
+
+/* In GamePresenter: */
+void view_RollClicked(object sender, EventArgs e) {
+    var dieValue = roller.Roll();
+    var player = game.CurrentPlayer;
+    var startingSquare = game.GetSquareFor(player);
+    game.Roll(dieValue);
+    view.ShowRollResult(dieValue);
+    view.SetCurrentPlayer(player);
+    view.MovePlayerMarker(player, startingSquare, game.GetSquareFor(player));
+    <b>if (game.IsFinished) {
+        view.DisableDieRolls();
+        view.ShowWinner(player);
+    }</b>
+}
+</pre>
+
+<h2>The worst, most blatant misuse of WPF in history!!!1!</h2>
+
+<p>I'm not proud of what you are about to see. In fact, I'm rarely proud of any of the crud I write on this blog, but if my normal stuff is a 2 out of 10, this is about a -30 * 10<sup>12</sup>. My local check-in comment for this stuff is &quot;Embarrassingly bad GUI using WPF controls&quot;, which is pretty accurate. I'm using WPF controls, but saying this is WPF is like wrapping a 1000 line main method in a class declaration and calling it OO. But I did promise a GUI of sorts, so let's try and get something graphical working.</p>
+
+<div class="note"><b>Don't do this!</b> In case you missed my subtle hints throughout this post, don't repeat what you are about to see. It would be pure evil if it weren't for its lack of competence. Don't bother donning the goggles, they'll do nothing.</div>
+
+<p>First, I've created a new <code>DaveSquared.GardenRace.Gui</code> WPF project to house this hideous monstrosity. I've created a new WPF form called <code>GardenRaceView</code>. Here's the XAML.</p>
+
+<pre>
+&lt;Window x:Class=&quot;DaveSquared.GardenRace.Gui.GardenRaceView&quot;
+    xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+    xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;
+    Title=&quot;GardenRaceView&quot; Height=&quot;526&quot; Width=&quot;716&quot;&gt;
+    &lt;Grid&gt;
+        &lt;Grid.ColumnDefinitions&gt;
+            &lt;ColumnDefinition Width=&quot;528*&quot; /&gt;
+            &lt;ColumnDefinition Width=&quot;166*&quot; /&gt;
+        &lt;/Grid.ColumnDefinitions&gt;
+        &lt;UniformGrid Name=&quot;gameBoard&quot; Rows=&quot;8&quot; Columns=&quot;8&quot; /&gt;
+        &lt;Label Grid.Column=&quot;1&quot; Height=&quot;28&quot; Margin=&quot;0,12,46,0&quot; Name=&quot;currentPlayer&quot; VerticalAlignment=&quot;Top&quot;&gt;currentPlayer&lt;/Label&gt;
+        &lt;Button Grid.Column=&quot;1&quot; Height=&quot;23&quot; Margin=&quot;46,46,46,0&quot; Name=&quot;rollDieButton&quot; VerticalAlignment=&quot;Top&quot; Click=&quot;rollDieButton_Click&quot;&gt;Roll&lt;/Button&gt;
+        &lt;Label Grid.Column=&quot;1&quot; Height=&quot;28&quot; Margin=&quot;0,86,46,0&quot; Name=&quot;rollResult&quot; VerticalAlignment=&quot;Top&quot;&gt;rollResult&lt;/Label&gt;
+        &lt;Ellipse Visibility=&quot;Hidden&quot; Name=&quot;player1Marker&quot; Stroke=&quot;Black&quot; Height=&quot;30&quot; Margin=&quot;5, 0, 0, 0&quot; HorizontalAlignment=&quot;Left&quot; VerticalAlignment=&quot;Top&quot; Fill=&quot;Red&quot; Width=&quot;30&quot; /&gt;
+        &lt;Ellipse Visibility=&quot;Hidden&quot; Height=&quot;30&quot; HorizontalAlignment=&quot;Left&quot; Name=&quot;player2Marker&quot; Stroke=&quot;Black&quot; Fill=&quot;Blue&quot; VerticalAlignment=&quot;Top&quot; Width=&quot;30&quot; /&gt;
+    &lt;/Grid&gt;
+&lt;/Window&gt;
+</pre>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://1.bp.blogspot.com/_wEsHWMWy090/SbzbLY1x70I/AAAAAAAAA-A/zkIQsUa0BK4/s1600-h/gardenRaceView-DesignView.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://1.bp.blogspot.com/_wEsHWMWy090/SbzbLY1x70I/AAAAAAAAA-A/zkIQsUa0BK4/s400/gardenRaceView-DesignView.png" style="cursor: move;" alt="The game screen in VS 2008's design view. It looks even worse when running for real!" title="The game screen in VS 2008's design view. It looks even worse when running for real!" /></a>
+</div>
+
+<p>This gives us two columns to work with: The left hand column to hold the board, and the right hand column for status and game controls. Let's wire this thing up. Here is the xaml.cs file. This was originally wired up piece by piece, manually testing in between (we don't have automated tests for the view remember).</p>
+
+<pre>
+public partial class GardenRaceView : Window, <b>IGameView</b> {
+    public GardenRaceView() {
+        InitializeComponent();
+        FillSquares();
+        MoveToStartingPositions();
+        <b>var gameModel = new Game(64, 2);
+        new GamePresenter(this, gameModel, new DieRoller());</b>
+    }
+
+    private void MoveToStartingPositions() {
+        MovePlayerMarker(1, 0, 0);
+        MovePlayerMarker(2, 0, 0);
+    }
+
+    private void FillSquares() {                        
+        for (var squareNumber=1; squareNumber &lt;= 64; squareNumber++) {
+            var square = new StackPanel();
+            var squareLabel = new Label();                
+            squareLabel.Content = squareNumber;
+            square.Children.Add(squareLabel);
+            gameBoard.Children.Add(square);
+        }
+    }
+
+    public event EventHandler RollClicked;
+
+    private void OnRollClicked() {
+        EventHandler rollClickedHandler = RollClicked;
+        if (rollClickedHandler != null) <b>rollClickedHandler(this, EventArgs.Empty)</b>;
+    }
+
+    <b>public void ShowRollResult(int dieFace) {
+        rollResult.Content = &quot;You rolled a &quot; + dieFace;
+    }</b>
+
+    <b>public void SetCurrentPlayer(int player) {
+        currentPlayer.Content = &quot;Player &quot; + player + &quot;'s turn.&quot;;
+    }</b>
+
+    public void <b>MovePlayerMarker(int player, int fromSquare, int toSquare)</b> {            
+        var markerForPlayer = GetMarkerForPlayer(player);
+        markerForPlayer.Visibility = Visibility.Visible;
+        
+        var containerForMarker = (Panel) markerForPlayer.Parent;
+        containerForMarker.Children.Remove(markerForPlayer);
+
+        <b>if (toSquare &gt;= gameBoard.Children.Count) toSquare = gameBoard.Children.Count-1;</b>
+        var newSquare = (StackPanel) gameBoard.Children[toSquare];
+        newSquare.Children.Add(markerForPlayer);            
+    }
+
+    private Shape GetMarkerForPlayer(int player) {
+        if (player == 1) { return player1Marker; }
+        if (player == 2) { return player2Marker; }
+        throw new ArgumentOutOfRangeException();
+    }
+
+    <b>public void ShowWinner(int winningPlayer) {
+        MessageBox.Show(&quot;Player &quot; + winningPlayer + &quot; wins! Nice work!&quot;);
+    }</b>
+
+    <b>public void DisableDieRolls() {
+        rollDieButton.IsEnabled = false;
+    }</b>
+
+    private void rollDieButton_Click(object sender, RoutedEventArgs e) {
+        <b>OnRollClicked();</b>
+    }
+}
+</pre>
+
+<p>If you haven't been blinded yet, the first thing you'll have seen is that we make our form implement our <code>IGameView</code>. The majority of these implementations are trivial: <code>ShowRollResult(...)</code>, <code>SetCurrentPlayer(...)</code>, <code>ShowWinner(...)</code>, <code>DisableDieRolls()</code>, and firing the <code>RollClicked</code> event. The <code>MovePlayerMarker(...)</code> is fairly hideous, but it is pretty much all view-specific logic (except the highlighted code that does bound checking on the player's positions).</p>
+
+<p>There is also some code in the constructor to fill our <code>UniformGrid</code> (in the incorrect order mind you), and then the code to instantiate our presenter and model code. I don't really see a pressing need for an IoC container here yet, do you? :)</p>
+
+<p>The only other implementation is the pseudo-random <code>DieRoller</code> which we pass through to our presenter:</p>
+
+<pre>
+internal class DieRoller : IDieRoller {
+    Random random = new Random();
+    public int Roll() {
+        return random.Next(1, 6);
+    }
+}
+</pre>
+
+<p>Somewhat surprisingly, this manages to actually work (er, well, somewhat work :)).</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://3.bp.blogspot.com/_wEsHWMWy090/SbzbM3NRtJI/AAAAAAAAA-I/wvU4rTfK6X0/s1600-h/gardenRaceView-GameView.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="292" src="http://3.bp.blogspot.com/_wEsHWMWy090/SbzbM3NRtJI/AAAAAAAAA-I/wvU4rTfK6X0/s400/gardenRaceView-GameView.png" style="cursor: move;" width="400" alt="Screen shot from the game." title="Screen shot from the game. While WPF is meant to make beautiful GUIs easier to make than ever before, it's great to see some people still manage to produce complete garbage. On the positive side, I think this one is still better than Lotus Notes. :)" /></a></div>
+
+
+<h2>On what poor, pitiful, defenseless customers has my monstrosity been unleashed?</h2>
+
+<p>So what have we done? Besides unsubscribing from Dave's blog, we also managed to test drive a presenter and unleash a hideous GUI on our unsuspecting customers. We've done a very rough job on this story (my fault, not yours), but we are now displaying players' positions on a grid. The grid is not in the correct order for a snakes and ladders-style game (it is meant to snake around, starting at the bottom of the board and winding its way up to the top), but we can refine this later. We've also replaced our untested, console-only demo app with a tested, hideous bastardisation of WPF.</p>
+
+<p>We've also found lots of new tasks to do. First, learn WPF. Next, refactor this to have a more useful <code>Game</code> class, and maybe change the presenter into more of a presentation model approach so we can use some WPF goodness. We also need to do something about our incomplete story about being able to play with 1 - 4 players -- at present we have 2 players hard coded in. And we also should put in some snake and/or ladder-like squares.</p>
+
+<p>Despite the obvious problems with the current code, I'd like to try and salvage some small glimmer of positivity from this post. We managed to test drive a whole host of GUI-specific functionality, before we even had a forms project. We managed to hook in a thin view on top of that foundation that, despite being ugly, just worked. (Really it did! If I was going to start lieing to you it would have been in an attempt to hide my incompetence during the rest of the post, not for something trivial like this ;)). And last but not least -- um, no, actually they're the only positives I can think of. :)</p>
+
+<p>I hope you can get some value from this post, even if its just a laugh or two at my expense. :) I'd love to hear your thoughts as to whether what we've got here is salvageable, and if so then how you would start evolving it in the right direction. In the meantime, I'm off to <a href="http://msdn.microsoft.com/en-us/magazine/cc785479.aspx">read up on WPF</a>.</p>

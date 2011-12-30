@@ -1,0 +1,177 @@
+---
+layout: "post"
+title: "Implementing Python-like Range in C#"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-9060164908704518921"
+categories: [".net", "tdd"]
+date: "2008-01-11T11:55:00.0+11:00"
+updated: "2009-06-23T10:47:51.929+10:00"
+---
+
+<p>During a practice coding session last night, I was writing some tests and ran into a small dilemma. I wanted to execute a method call in a loop. Wow, what a tough problem, right? :-) Anyways, my problem was that putting the method call in a <code>for</code> loop sort of obscured the intention of the test. Unrolling the loop was clearer, but was a pain to write.</p><pre>/* Unrolled loop. Pretty obvious what calls we are expecting. */
+using (mockery.Record()) {
+  renderer.WriteCurrentPage(1);
+  renderer.WritePageLink(2);
+  renderer.WritePageLink(3);
+  renderer.WritePageLink(4);
+  renderer.WritePageLink(5);
+}
+...
+/*Less typing, but I'm expecting, um, 4 calls, oh I see, rendering pages 2 to 5 */
+using ( mockery.Record()) {
+  renderer.WriteCurrentPage(1);
+  for (int page=2; page&lt;=5; page++) {
+    renderer.WritePageLink(page);         
+  }
+}
+</pre>
+<p>Parsing the second sample is admittedly pretty straight forward, but I found myself liking the first style as the scenarios being tested became more complicated. What I wanted was something a bit like the Python <a href="http://docs.python.org/tut/node6.html#SECTION006300000000000000000">range()</a> function. It works like this:</p><pre>&gt;&gt;&gt; print range(1,10)
+[1, 2, 3, 4, 5, 6, 7, 8, 9]
+&gt;&gt;&gt; range(10, 1, -1)
+[10, 9, 8, 7, 6, 5, 4, 3, 2]
+&gt;&gt;&gt; print sum(range(1,10))
+45
+&gt;&gt;&gt; print (map(lambda i: i * 10, range(1,10)))
+[10, 20, 30, 40, 50, 60, 70, 80, 90]
+</pre>
+<p>So I thought I'd code up something similar in C# for a bit of fun (depending, of course, on your definition of "fun"). Just to be clear, I wanted a different implementation to Python's. In Python the range stops before the second parameter, so <code>range(1, 3)</code> gives <code>[1, 2]</code>. In my case I want <code>[1, 2, 3]</code>.</p>
+<p>A few provisos. I like provisos, because when someone points out my stupidity I can always say "It's ok! I had provisos!". First, this has probably been done before. Second, this is probably a bad idea, breaking normal loop semantics and so on. Third, this is probably a bad idea for reasons I haven't thought of yet. But, in the name of fun (definition pending), I will proceed. You can <a href="#postAnchor_Range_20080111_getTheCode">download the code</a> I ended up with if you want to have a play around with it.</p>
+<h2>.NET 3.5 version</h2>
+<p style="font-size: x-small;"><i>This section rewritten on 14 February 2008 after reading <a href="http://stevenharman.net/blog/archive/2008/02/12/ruby-has-ranges-and-so-does-c.aspx">Steve Harman's post</a> on <code>System.Linq.Enumerable</code>. Jay Wren has a <a href="http://jrwren.wrenfam.com/blog/2007/12/04/the-good-stuff-is-hidden/">good post</a> on this too.</i></p>
+<p>Turns out that <a href="http://stevenharman.net/blog/archive/2008/02/12/ruby-has-ranges-and-so-does-c.aspx">.NET 3.5 already has a range implementation</a> that completely meets my basic requirements:</p><pre>IEnumerable&lt;int&gt; oneToTen = Enumerable.Range(1, 10);</pre>
+<p>I did search the relevant documentation when I initially wrote this post, but didn't find this .NET 3.5 addition until <a href="http://stevenharman.net/blog/archive/2008/02/12/ruby-has-ranges-and-so-does-c.aspx">Steve Harman's post</a>. However, the implementation covered in the rest of this post does a bit more than the built in functionality: it lets you specify different step values, does &quot;smart&quot; default step sensing, uses a fairly fluent interface, and is also a reasonable TDD exercise.</p>
+<p>This implementation can also be used as a base to generate non-integer ranges, like ranges of DateTime. <a href="http://msmvps.com/blogs/jon_skeet/archive/2008/01/26/immutability-and-inheritance.aspx">Jon Skeet also wrote a Range implementation</a> for his book (which I didn't know when I first wrote this post), that he extended in just this way.</p>
+<h2>Test driving the Range class</h2>
+<p>Let's write a few tests that show how we would like our implementation to work. (When I did this I did the tests and corresponding implementations one at a time, TDD-style. I also did them in a different order to that presented here. I'm combining stuff for the sake of brevity and coherency.)</p><pre>[Test]
+public void Should_be_able_to_get_enumerator() {
+  List&lt;int&gt; rangeValues = new List&lt;int&gt;();
+  foreach (int i in <b>Range.From(1).To(2)</b>) {
+    rangeValues.Add(i);
+  }
+  Assert.That(rangeValues, Is.EqualTo(new int[] { 1, 2 }));
+}
+
+[Test]
+public void Should_be_able_to_get_range_from_1_to_10() {
+  Assert.That(<b>Range.From(1).To(10)</b>.ToArray(), 
+              Is.EqualTo(new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }));
+}
+</pre>
+<p>The implementation to pass them looked a bit like this:</p><pre>public class Range : IEnumerable&lt;int&gt; {
+  private readonly int start;
+  private int stop;
+
+  public Range(int start) {
+    this.start = stop = start;
+  }
+  public static Range From(int startRange) {
+    return new Range(startRange);
+  }
+  public Range To(int endRange) {
+    stop = endRange;
+    return this;
+  }        
+  public IEnumerator&lt;int&gt; GetEnumerator() {      
+    int current = start;
+    while (current &lt;= stop) {
+      yield return current;
+      current++;
+    }
+  }
+  IEnumerator IEnumerable.GetEnumerator() {
+    return GetEnumerator();
+  }
+}
+</pre>
+<p>Right, before plunging into my goal of mapping method calls across this range, I started thinking about negative ranges. In Python you can use <code>range(10, 1, -1)</code> to get <code>[10, 9, 8, .., 2]</code>. Maybe we should have that? I don't want to have to specify a step of -1 though. It should figure that out for itself.</p><pre>[Test]
+public void Should_be_able_to_get_range_from_10_to_1() {
+  Assert.That(<b>Range.From(10).To(1)</b>.ToArray(), 
+              Is.EqualTo(new int[] { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 }));
+}
+</pre>
+<p>And while we're at it, let's give users the option to specify a step if they really want to. They might want every second number in a range.</p><pre>[Test]
+public void Should_be_able_to_set_a_step_value() {
+  Assert.That(<b>Range.From(1).To(10).WithStep(2)</b>.ToArray(), 
+              Is.EqualTo(new int[] { 1, 3, 5, 7, 9 }));
+}
+</pre>
+<p>We don't want them getting <code>OutOfMemoryException</code>S thrown while specifying steps though, so we'll need to make it tough to specify an infinite range.</p><pre>[Test]
+public void Should_handle_step_values_that_immediately_go_out_of_range() {
+  Assert.That(Range.From(1).To(10).WithStep(-1).ToArray(), 
+              Is.EqualTo(new int[]{1}));
+  Assert.That(Range.From(10).To(1).WithStep(2).ToArray(), 
+              Is.EqualTo(new int[] { 10 }));
+  Assert.That(Range.From(-10).To(1).WithStep(-1).ToArray(), 
+              Is.EqualTo(new int[] { -10 }));
+}
+</pre>
+<p>So carefully, test at a time, we get an implementation for <code>GetEnumerator&lt;int&gt;()</code> that looks a bit like this:</p><pre>public class Range : IEnumerable&lt;int&gt; {
+  ...
+  private int step;
+  public Range WithStep(int step) {
+    this.step = step;
+    return this;
+  }
+  ...
+  public IEnumerator&lt;int&gt; GetEnumerator() {
+    int max = Math.Max(start, stop);
+    int min = Math.Min(start, stop);
+    if (step == default(int)) {
+      step = (start == min) ? 1 : -1;
+    }
+    int current = start;
+    while (current &gt;= min &amp;&amp; current  &lt;= max) {
+      yield return current;
+      current += step;
+    }
+  }
+  ...
+} 
+</pre>
+<p>So far so good. Now let's make it easy to perform an operation over a <code>Range</code>. We'll add a <code>Do()</code> method on <code>Range</code>.</p><pre>[Test]
+public void Should_be_able_to_do_sum_with_range() {
+  int sum = 0;
+  <b>Range.From(1).To(5).Do(i =&gt; sum += i);</b>
+  Assert.That(sum, Is.EqualTo(1 + 2 + 3 + 4 + 5));
+}
+</pre>
+<p>And to pass that:</p><pre>//Range.cs
+public void Do(Action&lt;int&gt; f) {
+  foreach (int i in this) { f(i); }
+}
+</pre>
+<p>As an aside, it's also nice to know that our current implementation plays nicely with LINQ. The following test passes without modification:</p><pre>[Test]
+public void Should_be_able_to_use_linq_with_range() {
+  String oneToThree = "";
+  foreach (int num in <b>Range.From(1).To(5).Where(i =&gt; i &lt;= 3)</b> ) {
+    oneToThree = oneToThree + num + " ";
+  }
+  Assert.That(oneToThree, Is.EqualTo("1 2 3 "));
+}
+</pre>
+<h2>Original goal within range...</h2>
+<p>Bad pun, sorry. We can now set our sights on rewriting the original test from the start of this post using the <code>Range</code> class.</p><pre>[Test]
+public void Test_original_mocking_scenario() {
+  MockRepository mockery = new MockRepository();
+  IPagerRenderer renderer = mockery.CreateMock&lt;IPagerRenderer&gt;();
+  using (mockery.Record()) {
+    //This is what we expect Range.Do to call, 
+    //so we obviously won't use the Range class here.
+    renderer.WriteCurrentPage(1);
+    renderer.WritePageLink(2);
+    renderer.WritePageLink(3);
+    renderer.WritePageLink(4);
+    renderer.WritePageLink(5);
+  }
+  <b>using (mockery.Playback()) {
+    renderer.WriteCurrentPage(1);
+    Range.From(2).To(5).Do(i =&gt; renderer.WritePageLink(i));
+  }</b>
+}
+public interface IPagerRenderer {
+  void WriteCurrentPage(int i);
+  void WritePageLink(int i);
+}
+</pre>
+<p>The emphasised section of the code has the same effect as the code snippets at the start of this post. You can compare the <code>mockery.Record()</code> to the <code>mockery.Playback()</code> sections to see the difference. To me this reads nicely: for each number in the <code>Range</code> <code>From</code> 2 <code>To</code> 5 <code>Do</code> the <code>renderer.WritePageLink</code> operation. I'm not about to going using this everywhere or anything, but I'm considering using it when it helps to communicate the intention of a test. All in all, 'twas a bit of harmless fun.</p>
+<h2 id="postAnchor_Range_20080111_getTheCode">Grabbing the code</h2>
+<p>You can get a CS file containing the tests and Range code used for this post from <a href="http://davesquared.googlecode.com/files/RangeSpec.cs">here</a> [links direct to CS file download]. It requires .NET 3.5, NUnit 2.4+ and Rhino Mocks (I used v3.3) to get it to work without modification. Should go without saying, but don't assume it works or is suitable for real life -- it's for solely for the purpose of mucking around :-)</p>

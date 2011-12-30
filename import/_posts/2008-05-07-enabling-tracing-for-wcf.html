@@ -1,0 +1,29 @@
+---
+layout: "post"
+title: "Enabling tracing for WCF (then making sense of the output)"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8960386470673402267"
+categories: ["tools", ".net", "wcf"]
+date: "2008-05-07T15:06:00.0+10:00"
+updated: "2008-05-07T15:58:25.01+10:00"
+---
+
+<p>I've been battling with a few of WCF's &quot;endearing&quot; foibles over the last couple of days (like <a href="http://nimtug.org/blogs/damien-mcgivern/archive/2008/01/30/wcf-required-precompiled-asp-net-site-to-be-updatable.aspx">this one</a>). One thing that I really should have noticed earlier to help with this battle is that you can <a href="http://msdn.microsoft.com/en-us/library/ms733025.aspx">enable tracing for WCF</a>. MSDN gives <a href="http://msdn.microsoft.com/en-us/library/ms733025.aspx">this example</a>:</p>    <pre>&lt;configuration&gt;
+   &lt;system.diagnostics&gt;
+      &lt;sources&gt;
+            &lt;source name=&quot;System.ServiceModel&quot; 
+                    switchValue=&quot;Information, ActivityTracing&quot;
+                    propagateActivity=&quot;true&quot;&gt;
+            &lt;listeners&gt;
+               &lt;add name=&quot;traceListener&quot; 
+                   type=&quot;System.Diagnostics.XmlWriterTraceListener&quot; 
+                   initializeData= &quot;c:\log\Traces.svclog&quot; /&gt;
+            &lt;/listeners&gt;
+         &lt;/source&gt;
+      &lt;/sources&gt;
+   &lt;/system.diagnostics&gt;
+&lt;/configuration&gt;
+</pre>
+
+<p>This produces a fairly unreadable mess, but you can use the <a href="http://msdn.microsoft.com/en-us/library/ms732023.aspx">Service Tracer Viewer</a> (<code>SvcTraceViewer.exe</code>) that comes with the Windows SDK (<code>C:\Program Files\Microsoft SDKs\Windows\v6.0A\Bin</code> on my PC) to get some useful information out of it. This is actually quite a cool tool, providing a nice interface to view all the different activities happening behind the scenes, and highlighting errors that occur.</p>
+
+<a href="http://1.bp.blogspot.com/_wEsHWMWy090/SCFEya1QUtI/AAAAAAAAAjE/-InjLMxqJPM/s1600-h/wcfTraceViewScreenshot.png"><img src="http://1.bp.blogspot.com/_wEsHWMWy090/SCFEya1QUtI/AAAAAAAAAjE/-InjLMxqJPM/s400/wcfTraceViewScreenshot.png" border="0" alt="WCF Trace Viewer screen shot" /></a>

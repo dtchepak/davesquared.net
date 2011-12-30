@@ -1,0 +1,35 @@
+---
+layout: "post"
+title: "Changing previously stubbed calls with Rhino Mocks"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-280487035714792793"
+categories: []
+date: "2011-02-05T11:12:00.0+11:00"
+updated: "2011-02-05T11:14:33.03+11:00"
+---
+
+<p>There are occasionally times when I want to stub a call to return different values at different times in my test. I try and avoid this, as it generally means I'm writing procedural code and violating the <a href="http://en.wikipedia.org/wiki/Hollywood_Principle">Tell Don't Ask principle</a>, but there are times when it's necessary (say, writing procedural steps for an integration test).</p>
+
+<p>Anyway, I've tended to struggle with this when using Rhino Mocks, and end up randomly trying various forms of repeats, such as <code>Repeat.AtLeastOnce()</code> or <code>Repeat.Any()</code>, before I get it to work.</p>
+
+<p>I recently found a better way thanks to <a href="http://stackoverflow.com/questions/123394/rhino-mocks-re-assign-a-new-result-for-a-method-on-a-stub">a thread on StackOverflow</a>: just use a closure.</p>
+
+<pre class="brush:csharp">public interface IDoStuffWithInts { int GetAnInt(); }
+
+[Test]
+public void Change_return_value() {
+    int valueToReturn = 0;
+    var stub = MockRepository.GenerateStub&lt;IDoStuffWithInts&gt;();
+    stub.Stub(x =&gt; x.GetAnInt())
+        .Return(0)
+        .WhenCalled(x =&gt; x.ReturnValue = valueToReturn);
+
+    valueToReturn = 7;
+    Assert.AreEqual(stub.GetAnInt(), valueToReturn);
+    valueToReturn = 11;
+    Assert.AreEqual(stub.GetAnInt(), valueToReturn);
+}
+</pre>
+
+<p>Unfortunately you need to set a dummy return value first, but you can then override that using <code>WhenCalled</code>. This makes it easy to change the stubbed value by changing the variable. I've found it useful to sometimes wrap this in a helper method, such as <code>MakeStuffDoerReturn(int value)</code>.</p>
+
+<p>Hardly ground-breaking I know, but hopefully it will save someone else a bit of pain. :)</p>

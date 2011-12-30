@@ -1,0 +1,37 @@
+---
+layout: "post"
+title: "The \"http://www.\" key"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4786157558820326083"
+categories: ["misc"]
+date: "2009-12-17T09:40:00.0+11:00"
+updated: "2009-12-17T09:44:01.2+11:00"
+---
+
+<p>About 16 hours ago (according to Twitter) I saw the following tweet from <a href="http://twitter.com/shanselman">Scott Hanselman</a>:</p>
+
+<blockquote>
+"I need a keyboard with an "http://www." button." -- <a href="http://twitter.com/shanselman/status/6722895390">shanselman</a>
+</blockquote>
+
+<p>As 'tis the season, I thought I'd oblige. :)</p>
+
+<ol>
+<li>If you haven't done so already, download and install the wonderful <a href="http://www.autohotkey.com/">AutoHotKey</a>.</li>
+<li>Create a file called &quot;theHttpKey.ahk&quot;. On your desktop is fine for now.</li>
+<li>Enter the following text into the file and save it:
+<pre>
+#h::
+Send http://www.
+return
+</pre></li>
+<li>Double-click the file to load it (you'll see a little "H" in the tray on your taskbar, which is the default icon for loaded AutoHotKey files).</li>
+<li>Press <code>Win + h</code> whenever you want to type "http://www.".</li>
+<li>Enjoy your new HTTP key! :) (or ... Profit! for the meme addicted).</li>
+</ol>
+
+<p>If you want this hotkey available all the time, just drag the file or a shortcut to it to your startup folder. If you want to stop the hotkey from working, right click on the icon in the tray and click exit.</p>
+<p>So that's how easy it is to map <code>Win + h</code> (or <code>#h</code> in AutoHotKey parlance) to send some text. Or you can always <a href="http://www.autohotkey.com/docs/Hotstrings.htm">choose a new key combination</a> if you don't like <code>Win + h</code>.</p>
+
+<p>If you are not using AutoHotKey you really owe it to yourself to try it. It is just so easy to automate those little things you keep wishing "Wouldn't it be nice if...", and this can give you a surprisingly large productivity boost. AutoHotKey can do lots of advanced stuff too (moving windows, adding intellisense to prompts, creating forms etc.), but even without delving right into it you can easily create some useful little mappings (like <a href="http://www.davesquared.net/2008/05/bdd-test-naming-with-autohotkey.html">helping with BDD test naming</a> or simulating <a href="http://www.davesquared.net/2008/02/emacs-key-bindings-everywhere.html">Emacs key-bindings</a>).</p>
+
+<p>Enjoy!</p>

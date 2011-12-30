@@ -1,0 +1,201 @@
+---
+layout: "post"
+title: "Calculators and a tale of two TDDs - Pt 1: a traditional approach"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2566906242659465564"
+categories: [".net", "+Calculator TDD", "tdd"]
+date: "2009-10-21T13:11:00.0+11:00"
+updated: "2009-10-22T10:58:14.67+11:00"
+---
+
+<p>I've seen TDD practiced a number of different ways. All of them use the basic "red, green, refactor" approach (i.e. write a failing test, pass it, refactor to clean up the code), but differ in the way the tests are written and in the focus of each test. Each way seems to lead the design differently, pushing design decisions at different times, requiring different amounts of refactoring and also focussing on quite different elements of design and implementation. I have a feeling that when practiced by masters each approach would converge to similar levels of awesomeness, but how far the rest of us get with each approach seems to vary greatly by how we naturally tend to approach problems.</p>
+
+<p>To investigate this I thought I'd have a go at a coding exercise, and attempt it several different ways. You can't draw too many conclusions from this as the knowledge I get each time I go through the exercise will impact the later attempts, but I thought it could be an interesting exercise regardless. </p>
+
+<p>The exercise I've picked is <a href="http://osherove.com/tdd-kata-1/">Roy Osherove's String Calculator kata</a>. You can read the details at his site, but as it helps to avoid reading ahead I'll just describe it as we go. The overall gist is a calculator that has an <code>Add()</code> method. This method takes a string input, adds the numbers in the string together, then returns the result.</p>
+
+<p>For this first attempt I'll be using a traditional Test Driven Development approach (or at least, traditional TDD as I understand it from reading some early-ish work on the topic by <a href="http://www.amazon.com/Test-Driven-Development-Kent-Beck/dp/0321146530/">Kent Beck</a> et al.). We'll pick up from the point where I have created a new solution containing a single C# project called CalculatorKata. I have two files: <code>Calculator</code> and <code>CalculatorTests</code>.</p>
+
+<h2>First test: empty strings</h2>
+
+<p>The first requirement for <code>Add()</code> is that it should return zero when given an empty string. Let's do that:</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class CalculatorTests {
+    private Calculator calculator;
+
+    [SetUp]
+    public void SetUp() {
+        calculator = new Calculator();
+    }
+    
+    [Test]
+    public void Takes_empty_string_and_returns_zero() {
+        Assert.That(calculator.Add(&quot;&quot;), Is.EqualTo(0));
+    }
+}
+</pre>
+
+<p>I've cheated a bit here by extracting a <code>SetUp</code> method in advance, but I'm pretty sure I'm going to need a new calculator for each test. Maybe this is evil. Feel free to point out the problems with this in the comments. This test doesn't pass, so let's pass it:</p>
+
+<pre class="brush:csharp">
+public class Calculator {
+    public int Add(string expression) {
+        return 0;
+    }
+}
+</pre>
+
+<p>It passes. Stay with me, things should start getting more interesting later (I hope...).</p>
+
+<h2>Test 2: Adding a single number</h2>
+
+<p>The next requirement is for when the string contains a single number. The test and passing implementation is below:</p>
+
+<pre class="brush:csharp">
+//CalculatorTests.cs
+[Test]
+public void Takes_a_single_number_and_returns_it() {
+    Assert.That(calculator.Add("2"), Is.EqualTo(2));
+}
+
+//Calculator.cs
+public int Add(string expression) {
+    if (expression == &quot;&quot;) return 0;
+    return int.Parse(expression);
+}
+</pre>
+
+<h2>Summing multiple numbers</h2>
+
+<p>The next requirement is to actually sum multiple numbers separated by commas (','). We'll start of with the easy case: 2 numbers.</p>
+
+<pre class="brush:csharp">
+//CalculatorTests.cs
+[Test]
+public void Takes_two_numbers_delimited_by_commas_and_returns_the_sum() {
+    Assert.That(calculator.Add(&quot;1,2&quot;), Is.EqualTo(3));
+}
+
+//Calculator.cs
+public int Add(string expression) {
+    if (expression == &quot;&quot;) return 0;
+    return expression.Split(',').Sum(x =&gt; int.Parse(x));
+}
+</pre>
+
+<p>Now you're quite welcome to debate me on whether this is actually the simplest thing that could possibly work. I could assume from my test that I'll only be dealing with two single digit numbers separated by a comma, get each digit via array access (<code>expression[0]</code> and <code>expression[2]</code>), parse each as an <code>int</code> and return the sum, but that hardly sounds any simpler to me. The current implementation will also pass our next test:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void Takes_multiple_numbers_separated_by_commas_and_returns_the_sum() {
+    Assert.That(calculator.Add(&quot;1,2,3,4,5,6,7,8,9&quot;), Is.EqualTo(45));
+}
+</pre>
+
+<p>The only refactoring I can see is extracting the delimiter (',') into a constant. Once that's done we can go to the next step.</p>
+
+<h2>Allow commas and newlines as delimiters</h2>
+
+<pre class="brush:csharp">
+//CalculatorTests.cs
+[Test]
+public void Takes_numbers_delimited_by_a_newline_and_returns_the_sum() {
+    Assert.That(calculator.Add(&quot;1\n2\n3&quot;), Is.EqualTo(6));
+}
+
+//Calculator.cs
+public class Calculator {
+    private string[] delimiters = new[] {&quot;,&quot;, &quot;\n&quot;};
+    public int Add(string expression) {
+        if (expression == &quot;&quot;) return 0;
+        return expression.Split(delimiters, StringSplitOptions.None).Sum(x =&gt; int.Parse(x));
+    }
+}
+</pre>
+
+<h2>Allow a custom delimiter</h2>
+
+<p>The next requirement in the kata is more interesting. As input we can optionally specify a delimiter by using the following format: <code>//[delimiter]\n[numbers]</code>. The test is fairly simple, but the code got very messy:</p>
+
+<pre class="brush:csharp">
+//CalculatorTest.cs
+[Test]
+public void Can_set_the_delimiter_at_the_start_of_the_expression() {
+ Assert.That(calculator.Add(&quot;//;\n1;2;3;4&quot;), Is.EqualTo(10));
+}
+
+//Calculator.cs
+public class Calculator {
+    private const string CustomDelimiterToken = &quot;//&quot;;
+    private string[] DefaultDelimiters = new[] {&quot;,&quot;, &quot;\n&quot;};
+
+    public int Add(string expression) {
+        if (expression == &quot;&quot;) return 0;
+        var delimiters = DefaultDelimiters;
+        if (expression.StartsWith(CustomDelimiterToken)) {
+            var indexOfStartOfCustomDelimiter = CustomDelimiterToken.Length;
+            var indexAfterCustomDelimiter = expression.IndexOf(&quot;\n&quot;);
+            var customDelimiter = expression.Substring(indexOfStartOfCustomDelimiter, indexAfterCustomDelimiter - indexOfStartOfCustomDelimiter);
+            delimiters = new[] {customDelimiter};
+            expression = expression.Substring(indexAfterCustomDelimiter + 1);
+            //Console.WriteLine(expression);
+        }
+        return expression.Split(delimiters, StringSplitOptions.None).Sum(x =&gt; int.Parse(x));
+    }
+}
+</pre>
+
+<p>That's beginning to look pretty intolerable. Our test passes, but this is in desperate need of refactoring. Now I'm pretty sure I've stuffed up the traditional TDD process here: this seems like much too big a step to get this test to pass. This could be an indication that I should have refactored first. Another indication is, as you may have noticed, I left a commented out <code>Console.WriteLine()</code> in there. That was because I had initially stuffed up the string escaping of the newline character, and couldn't find a good way to get inside my implementation to test what the value was at that point. This just feels plain dirty when you resort to that, but pragmatism won that battle and it helped me fix my error. All of this is really screaming out for a nice big refactoring, and I did refactor, but it was mainly tinkering around the edges using Extract Method to make the mess more understandable, rather than cutting through the mess itself.</p>
+
+<pre class="brush:csharp">
+public class Calculator {
+    private const string CustomDelimiterToken = &quot;//&quot;;
+    private const string NewLine = &quot;\n&quot;;
+    private string[] DefaultDelimiters = new[] {&quot;,&quot;, NewLine};
+
+    public int Add(string expression) {
+        if (expression == &quot;&quot;) return 0;
+        var delimiters = DefaultDelimiters;
+        if (HasCustomDelimiterSpecified(expression)) {
+            delimiters = new[] {GetCustomDelimiter(expression)};
+            expression = GetExpressionWithoutCustomDelimiterSpecification(expression);
+        }
+        return expression.Split(delimiters, StringSplitOptions.None).Sum(x =&gt; int.Parse(x));
+    }
+
+    private string GetExpressionWithoutCustomDelimiterSpecification(string expression) {
+        return expression.Substring(IndexOfFirstNewLine(expression) + 1);
+    }
+
+    private string GetCustomDelimiter(string expression) {
+        var indexOfStartOfCustomDelimiter = CustomDelimiterToken.Length;
+        var indexAfterCustomDelimiter = IndexOfFirstNewLine(expression);
+        var lengthOfCustomDelimiter = indexAfterCustomDelimiter - indexOfStartOfCustomDelimiter;
+        var customDelimiter = expression.Substring(indexOfStartOfCustomDelimiter, lengthOfCustomDelimiter);
+        return customDelimiter;
+    }
+
+    private int IndexOfFirstNewLine(string expression) {
+        return expression.IndexOf(NewLine);
+    }
+
+    private bool HasCustomDelimiterSpecified(string expression) {
+        return expression.StartsWith(CustomDelimiterToken);
+    }
+}
+</pre>
+
+<p>Not horribly impressive, is it? Perhaps a little easier to understand the <code>Add()</code> method itself, but this implementation hardly fills me with joy. The kata is not fully finished yet, but I think this is a decent place to stop and take stock.</p>
+
+<h2>Where did I go wrong?</h2>
+
+<p>Well, first up I missed the cue for a bigger refactoring. My tests weren't really screaming out a nice direction for me to go though. If you know your <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">SOLID principles</a> you'll have noticed right away that I am violating the Single Responsibility Principle (SRP). My class is doing lots of things: interpretting custom delimiters specified in a string, parsing numbers from the string, and adding the numbers.</p>
+
+<p>Later on I went through and factored out a <code>NumberParser</code> class which took care of all the delimiter stuff and returning the numbers in the string, but that class still needed to be broken down further as well. Then I also needed to update the tests, so the calculator tests only test that it adds the numbers that come back from a mock <code>NumberParser</code>, and then adjust most of the current tests to test that the number parser is doing the parsing properly. Sure, I could leave the current tests as integration tests and forget about each unit, but I've this approach has given me troubles in the past.</p>
+
+<p>Now I'm sure that if I were a better TDDer, refactorer, OOer etc that this would have turned out better. But my main complaint is that my tests aren't really helping me drive out my <i>design</i>. They help me to drive out an <i>implementation</i> that works (for which I am very grateful -- so much better than old school hack and slash :)), but by the time I am getting design feedback and test smells I've already dug myself in a bit of a hole. Luckily I've got tests to haul myself out, but is there a better way? Or do I need to just resign myself to the fact that I'm going to have to run through the gauntlet of SOLID principles and GRASP patterns etc. after each test to see when I need to refactor? But even then, refactor to what? I can start writing tests for the <code>NumberParser</code>, then join the bits back together, but this seems a bit hit-and-miss to me.</p>
+
+<p>I'd love to get your thoughts on this. Anyone that wants to give the first part of the kata a try I'd love to read a blog post or have a chat with you and see how things ended up for you.</p>
+
+<p><a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">Next up</a> I'll try a different flavour of TDD on the same problem.</p>

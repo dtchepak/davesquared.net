@@ -1,0 +1,37 @@
+---
+layout: "post"
+title: "Emacs key bindings everywhere"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7018461110271660558"
+categories: ["downloads"]
+date: "2008-02-11T11:30:00+11:00"
+updated: "2008-02-11T12:39:50.278+11:00"
+---
+
+<p>I used to use Emacs for everything, and I loved it. You could do absolutely everything really efficiently from the keyboard using a number of arcane key combinations, and once the learning curve had been overcome you could absolutely fly through your work.</p>
+<p>Now I use Visual Studio for my coding work, MS Word for documentation, and NotePad++ for everything else, I find myself wishing that I didn't have to move positions on the keyboard to move the cursor, delete characters and words, and do basic document navigation. I know VS.NET has Emacs key bindings available, but I find that their incompleteness means I have to mentally figure out whether to use Windows or Emacs shortcuts. This is especially difficult when switching between applications.</p>
+<p>So I decided to whip up a quick <a href="http://www.autohotkey.com/">AutoHotKey</a> script that reproduces the basic Emacs document navigation key bindings, sticking to the shortcuts that don't interfere too much with standard Windows shortcuts (for example, I left Ctrl-V alone :)). You can toggle "Emacs Mode" on and off using the CapsLock key, and because it uses AutoHotKey to translate key strokes, it works everywhere your keyboard does :). I've been using it for months and found it quite useful, so I thought I'd put it online before I lose it. :)</p>
+<p>You can download the script from <a href="http://davesquared.googlecode.com/files/EmacsEverywhere.zip">here [ZIP]</a>. You'll also need <a href="http://www.autohotkey.com/">AutoHotKey</a>. I'm far from an expert on AutoHotKey, so feel free to comment or email if you find any problems with the script.</p>
+<h2>Key bindings</h2>
+<p>The keys mapped by the script are described below. The mappings aren't perfect, they simply translate Emacs keys into similar Windows key combinations. Because different applications implement concepts like "next word" differently, sometimes you get results that are slightly different to expected. C is Control, M is meta key (Alt).</p>
+<table>
+<tr><td>CapsLock</td><td>Toggle Emacs mode on/off</td></tr>
+<tr><td>C-p</td><td>Previous line (move up)</td></tr>
+<tr><td>C-n</td><td>Next line (move down)</td></tr>
+<tr><td>C-f</td><td>Forward one character (move right) <span style="font-style:italic;">Note: conflicts with normal &quot;find&quot; shortcut</span></td></tr>
+<tr><td>C-b</td><td>Back one character (move left) <span style="font-style:italic;">Note: conflicts with normal &quot;bold&quot; shortcut</span></td></tr>
+<tr><td>M-f</td><td>Forward one word</td></tr>
+<tr><td>M-b</td><td>Back one word</td></tr>
+<tr><td>C-a</td><td>Start of line <span style="font-style:italic;">Note: conflicts with normal &quot;Select all&quot; shortcut</span></td></tr>
+<tr><td>C-e</td><td>End of line</td></tr>
+<tr><td>C-&lt;</td><td>Start of page</td></tr>
+<tr><td>C-&gt;</td><td>End of page</td></tr>
+<tr><td>C-_</td><td>Undo</td></tr>
+<tr><td>C-d</td><td>Delete character after cursor</td></tr>
+<tr><td>M-d</td><td>Delete word after cursor</td></tr>
+<tr><td>M-Del</td><td>Delete word before cursor</td></tr>
+<tr><td>C-k</td><td>Kill line</td></tr>
+<tr><td>C-w</td><td>Cut region</td></tr>
+<tr><td>M-w</td><td>Copy region</td></tr>
+<tr><td>C-y</td><td>Paste (no kill ring, so don't get full Emacs yank ability)</td></tr>
+</table>
+<p>If you want to use regular CapsLock functionality, try holding down Shift while pressing CapsLock. For me at least, this lets me toggle CapsLock on and off without being caught by the script.</p>

@@ -1,0 +1,30 @@
+---
+layout: "post"
+title: "Adding IPrincipal to the list of known types in WCF"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3682149640613683369"
+categories: [".net", "wcf"]
+date: "2008-05-02T14:58:00.0+10:00"
+updated: "2008-05-02T15:14:24.56+10:00"
+---
+
+<p>WCF has a concept called <a href="http://msdn.microsoft.com/en-us/library/ms730167.aspx">Known Types</a>, which lets WCF handle subclasses and interface implementations passed to services. Normally you can just whack a <a href="http://msdn.microsoft.com/en-us/library/system.runtime.serialization.knowntypeattribute.aspx">KnownTypeAttribute</a> on your DataContract and you're good to go:</p><pre>[DataContract]
+[KnownType(typeof(Manager))]
+public class Employee { ... }
+</pre>
+<p>In the example above, the service will be able to use the <code>Manager</code> subclass anywhere it expects an <code>Employee</code>.</p>
+<p>This doesn't help much when you want to use non-DataContract types like <code>IPrincipal</code>. Trying to pass a <code>GenericPrincipal</code> to a service operation that expects an <code>IPrincipal</code> gives you an error message like this (line breaks added for slightly improved legibility):</p>
+<pre>System.Runtime.Serialization.SerializationException:
+Type 'System.Security.Principal.GenericPrincipal' with data contract name 'GenericPrincipal:http://schemas.datacontract.org/2004/07/System.Security.Principal' is not expected. 
+Add any types not known statically to the list of known types - 
+for example, by using the KnownTypeAttribute attribute or by adding them to the list of known types passed to DataContractSerializer.</pre>
+<p>One solution is to decorate your service contract with a <a href="http://msdn.microsoft.com/en-us/library/system.servicemodel.serviceknowntypeattribute.aspx">ServiceKnownTypeAttribute</a>:</p><pre>[ServiceContract]
+<strong>[ServiceKnownType(typeof(GenericIdentity))]
+[ServiceKnownType(typeof(GenericPrincipal))]</strong>
+public interface ISomeService {
+  [OperationContract]
+  String DoSomethingWith(<strong>IPrincipal principal</strong>);
+}</pre>
+
+<p>While I don't necessarily recommend exposing <code>IPrincipal</code> through your service, the technique is worth knowing about. Most of the search results I got mentioned <code>KnownTypeAttribute</code> and not <code>ServiceKnownTypeAttribute</code>.</p>
+
+<p>Thanks to Steven Cheng who answered this question <a href="http://www.eggheadcafe.com/software/aspnet/31749760/wcf-35-and-problem-with.aspx">in his response to this post</a>. Steven also provided a link to <a href="http://footheory.com/blogs/bennie/">Bennie Haelen's</a> fantastic post on <a href="http://footheory.com/blogs/bennie/archive/2007/07/28/handling-data-contract-object-hierarchies-in-wcf.aspx">Handling Data Contract Object Hierarchies in WCF</a>, which covers more than you could ever want to know about this stuff :-).</p>  

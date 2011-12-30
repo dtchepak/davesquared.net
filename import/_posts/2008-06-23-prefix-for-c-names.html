@@ -1,0 +1,26 @@
+---
+layout: "post"
+title: "@ prefix for C# names"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2278078507427051348"
+categories: [".net"]
+date: "2008-06-23T11:03:00.0+10:00"
+updated: "2008-06-23T11:27:59.716+10:00"
+---
+
+<p>Who'd have thought I'd learn something over <a href="http://www.twitter.com">Twitter</a> (during an uncharacteristic period of uptime)? Nothing overly useful mind you, just an interesting bit of trivia. :)</p>    <p>Besides &quot;yuck&quot;, what would you think when you saw the following C# code?</p>  <pre>
+class @class {
+  public string @someValue;
+  public int @int;
+}
+
+[Test]
+public void TestAtClass() {
+  @class myclass = new @class();
+  myclass.@int = 10;
+  myclass.@someValue = &quot;test&quot;;
+}
+</pre>
+
+<p>Prior to today I'd have thought that it wouldn't compile, but after seeing <a href="http://twitter.com/bradwilson/statuses/841213799">a tweet from Brad Wilson</a> that mentioned you could use @ to prefix variable names I thought I'd give it a try, and sure enough the C# compiler is happy. Brad's tweet was about using @ to prefix reserved words so you can get names like @class.</p>
+
+<p>Bit evil perhaps, but all those @'s might make some <a href="http://rubylearning.com/satishtalim/ruby_names.html">Rubyists feel a bit more at home</a> in C# ;-)</p>  

@@ -1,0 +1,82 @@
+---
+layout: "post"
+title: "Creating a photo album for printing"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2704600828320021379"
+categories: ["linux"]
+date: "2007-07-03T20:08:00+10:00"
+updated: "2008-05-01T09:04:07.752+10:00"
+---
+
+I wanted to create a photo album that I could give to a print shop and get a nice, hard copy album back. Option 1 was to use a word processor and manually drop in 150 photos, rotating and cropping as appropriate. I did not like my chances of Word handling this. Even without .doc format overhead we are talking around 300MB.  Even if  the software would handle it on my fairly basic hardware,  I would have to do it manually or grapple with VBA/Macros to get the photos in.
+
+Option 2 was to fire up my <a href="http://www.ubuntu.com/">Ubuntu</a> Feisty Fawn PC and dust off my old <a href="http://en.wikipedia.org/wiki/Bash">bash</a> scripting skills (using the term "skills" is probably misleading). I also have had great experiences using <a href="http://en.wikipedia.org/wiki/LaTeX">LaTeX</a> to generate documents, and its simple text format would be easy to generate as script output. Finally, I have all my photos in <a href="http://f-spot.org/">F-Spot</a>. I should also mention I had a lot of help from <a href="http://www.opencompositing.org/">Compiz Fusion</a> ;-) -- I'm normally not too fussed with eye candy but once you try Compiz it becomes difficult to live without the visual cues and just plain coolness of a fast 3D desktop.
+
+<span style="font-weight: bold;">Getting a folder full o' photos</span>
+First thing I did was sit down with my lovely wife and pick all the photos we wanted using F-Spot labels. We then exported all the photos into a temporary folder, maintaining the correct photo orientation.
+
+<span style="font-weight: bold;">Ensuring photo ordering</span>
+Next up was a horrible hack to get the photos in the correct order. The photos have a mix of file names, so I could not just order by file name. F-Spot seemed to export copies of the files in the order they appear in its album view -- chronological order. So my horrible hack was just to get a directory listing by creation date, and it seemed to get everything in the correct order. Your mileage may vary. What I wanted to do was rename all these photos to give them sequential numbers. Here is the bash script:
+<pre>#! /bin/bash
+counter=1000
+cd ../Photos
+ls -1t --quoting-style=escape | while read FILE;
+do
+  let counter=$counter+5
+  cp -T "$FILE" ../PhotosOrdered/$counter.jpg
+done</pre>
+The arguments to <code>ls</code> order by date, one file per line. It also escapes the file names, as generally bash scripting and file names with spaces don't mix too well. It is a bit easier if your file names don't have spaces in them, but mine did (not my fault! :)). This copies all the files in the ../Photos directory to ../PhotosOrdered, giving each a number starting from 1000.jpg.
+
+<span style="font-weight:bold;">Generate the LaTeX source file</span>
+The next step was to create a script to take all of the photos in ../PhotosOrdered and get a LaTeX file. I wanted each page to be A4, and two photos per page.
+<pre>#! /bin/bash
+set counter = 0
+set modResult = 0
+echo \\documentclass[a4paper]{article}
+echo \\usepackage{graphicx}
+echo \\usepackage{fancyhdr}
+
+echo \\topmargin =0.mm
+echo \\oddsidemargin =0.mm 
+echo \\evensidemargin =0.mm 
+echo \\headheight =10.mm
+echo \\headsep =5.mm
+echo \\textheight =250.mm
+echo \\textwidth =165.mm
+
+echo \\pagestyle{fancyplain}
+echo \\lhead[{\\tiny \\thepage}]{{\\tiny Dido\'s Birthday Album}}
+echo \\rhead[{\\tiny Dido\'s Birthday Album}]{{\\tiny \\thepage}}
+echo \\cfoot[]{}
+
+echo \\begin{document}
+echo
+echo \\clearpage
+
+ls -1 --quoting-style=escape ../PhotosOrdered | while read FILE;
+do
+  let counter=$counter+1
+  echo \\begin{figure}[!htb]
+  echo \\centering
+  echo  \\includegraphics[keepaspectratio,totalheight=0.45\\textheight,width=\\textwidth]{../PhotosOrdered/$FILE}  
+  echo \\end{figure}
+  let "modResult = $counter % 2"
+  if [ $modResult = 0 ]; then
+    echo \\clearpage
+  fi
+done
+echo \\end{document}
+</pre>
+
+The first part of the script is outputting the LaTeX configuration information such as package usage (for the graphics), header and footer and page size. By the way "Dido" is Ukrainian for "Grandfather" :-). 
+
+The last part of the script deals with the actually inclusion of the images. The images are included using <code>\begin{figure}[<span style="font-weight:bold;">!htb</span>]</code>, to force each image to be fairly immune to LaTeX's figure-positioning smarts. Normally letting LaTeX handle this layout is fantastic, but we are using/misusing LaTeX a bit here and so have to compromise.
+
+The <code>\includegraphics</code> tag handles the resizing of each photo to make sure it only takes up half the page. This lets us fit two to a page. Finally the mod operation and <code>\clearpage</code> flush LaTeX's figure queue and makes sure it does not fret too much about how to layout all the images this idiot is throwing at it :)
+
+To get the output file, we just run this script using <code>createAlbumDocument > doc</code> (<code>chmod +x createAlbumDocument</code> first).
+
+<span style="font-weight:bold;">LaTeX magic</span>
+From there it is just a matter of calling <code>pdflatex doc</code> to generate a lovely, 280MB PDF file. Very quick, very nice printed result too. The print shop was fairly impressed as well. :)
+
+I love LaTeX. I love bash. I love Linux! I also love tea, and now seems a good time to go get one...
+<hints id="hah_hints"></hints>

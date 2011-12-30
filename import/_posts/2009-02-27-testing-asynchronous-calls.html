@@ -1,0 +1,91 @@
+---
+layout: "post"
+title: "Testing a class for making asynchronous calls"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8622745215984115093"
+categories: [".net", "testing"]
+date: "2009-02-27T22:31:00.0+11:00"
+updated: "2009-02-27T22:40:21.597+11:00"
+---
+
+<p>In my <a href="http://davesquared.blogspot.com/2009/02/testing-legacy-code-when-simple.html">last post</a> I looked at doing all kinds of evil things to get some legacy code under test. The code in question launched a new thread to do some work, and I ended up wrapping this asynchronous call in a <code>ThreadDispatcher</code> class for testing.</p>
+
+<pre>
+public class <b>ThreadDispatcher</b> {
+  public AsyncCall Dispach(Action function) {
+    var thread = new Thread(() =&gt; function());
+    thread.Start();
+    <b>return new AsyncCall(thread);</b>
+  }
+}
+
+public class AsyncCall {
+  private readonly Thread _thread;
+  public AsyncCall(Thread thread) { _thread = thread; }
+  public void WaitUntilCallFinishes() { _thread.Join(); }
+}
+</pre>
+
+<p>I could then test the dispatcher like this:</p>
+
+<pre>
+[Test]
+public void RunsFunctionFromDifferentThread() {
+  var dispatcher = new ThreadDispatcher();
+  int callingThreadId = Thread.CurrentThread.ManagedThreadId;
+  int dispatchedThreadId = callingThreadId;
+  var asyncCall = dispatcher.Dispach(() =&gt; dispatchedThreadId = Thread.CurrentThread.ManagedThreadId);
+  <b>asyncCall.WaitUntilCallFinishes();</b>
+  Assert.That(dispatchedThreadId, Is.Not.EqualTo(callingThreadId));
+}
+</pre>
+
+<p>There's (at least) two problems with this. First, the return value of this function is a complete contrivance for the sake of testability (so our tests can call <code>asyncCall.WaitUntilCallFinishes()</code> before checking any assertions). This isn't always a bad thing, but in this case we are adding functionality and complexity that the production code does not need (the fact that the return value is always ignored in production code doesn't seem very reassuring). The second problem is that if we want to use the <code>ThreadPool</code> to run the work in the background then we don't get a reference to a <code>Thread</code>, and therefore can't wait on it.</p>
+
+<h2>A neater approach</h2>
+
+<p>This week I was faced with an actual need to do something like this (the previous implementation was an exercise stemming from a discussion with a mate). I ended up using similar TDD steps to come up with what I feel is a nicer way of testing a fire-and-forget asynchronous call. The implementation itself is trivial, and removes all traces of waiting on/joining threads:</p>
+
+<pre>
+public class AsynchronousDispatcher {
+    public void Execute(Action action) {
+        ThreadPool.QueueUserWorkItem(state =&gt; action());
+    }
+}
+</pre>
+
+<p>The fun part is the tests. Seeing as we've removed the concept of waiting from our implementation, this has to be handled from our tests instead. Which is fine, because the tests are the only place we need this functionality.</p>
+
+<pre>
+[Test]
+public void ShouldExecuteAction() {
+    var wasRun = false;
+    DispatchToThreadAndWaitUntilDone(() =&gt; wasRun = true);
+    Assert.That(wasRun, &quot;Expected action to execute&quot;);
+}
+
+[Test]
+public void ShouldExecuteActionOnDifferentThread() {
+    var currentThreadID = Thread.CurrentThread.ManagedThreadId;
+    var dispatchedThreadID = currentThreadID;
+
+    DispatchToThreadAndWaitUntilDone(() =&gt; dispatchedThreadID = Thread.CurrentThread.ManagedThreadId);
+    Assert.That(dispatchedThreadID, Is.Not.EqualTo(currentThreadID));
+}
+
+private void DispatchToThreadAndWaitUntilDone(Action action) {
+    <b>var resetEvent = new AutoResetEvent(false);</b>
+    var dispatcher = new AsynchronousDispatcher();
+    dispatcher.Execute(() =&gt;
+                           {
+                               action();
+                               <b>resetEvent.Set();</b>
+                           });
+    <b>resetEvent.WaitOne();</b>
+}
+</pre>
+
+<p>You'll see that the tests themselves are almost identical to the ones from last time, as most of the hard work is done in the <code>DispatchToThreadAndWaitUntilDone(Action action)</code> function. This uses an <code>AutoResetEvent</code> to handle synchronisation, and signals (<code>resetEvent.Set()</code>) as part of the work being done on our new thread. While the new thread is busy doing its asynchronous thang, the thread running our test uses <code>WaitOne()</code> to patiently sit around until it gets signaled that the asynchronous thread is done. We can then check that the results of the asynchronous operation matched what we expected, which for these tests is just that the code was run and that it used a different thread to run it.</p>
+
+<p>So now we've got a trivial and tested implementation we can use to make asynchronous calls. If we extract an interface (or make <code>Execute(...)</code> virtual) we can easily mock this or replace it with a synchronous implementation to test classes that need to use <code>AsynchronousDispatcher</code>.</p>
+
+<p>Apologies if this is all a bit simplistic, but I thought the tests looked kinda neat so I thought I'd share. Feel free to rip gigantic holes in it all. :)</p>

@@ -1,0 +1,14 @@
+---
+layout: "post"
+title: "Getting the default value of some value type"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2606302388646403839"
+categories: [".net"]
+date: "2007-01-19T11:06:00.0+11:00"
+updated: "2007-10-04T14:38:20.128+10:00"
+---
+
+<p>I am using reflection to check an object's fields. I only want to do work on fields that are assigned a non-default value, so non-null for reference types, and values other than false/0/0.0 for bool/int/float etc.</p>
+
+<p>C# 2.0 has a <code>default(T)</code> keyword, but this only works when you know the type <code>T</code> at compile time. So <code>default(int)</code> returns 0, but you can't do <code>default(typeof(int))</code> or <code>default(myFieldInfo.FieldType)</code>.</p>
+
+<p>Avner Kashtan has a <a href="http://weblogs.asp.net/avnerk/archive/2006/05/21/Non_2D00_generic-default-values-in-C_23003F00_-Why-not_3F002100_.aspx">good summary and a work-around using reflection</a>, which involves calling the default constructor for value types using <code>Activator.CreateInstance(myFieldInfo.FieldType)</code> and comparing it to the value you have.</p>

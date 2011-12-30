@@ -1,0 +1,33 @@
+---
+layout: "post"
+title: "TDD and unit testing misconceptions"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6399425232784935987"
+categories: ["imho", "featured", "tdd"]
+date: "2007-05-30T21:01:00+10:00"
+updated: "2008-05-01T08:55:53.706+10:00"
+---
+
+<p>Today I test-drove a feature into some legacy code. It was my first shot at using TDD in a real situation (as opposed to my usual contrived play-around scenarios), and it actually went fantastically well. This post is not about all the stuff that worked, but about some common misconceptions that were revealed when something did not work so well.</p>
+
+<p>There is currently a huge amount of work going on in the rest of the code base (read: the whole thing is broken and the web project will not compile), so I did not get a chance to perform integration tests on the feature, and of course a bug crept in. This lead my colleague (hi mate!), upon joyfully discovering the bug, to make a hysterical joke: "I thought you said you unit-tested this thing, how can it have a bug!?!!" (haw haw, &lt;rollsEyes /&gt; :-P).</p>
+
+<p>Now hilarity aside, this jest actually touches on a number of common* misconceptions about both TDD and unit testing.</p>
+
+<p>Firstly, TDD is a design tool, not a testing tool. The fact you end up with a couple of tests afterwards is just a nice bonus. The real value is producing low coupling between modules which results in a testable, maintainable design, and generally a sensible, consumer-focussed API. In this case TDD served me really well, allowing me to inject a nice, self-contained behaviour into a number of legacy classes.</p>
+
+<p>Secondly, unit testing itself does not eliminate bugs. Even with 100% code coverage there will be bugs. Even with full coverage, a comprehensive suite of integration tests, automated user acceptance tests, hordes of dedicated and specialist testers and a beta testing program of 12 million users there will still be bugs**!</p>
+
+<p>So what's the point of unit tests? For one, they indicate that all the tested cases seem to work. As we can't usually exhaustively test, this means that every case left untested might be broken, but at least we have some cases that work. If we pick our test cases carefully then we can have some measure of confidence that lots of code units work in lots of cases. Unit tests also enable us to refactor with some level of protection, and can help us to catch regressions that can occur during development (such as when merging conflicted changes, working with multiple developers etc.).</p>
+
+<p>In my case today the bug was in a thin slice (~10 lines) of untested code used to plumb in the TDD code to the legacy code (all the TDD'ed code works as advertised -- so far). This plumbing code was difficult to test as it tied in with the ASP.NET page lifecycle and HttpContext. So it was untested and ergo, bug ridden :-). However the unit tests helped here enormously. I knew exactly where the bug probably was <em>not</em>, because my tests passed for a similar case. This left only a handful of places where the bug could be hiding. It took about 30 seconds to find the source***, 5 more to fix it, 10 more to commit to SVN.</p>
+
+<p>Which leads to another point about TDD that caused me some grief when I first started -- you need to be aware of exactly <em>what</em> your tests are testing. You need to know the class under test, the behaviour being tested, and what is not being tested. Get any of these things mixed up and you can end up testing a stub object that is never going to be used anyway. And worse, you lose the advantage of knowing where to look for bugs that have crept in.</p>
+
+<p>The last misconception for this post is around the definition of unit tests. Unit tests are NOT integration tests. Both are important. Just because all your units work in isolation doesn't mean they'll get along with each other.</p>
+
+<p>So there you have it. I found TDD in this case was very helpful, great fun and also very successful. It helped produce low-defect (zero so far) code, resulted in a nice design and API, has given a framework for future refactoring, and also helped debug untested code. And gave me an excuse to ramble on in a large blog post. TDD -- it's fan-tastic!****</p>
+
+<p><span style="font-size:78%;">* By "common" I mean they seem to crop up on blogs, blog comments and groups. I have no idea what the majority of developer's think, only my current audience ( er, me :-) )</span></p>
+<p><span style="font-size:78%;">** Actually, this might be sufficient for "Hello, World!".</span></p>
+<p><span style="font-size:78%;">*** I had "==" instead of "!=" on a condition.</span></p>
+<p><span style="font-size:78%;">**** Can I have some advertising revenue now please Mr Beck? :-)</span></p>

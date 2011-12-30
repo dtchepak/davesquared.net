@@ -1,0 +1,46 @@
+---
+layout: "post"
+title: "LINQ-to-SQL logging via DataContext.Log"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6008384047214078878"
+categories: [".net", "linq"]
+date: "2007-11-08T23:30:00.0+11:00"
+updated: "2008-05-01T09:04:07.73+10:00"
+---
+
+<p>After playing around with LINQ-to-SQL today I noticed that the generated <code>DataContext</code> subclass exposes a <code>Log</code> property of type <code>TextWriter</code>.</p> <p>I initially replaced this with a <code>StringWriter</code> backed by a local <code>StringBuilder</code> variable so I could read the output, but then decided to take advantage of the fact that the generated class is a partial class:</p><pre>//Generated class: WidgetDb.designer.cs
+public partial class WidgetDbDataContext : System.Data.Linq.DataContext {
+  ...
+}
+
+//My partial implementation: WidgetDbDataContext.cs
+public partial class WidgetDbDataContext {
+  private StringBuilder logBuilder = new StringBuilder();
+  
+  public String GetLoggedInformation() {
+    return logBuilder.ToString();
+  }
+
+  partial void OnCreated() {
+    Log = new StringWriter(logBuilder);
+  }
+}
+</pre>
+<p>I could then perform a sample query or two in my ASPX:</p><pre>private void doLinqStuff() {
+  WidgetDbDataContext db = new WidgetDbDataContext();      
+  var widgets = from w in db.Widgets select w;
+  WidgetGrid.DataSource = widgets;
+  WidgetGrid.DataBind();      
+  WidgetCount.Text = widgets.Count().ToString();      
+  <strong>StatusLog.Text += db.GetLoggedInformation().Replace("\n", "&lt;br/&gt;");</strong>
+}
+</pre>
+<p>The output of <code>StatusLog.Text</code> from this was:</p><pre>SELECT [t0].[WidgetId], [t0].[WidgetName], [t0].[WidgetDescription], [t0].[WidgetPrice], [t0].[IsActive]
+FROM [dbo].[Widgets] AS [t0]
+-- Context: SqlProvider(Sql2005) Model: AttributedMetaModel Build: 3.5.20706.1
+
+SELECT COUNT(*) AS [value]
+FROM [dbo].[Widgets] AS [t0]
+-- Context: SqlProvider(Sql2005) Model: AttributedMetaModel Build: 3.5.20706.1 
+</pre>
+<p>This is potentially helpful for learning how your expressions translate to SQL, but you probably wouldn't want to do this in production :) </p>
+<p>I then decided to search Google for "DataContext.Log" and found out that people far smarter than me have already come up with <a href="http://www.davidhayden.com/blog/dave/archive/2007/08/17/DataContextLogLoggingLINQToSQLOutputConsoleDebuggerOuputWindow.aspx">better solutions</a>. Ah well, at least I learnt about extending the generated DataContext, as well as some smart ways of logging from others. :) </p>  

@@ -1,0 +1,56 @@
+---
+layout: "post"
+title: "Configuration changes in NHibernate 2.0"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2409539212068750981"
+categories: ["orm", "nhibernate"]
+date: "2008-08-25T16:33:00.01+10:00"
+updated: "2008-08-26T09:51:21.66+10:00"
+---
+
+<p>I downloaded <a href="http://ayende.com/Blog/archive/2008/08/23/NHibernate-2.0-Final-is-out.aspx">NHibernate 2.0</a> today and started to play around with it, only to be greeted by a host of configuration errors like <code>System.InvalidOperationException : Could not find the dialect in the configuration</code>. It was then I remembered reading somewhere about some changes to the configuration syntax, so I downloaded the source and looked at the examples (after a brief, ill-fated search for NHibernate 2.0-specific documentation*).</p>
+
+<div class="note">* <b>Update 2008-08-26</b>: Fabio has published a <a href="http://knol.google.com/k/fabio-maulo/nhibernate/1nr4enxv3dpeq/21">knol on NH2.0</a>. <a href="http://knol.google.com/k/fabio-maulo/nhibernate-chapter-3">Chapter 3 covers configuration.</a></div>
+
+<p>Here is an example of how an <code>App.config</code> looked for NHibernate 1.2:</p>
+
+<pre>
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+&lt;configuration&gt;
+  &lt;configSections&gt;
+    &lt;section name=&quot;nhibernate&quot; type=&quot;System.Configuration.NameValueSectionHandler, System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089&quot; /&gt;
+  &lt;/configSections&gt;
+  &lt;nhibernate&gt;
+    &lt;add key=&quot;hibernate.connection.provider&quot; value=&quot;NHibernate.Connection.DriverConnectionProvider&quot; /&gt;
+    &lt;add key=&quot;hibernate.dialect&quot; value=&quot;NHibernate.Dialect.MsSql2005Dialect&quot; /&gt;
+    &lt;add key=&quot;hibernate.connection.driver_class&quot; value=&quot;NHibernate.Driver.SqlClientDriver&quot; /&gt;
+    &lt;add key=&quot;hibernate.connection.connection_string&quot; value=&quot;Data Source=127.0.0.1\SQLEXPRESS;Initial Catalog=DbWorkshop;Integrated Security=True&quot; /&gt;
+  &lt;/nhibernate&gt;
+&lt;/configuration&gt;
+</pre>
+
+<p>And here is the equivalent for version 2.0:</p>
+<pre>
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+&lt;configuration&gt;
+  &lt;configSections&gt;
+    &lt;section name=&quot;<b>hibernate-configuration</b>&quot; type=&quot;<b>NHibernate.Cfg.ConfigurationSectionHandler, NHibernate</b>&quot; /&gt;
+  &lt;/configSections&gt;
+  &lt;<b>hibernate-configuration</b> xmlns=&quot;urn:nhibernate-configuration-2.2&quot;&gt;
+    <b>&lt;session-factory&gt;</b>
+      &lt;<b>property</b> name=&quot;<b>connection.provider</b>&quot;&gt;NHibernate.Connection.DriverConnectionProvider&lt;/property&gt;
+      &lt;property name=&quot;dialect&quot;&gt;NHibernate.Dialect.MsSql2005Dialect&lt;/property&gt;
+      &lt;property name=&quot;connection.driver_class&quot;&gt;NHibernate.Driver.SqlClientDriver&lt;/property&gt;
+      &lt;property name=&quot;connection.connection_string&quot;&gt;Data Source=127.0.0.1\SQLEXPRESS;Initial Catalog=DbWorkshop;Integrated Security=True&lt;/property&gt;
+    <b>&lt;/session-factory&gt;</b>
+  &lt;/hibernate-configuration&gt;
+&lt;/configuration&gt;
+</pre>
+
+<p>The main changes are:</p>
+<ul>
+<li>We aren't using an <code>nhibernate</code> configuration section, it's <code>hibernate-configuration</code> now (yay for more typing! :P).</li>
+<li>We now have a <code>session-factory</code> child node for adding the configuration properties.</li>
+<li>We aren't adding properties using the <code>&lt;add key=&quot;...&quot; value=&quot;...&quot; /&gt;</code> syntax. Instead we are using <code>&lt;property name=&quot;...&quot;&gt;(property value)&lt;/property&gt;</code>.</li>
+<li>The property names aren't prefixed by &quot;hibernate&quot; anymore, so &quot;hibernate.connection.provider&quot; becomes &quot;connection.provider&quot;.</li></ul>
+
+<p>Moral of the story is to check the source first -- the NHibernate.Examples folder is filled with helpful goodies. :) Svend Tofte also has a helpful post on <a href="http://www.svendtofte.com/serverside/setting-up-nhibernate-20/">setting up NHibernate 2.0</a>.</p>

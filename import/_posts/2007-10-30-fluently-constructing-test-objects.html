@@ -1,0 +1,92 @@
+---
+layout: "post"
+title: "Fluently constructing test objects"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6969534880811979308"
+categories: ["imho", ".net", "tdd"]
+date: "2007-10-30T16:31:00.0+11:00"
+updated: "2007-10-31T09:03:42.719+11:00"
+---
+
+<p>I have recently been playing around with TDD'ing a simple Pager control (like the one rendered at the bottom of the Google search results when your <a href="http://www.google.com.au/search?q=.net#navbar">search returns multiple pages</a>). For each test I ended up with a lot of recurring setup code (the typically repeated code is emphasised below):</p><pre>[Test]
+public void TestPagerAbbreviatesHeadOfList() {
+<strong>  Pager pager = new Pager(2);
+  StubPagerRenderer renderer = new StubPagerRenderer();
+  pager.Renderer = renderer;
+  pager.MaximumPageLinksToDisplay = 1;
+  pager.CurrentPage = 2;
+</strong>  pager.Render();
+  string[] expectedPages = { "...", "2" };
+  Assert.That(renderer.Pages, Is.EqualTo(expectedPages));
+}
+</pre>
+<p>Traditionally a SetUp method has used to perform common initialisation tasks between test runs, but this practice is <a href="http://jamesnewkirk.typepad.com/posts/2007/09/why-you-should-.html">beginning to be discouraged</a>, and after some initial doubts I am inclined to agree. I have frequently found my SetUp methods end up setting initial states that are overridden in some tests and not others, which quickly devalues the common initialisation and results in confusing tests (to assert something you need to check the SetUp method and check if the test is changing any of the default state). In fact, while I find I commonly need to setup common objects, most tests will require their own data relevant to that test. So does that mean I have to live with the duplication of the first 5 lines shown in the test above?</p>
+<p>Well, being extremely prejudiced against duplication, I decided to create a method to create a new pager as a field in my fixture, with the relevant data passed in as parameters:</p><pre>[TestFixture]
+public class PagerBehaviour {
+  private StubPagerRenderer renderer;
+  private Pager pager;
+  [SetUp]
+  public void SetUp() {
+    renderer = null; 
+    pager = null;
+  }
+  void createPagerAndRenderer(int? currentPage, int? numberOfPages, int? maxLinksToDisplay) {
+    pager = new Pager();
+    renderer = new StubPagerRenderer();
+    pager.CurrentPage = currentPage ?? pager.CurrentPage;
+    pager.NumberOfPages = numberOfPages ?? pager.NumberOfPages; 
+    pager.MaximumLinksToDisplay = maxLinksToDisplay ?? pager.MaximumLinksToDisplay; 
+  }
+  ...
+</pre>
+<p>I still used a very basic SetUp method here, just to force every test to explicitly recreate the pager (if they don't they'll get a null pointer exception -- I don't want a test accidentally using the state from a previous test). Here is what a revised test looks like:</p><pre>[Test]
+public void TestPagerAbbreviatesHeadOfList() {
+<strong>  createPagerAndRenderer(2, 2, 1);</strong>
+  pager.Render();
+  string[] expectedPages = { "...", "2" };
+  Assert.That(renderer.Pages, Is.EqualTo(expectedPages));
+}
+</pre>
+<p>This has solved one problem, the duplication of the setup code, but hasn't solved the second, which is giving the test an obvious view of the Pager's state. How on earth am I meant to be able to determine the current page from <code>createPagerAndRenderer(2, 2, 1)</code>? Obviously this solution stinks pretty badly.</p>
+<p>What I really want is an obvious way of passing the data, while still retaining brevity and minimal duplication. My current approach is to add a bit of complexity to get this by using a small class to build up the pager.</p><pre>[TestFixture]
+public class PagerBehaviour {
+  private StubPagerRenderer renderer;
+  private Pager pager;
+
+  /* ... same SetUp() as last example ... */
+
+  PagerAndRendererBuilder createPagerAndRenderer() {
+    pager = new Pager();
+    renderer = new StubPagerRenderer();
+    pager.Renderer = renderer;
+    return new PageAndRendererBuilder(pager);
+  }
+
+  class PagerAndRendererBuilder {
+    private readonly Pager pager;
+    public PagerAndRendererBuilder(Pager pager) {
+      this.pager = pager;
+    }
+    public PagerAndRendererBuilder WithTotalPages(int numberOfPages) {
+      pager.NumberOfPages = numberOfPages;
+      return this;
+    }
+    public PagerAndRendererBuilder CurrentlyAtPage(int currentPage) {
+      pager.CurrentPage = currentPage;
+      return this;
+    }
+    public PagerAndRendererBuilder ShowingMaximumOf(int maximumLinksToDisplay) {
+      pager.MaximumPageLinksToDisplay = maximumLinksToDisplay;
+      return this;
+    }
+  }
+  ...
+</pre>
+<p>My initial test now looks like this: </p><pre>[Test]
+public void TestPagerAbbreviatesHeadOfList() {
+  createPagerAndRenderer().WithTotalPages(2).ShowingMaximumOf(1).CurrentlyAtPage(2);
+  pager.Render();
+  string[] expectedPages = { "...", "2" };
+  Assert.That(renderer.Pages, Is.EqualTo(expectedPages));
+}
+</pre>
+<p>True, this may classify as a bit of a <a href="http://davesquared.blogspot.com/2007/09/misusing-fluent-interfaces.html">misuse of a fluent interface</a>, but to me it eliminates the duplication of creating the renderer and pager whilst providing an easy, readable way of passing test-specific data. The test only needs to deal with the initialisation that is relevant to it. The only cost is a slight increase in complexity, but to me this is more than offset by the increased readability.</p>

@@ -1,0 +1,32 @@
+---
+layout: "post"
+title: "Building native extensions for Ruby Gems on Windows"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3774552043197247131"
+categories: ["ruby"]
+date: "2010-08-20T22:11:00+10:00"
+updated: "2010-08-20T22:11:40.914+10:00"
+---
+
+<p>This tripped me up for a little while, so I thought I'd post it in the hope that it will save someone else some head-scratching.</p>
+
+<p>If you're running Ruby on Windows and trying to install a gem that uses native extensions, you may get an error like this (depending on how you got Ruby on to your machine):</p>
+
+<pre>
+$ gem install jekyll
+Building native extensions.  This could take a while...
+ERROR:  Error installing jekyll:
+        ERROR: Failed to build gem native extension.
+
+c:/Ruby191/bin/ruby.exe extconf.rb
+creating Makefile
+
+make
+'make' is not recognized as an internal or external command,
+operable program or batch file.
+</pre>
+
+<p>Turns out the answer is quite simple: <a href="http://wiki.github.com/oneclick/rubyinstaller/development-kit">RubyInstaller DevKit</a>.</p>
+
+<p>The site has the full instructions, but to give you a quick summary it is just a matter of downloading DevKit, extracting it somewhere, then running <code>ruby dk.rb init</code> followed by <code>ruby dk.rb install</code>. I was very impressed with how easy it was to get working.</p>
+
+<p>Hope this helps.</p>

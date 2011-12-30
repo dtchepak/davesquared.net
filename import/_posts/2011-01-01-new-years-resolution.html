@@ -1,0 +1,56 @@
+---
+layout: "post"
+title: "New Year's resolution"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8611574529203552890"
+categories: ["imho"]
+date: "2011-01-01T20:46:00.0+11:00"
+updated: "2011-01-06T14:17:43.992+11:00"
+---
+
+<p>I don't generally go in for the whole New Year's resolution thing. I'm constantly looking for ways to improve (and have a lot of flaws to choose from ;)), and I'm not going to wait for a specific date to start trying to fix things. In this case though, the timing has coincided quite nicely. So here it is:</p>
+
+<blockquote>
+I will not knowingly contribute, or condone the contribution of, bad code to a project.
+</blockquote>
+
+<p>Let me tell you a story.</p>
+
+<h2>A tale of two projects</h2>
+
+<p>Before I start, let me assure you that we are talking about <em>internal code quality</em> here. DRY, SOLID code. The scenarios discussed below are all uncompromising about product quality. The final products go through strict verification protocols to ensure quality. This is obviously completely independent of the internal code design, which is more to do with how easy the code is to change in light of new requirements etc. </p>
+
+<p>So, towards the end of 2010 my team had several quick projects to get through. All had unachievable deadlines, all had a small scope and small domain, and all were of relatively low importance (more research experiments than shippable products).</p>
+
+<p>For the first of these we had 6 weeks. We used an Agile project approach with one week iterations, did TDD, wrote acceptance tests, etc. Clean code all the way. The software that shipped at the end of the third iteration was good enough to fulfil all the major requirements and everyone was really pleased. We added some extra polish and features in the remaining weeks.</p>
+
+<p>The last of these went quite differently. We were given three days. We estimated we'd need three weeks. We communicated that the deadline could not possibly be met, but resolved to do everything we could to get it working as quickly as possible.</p>
+
+<p>After a bit of debate, <a href="http://www.davesquared.net/2010/08/there-is-no-u-in-collective-ownership.html">we decided</a> to ditch any attempt at clean code and just do whatever it took to ship it as quickly as possible. It was a small project with next to no maintenance requirements, so we figured write-only code would be ok. No SOLID, DRY code meant no slaving over the IDE extracting interfaces, or driving out a nice design using rapid feedback from TDD. We wouldn't use acceptance tests, but would manually test as required, and only automate any testing that was easy. We had a continuous build, but skipped the full deployment build to ship at the end of an iteration; probably because we didn't have iterations. The scope was small, so we decided to use only very broad, coarse-grained stories and just work until they were done. We still had our rigorous verification protocol to pass, but it was a small project, how hard could it be?</p>
+
+<p>As I said, we were meant to have it done in 3 days. We figured it would take three weeks. It <em>should</em> have taken three weeks.</p>
+
+<p>It ended up taking three months.</p>
+
+<h2>The way to go fast is to go well</h2>
+
+<p>Our decision to abandon any pretence of working towards clean code was our undoing. Not making much of an effort at design or removal of duplication resulted in tight coupling and obfuscated code. It was effectively a write-only code base; the simplest of changes became all but impossible, including fixing what should be simple bugs or catering for clarifications to requirements. It was very difficult to find seams for testing bits in isolation, and changes would frequently ripple through the code. Our lack of rigour around project planning and story breakdown made it impossible to track our progress. Time saved by not automating repetitive tasks was re-spent ten-fold on mindless, error-prone tasks when we should have been writing code to finish the project.</p>
+
+<p>Let me make this very clear: anyone that tells you working toward clean code is a waste of time and will slow you down is completely wrong.</p>
+
+<p>You cannot <a href="http://www.davesquared.net/2010/08/quality-vs-shipping.html">trade internal quality for speed</a>. I give you about 30 minutes of coding before you need to change something where an automated test would have made you faster. As you can read from the <a href="http://www.davesquared.net/2010/08/quality-vs-shipping.html">earlier post</a>, I was pretty convinced of this already, but experiencing such a dramatic illustration by far surpassed my expectations in terms of the return on investment in clean code. Previously I would have guessed we'd start feeling pain after about a week of hacking, but it started almost immediately. I am now adamant it is impossible to have anything but an illusion of productivity without writing clean code.</p>
+
+<p>As <a href="http://twitter.com/unclebobmartin">Uncle Bob</a> puts it, the way to go fast is to go well.</p>
+
+<h2>Clean code is a journey, not a destination</h2>
+
+<p>None of the above means gold plating your code. Your code need not be a shining beacon of architectural and OO greatness, gazed upon with awe by artisans for centuries to come. Your code is never completely clean; clean code is not an end state, it is about the process of reducing coupling, reducing duplication, simplifying, and clarifying intention whenever you work with your code.</p>
+
+<p>This does not mean you must practice TDD. It does not mean you need to use a particular language or framework. It does not mandate a project methodology. It doesn't mean you can't spike. It doesn't mean you can't knowingly take on manageable technical debt. It doesn't even mean you must unit test. It means that you need to do what it takes to ensure your code is maintainable. That your code has the qualities we associate with clean code: it works, it is maintainable, it is correct. It is not about trading quality for speed, because that is an illusion. It is about doing what it takes to produce what's required as quickly as possible, and that means you can't afford to write cruddy code.</p>
+
+<p>In short, <a href="http://www.artima.com/weblogs/viewpost.jsp?thread=7588">don't ship $#*!</a>.</p>
+
+<h2>Conclusion</h2>
+
+<p>And so back to my resolution, which was always a high-priority goal of mine but never an unwavering commitment, never before a line I simply will not cross. I will never deliberately contribute or support the contribution of bad code to a project. I will always strive to write clean code, not in pursuit of some programming utopia, but in the sincere belief that it is the only way to quickly and effectively deliver a project.</p>
+
+<p>I wish you all the best of health, happiness, and clean code for 2011. :)</p>

@@ -1,0 +1,18 @@
+---
+layout: "post"
+title: "Converting values for a DataColumn to an Array"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1746149512758712499"
+categories: ["imho", ".net"]
+date: "2007-04-10T15:25:00+10:00"
+updated: "2007-10-16T21:24:29.709+10:00"
+---
+
+<p>I was asked this question today: is there an easy way (i.e. single method call) to convert the row values for a particular DataColumn of a DataTable into a String array. I don't necessarily recommend doing this, but yes:</p>
+<pre>
+String[] rowValuesForColumn =
+ Array.ConvertAll&lt;DataRow, String&gt;(
+   dataTable.Select(),
+   delegate(DataRow row) { return (String) row[columnName]; }
+ );
+</pre>
+<p>You can obviously package all this into a generic method to convert to any type of array.</p>

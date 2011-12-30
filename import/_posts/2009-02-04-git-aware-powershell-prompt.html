@@ -1,0 +1,77 @@
+---
+layout: "post"
+title: "Git-aware PowerShell prompt"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4397291612256960391"
+categories: ["powershell"]
+date: "2009-02-04T23:54:00.0+11:00"
+updated: "2009-02-06T23:05:04.845+11:00"
+---
+
+<p>Today a <a href="http://www.shannoncornish.com/blog/">colleague</a> sent around an interesting link on how to put your <a href="http://www.intridea.com/posts/git-status-in-your-prompt">git status in your bash prompt</a>. I thought I'd spend a few minutes trying to get a similar effect in PowerShell (v2 CTP3). It's not particularly useful, but I found it an interesting exercise. Here's what I came up with, saved in <code>GitAwarePrompt.ps1</code>. <b>Disclaimer:</b> I know nothing about PowerShell so use anything from this post at your own risk. :) </p>
+
+<pre>
+function Get-GitBranchNameWithStatusIndicator {
+  $statusOutput = Invoke-Expression 'git status 2&gt;$null'  <b>#1</b>
+  if (!$statusOutput) { return } <b>#2</b>
+  $branch = $statusOutput[0] <b>#3</b>
+  if ($branch -eq &quot;# Not currently on any branch.&quot;) {
+    $branch = &quot;No branch&quot;
+  } else {
+    $branch =  $branch.SubString(&quot;# On branch &quot;.Length) 
+  }
+  $statusSummary = $statusOutput[-1] <b>#4</b>
+  if ($statusSummary -eq &quot;nothing to commit (working directory clean)&quot;) { <b>#5</b>
+    $statusIndicator = &quot;&quot; 
+  } else {
+    $statusIndicator = &quot;*&quot;
+  }
+  return $branch + $statusIndicator
+}
+
+function prompt { <b>#6</b>
+  $gitStatus = Get-GitBranchNameWithStatusIndicator
+  Write-Host (&quot;PS &quot; + $(get-location)) -nonewline
+  if ($gitStatus) {
+    Write-Host (&quot; [&quot; + $gitStatus +&quot;]&quot;) -nonewline -foregroundcolor Gray
+  }
+  Write-Host (&quot;&gt;&quot;) -nonewline
+  return &quot; &quot;
+}
+</pre>
+
+<p>I've put some numbered comments on a couple of lines so we can go through the main parts of the script, or you can skip to the next heading if you just want to try out the script.</p>
+
+<p>Line #1 uses the <code>Invoke-Expression</code> commandlet to run the <code>git status</code> command and store the output in the local <code>$statusOutput</code> variable. We are using <code>2&gt;$null</code> to drop any output written to standard error, otherwise whenever we try and write a prompt in a non-git directory we'll get a git error message appearing. You'll also notice we have the <code>git status 2&gt;$null</code> command surrounded by single quotes ('), rather than double quotes (&quot;). The reason is that PowerShell automatically performs variable substitution within double quoted strings. So if we used double quotes the <code>$null</code> would be replaced by with nothing (it's current value), which will cause us no end of problems (go on, ask me how I know! :)). </p>
+
+<p>If the <code>git status</code> command errors out (say, if the current directory is not in a git repo), then <code>$gitStatus</code> will be null. Line #2 checks for this and returns void if <code>$statusOutput</code> is undefined. Otherwise <code>$statusOutput</code> will an array of objects, with an item for each line of the command output. Line #3 grabs the first line of output, which contains a string which contains our branch name, and stores it in a variable. The <code>if/else</code> that follow checks first to make sure we are actually on a branch, and parses the branch name from the line.</p>
+
+<p>Line #4 was a nice surprise for me -- PowerShell supports wrapped array indexing! Using an index of <code>-1</code> grabs the last item in the array. Very pythonesque :). Line #5 then compares this with the output <code>git status</code> gives when there are no changes, and the rest of the <code>if/else</code> block sets the <code>$statusIndicator</code> based on this result. (No <a href="http://blogs.msdn.com/powershell/archive/2006/12/29/dyi-ternary-operator.aspx">built in ternary operator</a> apparently.)</p>
+
+<p>Finally, line #6 defines a <code>prompt</code> function, which PowerShell uses to write it's prompt.</p>
+
+<h2>Using the script</h2>
+
+<p>If we just run this script from within PowerShell it will do absolutely nothing. The reason is because any functions or variables defined will be cleaned up when the script exits. To change the scope and affect the current environment we need to <a href="http://www.microsoft.com/technet/scriptcenter/topics/winpsh/manual/run.mspx#EMBAC">dot-source</a> the script, like this (depending on where you saved the script):</p>
+
+<pre>
+PS &gt; . $HOME/Documents/WindowsPowerShell/GitAwarePrompt.ps1
+</pre>
+
+<p>Without the dot and space, you get nothing. With the dot-sourced script, we have created a <code>prompt</code> function for PowerShell to call, and we get the status of our Git working directory from our command line:</p>
+
+<pre>
+PS C:\Development\git\HelloWorld <b>[helloGit]</b>&gt; &quot;Modify hello.txt&quot; &gt; hello.txt
+PS C:\Development\git\HelloWorld <b>[helloGit*]</b>&gt; git commit -a -m &quot;Commit change&quot;
+[helloGit]: created 8a7947c: &quot;Commit change&quot;
+ 1 files changed, 0 insertions(+), 0 deletions(-)
+PS C:\Development\git\HelloWorld <b>[helloGit]</b>&gt; git checkout master
+Switched to branch &quot;master&quot;
+PS C:\Development\git\HelloWorld <b>[master]</b>&gt; &quot;Change hello.txt again&quot; &gt; hello.txt
+PS C:\Development\git\HelloWorld <b>[master*]</b>&gt;
+PS C:\Development\git\HelloWorld <b>[master*]</b>&gt; cd ..
+PS C:\Development\Git&gt;
+</pre>
+
+<h2>Setting the default prompt</h2>
+
+<p>You can also more permanently modify your PowerShell prompt by putting the script in your PowerShell profile, which is set to something like <code>~\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1</code> by default (if it doesn't exist, you can create it from PowerShell using <code> New-Item $PROFILE -ItemType file -Force</code>). This can be something like the Git-aware prompt shown here, or something <a href="http://mshforfun.blogspot.com/2006/05/perfect-prompt-for-windows-powershell.html">more interesting</a>. Be careful you don't slow down your shell too much though: <code>prompt</code> is obviously called on every new line!</p>

@@ -1,0 +1,11 @@
+---
+layout: "post"
+title: "Hotfix Patch for ASP.NET Compilation Issues"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1575112900678348288"
+categories: [".net"]
+date: "2007-04-12T20:45:00+10:00"
+updated: "2007-04-12T20:54:26.741+10:00"
+---
+
+ScottGu has posted about a <a href="http://weblogs.asp.net/scottgu/archive/2007/04/11/public-hotfix-patch-available-for-asp-net-compilation-issues.aspx">hot fix available for ASP.NET compilation problems</a> that have  plagued some of projects we have at work. Symptoms of the issue include wonderful errors like this (care of Scott's post):
+<ul><li><span style="font-family:arial;font-size:85%;">Unable to cast object of type 'ASP.masterpage_master' to type 'ASP.masterpage_master'.</span></li><li><span style="font-family:arial;font-size:85%;">Could not load file or assembly 'App_Web_e9dbmaj, Version=0.0.0.0, ...</span></li><li><span style="font-family:arial;font-size:85%;">Compiler Error Message: CS0006: Metadata file 'C:\WINDOWS\Microsoft.NET\Framework\v2.0.50727\Temporary ASP.NET Files...</span></li></ul>Previously we solved these with an <span style="font-family: courier new;">iisreset</span> and by deleting the temporary files compiled by ASP.NET. The fact we had these errors at all is probably a sign of a ppor solution structure or a problematic design (Scott mentions circular references. We had this problem a lot with a project that had a number of ASCXs in sub-directories that relied on a master page in another directory that were all used in a main ASPX page, as well as having ASCXs registered in <span style="font-family: courier new;">web.config</span>), but I guess it should either work or fail with a decent error message instead of having intermittent breaks. Nice to have the issue resolved :)

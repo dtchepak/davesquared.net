@@ -1,0 +1,129 @@
+---
+layout: "post"
+title: "Why learning TDD is hard, and what to do about it"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7790793726825916733"
+categories: ["imho", "tdd", "tldr"]
+date: "2011-03-21T17:42:00.0+11:00"
+updated: "2011-03-21T22:04:28.961+11:00"
+---
+
+<p>I was recently asked to try some TDD coaching, which involved pairing with an insanely smart dev who was fairly new to TDD. One thing I found interesting was that many of the questions he asked were strikingly similar to the ones that tripped me up when I started out with TDD. Many of these seem to stem from incorrect assumptions about TDD, and the fact we both managed to get similar assumptions got me thinking about their source.</p>
+
+<p>For this post we're going to take a look at why I feel TDD is so hard to learn, at least to the point where it can be used effectively for everyday coding tasks. From there we'll look at how and why TDD works, with the goal of giving new TDD practitioners a way to critically evaluate the introductory material they come across, and hopefully avoid some of the mistaken assumptions that can slow down the learning process. Finally we'll look at some ways this understanding can help people with some of the questions that commonly crop up starting TDD.</p>
+
+<h2>Why is this so hard?</h2>
+
+<p>I think there's a few reasons learning TDD is so difficult. Firstly, I think the hype around TDD can be quite detrimental to the learning process. Depending on which sources you read it is easy to get the impression that TDD is the only valid way of writing software, and that by following the simple steps your code will turn out gleaming with cleanliness, filled with only obvious, beautiful abstractions. In my experience, for all but the simplest of examples, this is just not true.</p>
+
+<p>The unrealistic expectations set by the hype can cause people to become overly focused on the process, without understanding the rationale behind it. This can result in developers applying TDD in an ineffective manner. It can also become very frustrating for the leaner, as they see the process that worked so well for implementing a <code>Stack</code> leave them lost and feeling inept when trying to use it to put something simple on a web page.</p>
+
+<p>TDD is not a substitute for thinking. It is not a replacement for design skills. It is not actually driving anything -- the developer is, and so TDD will only go as well as its driver.  A more realistic view of TDD is that it is simply a tool that can be used to help you get a job done. Sure, it can be a remarkably useful and powerful tool, but in the end the goal is to get the job done*, not to start every bit of code with a failing test.</p>
+
+<div class="note"><b>*</b> Writing shoddy code <a href="http://www.davesquared.net/2010/08/quality-vs-shipping.html">does not qualify as getting the job done</a>.</div>
+
+
+<p>The other reason I believe TDD is hard to learn is that the TDD process itself actually gives you very little guidance as to how to practice it. When trying to learn something new a common first step is to learn a set of rules and go around applying them fairly mindlessly until enough experience is gained to know when to bend or break them. Eventually you start to see the rationale and patterns behind the rules and realise that how to apply them depends mainly on the context. Hence the infamous standard answer from experts: "it depends".</p>
+
+<p>Now with TDD the <a href="http://www.davesquared.net/2008/02/tdd-is-easy.html">rules are trivially simple</a>. In fact they are so simple they don't give you enough guidance to mindlessly apply them until you gain enough proficiency to start achieving success with TDD. Instead you also need to know how to appropriately abstract your design, which requires in-depth knowledge of OO design, patterns, SOLID, DRY, etc. This can make TDD very hard to use effectively until some of these gaps are filled. Now TDD is an excellent way of highlighting deficiencies in these areas, but it isn't quite so forthcoming with the answers.</p>
+
+<h2>Understand the mechanism, then learn to apply it</h2>
+
+<p>I think one way to make TDD easier to learn is to make a concerted effort early on to understand how it works. Sure, start with the trivial, one class kind of example to learn the basics of the red-green-refactor process, like implementing a <code>Stack</code> [<a href="http://www.theserverside.net/tt/articles/content/TDD_Chapter/ch2.pdf">PDF link</a>] or <a href="http://osherove.com/tdd-kata-1/"><code>StringCalculator</code></a>, but then stop and think about what the process is doing.</p>
+
+<p>We start by writing a failing test. Why? Our current tests are all passing, which gives us feedback that there are no known problems with it. By writing a test to expose a deficiency we are clarifying the problem we are trying to solve. Constraining the problem and therefore the possible solutions in this way makes it easier to solve (a divide and conquer-style approach). We're also making sure this code will be tested for both correctness and protection against regressions, but that's not exclusive to TDD; you can get that writing any decent automated tests.</p>
+
+<p>Most importantly we're also sketching out a design, but rather than doing it on a whiteboard (which has its own advantages) we're doing it in code and getting immediate feedback as to how usable it is and how easy it is to test. Let's think about the kind of questions we need to think about in order to write this failing test:</p>
+
+<ul>
+<li>What is our System Under Test's (SUT) responsibility? i.e. What should it do, and when should it do it?</li>
+<li>What is a convenient API for making the SUT do this?</li>
+<li>What does the SUT need to discharge its responsibility? (Data? Collaborators?)</li>
+<li>What output or side-effects are there to observe?</li>
+<li>How can we tell it worked correctly? How is "correct" defined?</li>
+</ul>
+
+
+<p>These are all questions that should be asked at some point when writing any code. The power of TDD is that it provides us with a convenient tool for thinking about these questions. Rather than having to go through each question in turn, resolving potentially conflicting answers as we go, TDD lets us address the more abstract question of "How can I write the next test?", and in the process infer a solution that also addresses the more concrete questions.  This is why TDD is no better than its driver; you still need the skills and experience to answer the same questions. TDD merely gives you a tool to make it easier to think about them.</p>
+
+<p>How exactly does this more abstract question help us? Like all useful abstractions, it gives us a way of thinking of a lot of details as a single whole. We can now tackle all those little details in a single train of thought, in a form that lets us apply both our technical skills and our creativity to finding a solution. And while tackling that single question we get the benefit of another of TDD's strengths: rapid, accurate feedback.</p>
+
+<p>The process of writing the test gives us all sorts of feedback. The setup is too long or complicated? We've probably got too many collaborators (or are violating the Law of Demeter for them) and can try encapsulating them behind a new abstraction. Too many scenarios or test fixtures on the same SUT? Our SUT probably has too many responsibilities. Too hard to isolate the behaviour we're trying to test, or can't find how to write an assert for the behaviour? Maybe the current API or abstraction is wrong, and needs to be broken down differently? With TDD these problems become obvious very quickly. Solving them requires design skills, but so does any other approach to development. Writing the test first gives us ample opportunity to respond to this feedback, to sketch out our design, before committing to it. There is no cheaper time to change your code than before it is written.</p>
+
+<p>Next we make our test pass with the simplest code we can justify. Funnily enough this is the least interesting part of the TDD process. We've done all the hard work in specifying our behaviour, now we just take the relatively simple step of making it work. Is it too hard to get working? Then we drop back to change our test; TDD has just given us feedback that our test is forcing too big a leap. Is the implementation so trivial it has obvious flaws? TDD has just given us feedback to tell us what our next test should expose.</p>
+
+<p>Finally, we have the refactoring step. Our code works, but we've been focussed on passing a very specific test which only shows a very small picture of the application. Now is our chance to <a href="http://www.davesquared.net/2010/05/on-design-and-missing-forest-for-trees.html">zoom out and take in the entire application</a>. If we've  used a naive implementation to get our tests passing we can clean up this duplication, or extract methods to help our code be more self-describing. Even more important is <a href="http://www.davesquared.net/2010/05/on-design-and-missing-forest-for-trees.html">noticing larger scale duplication</a>; finding not only repeated code, but repeated activities that can be abstracted or made a transparent infrastructure concern.</p>
+
+<h2>How does this help?</h2>
+
+<p>Glad you asked! Provided you accept my rambling above, we now understand that TDD helps constrain the scope of the problem we're looking at, gives us a relatively simple way of thinking about the large number of design questions that apply to that problem, and provides rapid feedback on how well we are addressing these problems. This knowledge can help get us through some of the problems that can trip up people learning TDD.</p>
+
+<h3>What test should I write?</h3>
+
+<p>Well the flippant (albeit accurate) answer is whatever test provides you with the feedback you need to further your design. This answer is hardly going to help people just starting out unless we delve into a bit more detail.</p>
+
+<p>What I struggled with most while learning TDD was moving from the simple, unit test driven examples to using TDD for real code. If I picked a unit test of a class lower down the hierarchy I'd have problems fitting the driven code back into the design. The problem was I wasn't thinking about how I could use my tests to give me feedback on what to do. If I had started with a test that described what I was trying to do then I would have been able to start driving out abstractions that actually helped me solve the problem, instead of blindly abstracting myself in circles. The trick is to pick a test that encapsulates what you know about the current problem.</p>
+
+<p>Let's look at a more extreme case to illustrate this. Say we have a brand new project. In this case we're not even sure what classes we need. How can we use TDD to get feedback on our class design when we don't even have a class? Well, let's write a test that describes the feature (or story) we're working on. This will be an acceptance test rather than a unit test. <a href="http://www.davesquared.net/2010/06/tdd-not-utdd.html">No one said TDD has to exclusively use unit tests</a>, but as most examples for new practitioners concentrate on the process they all seem to use unit tests, hence the common misconception. This process will allow us to sketch out a basic architectural skeleton which we can flesh out and modify as we go along. Our test will provide us with feedback on how well we've managed to break the feature's requirements into manageable, testable abstractions. We'll also get a nice programmable interface to our system for future acceptance and integration tests. I found the <a href="http://www.growing-object-oriented-software.com/">Growing OO Software Guided By Tests books</a> a great source of examples of how to do this.</p>
+
+<p>Once we have defined the basic behaviour for the feature via the acceptance test we can implement some of the infrastructure required for the test (build, CI etc.), and then pick the top class our test has discovered and start using more granular tests to drive out our classes. Or perhaps we won't even need more granular tests; the direction given by our acceptances tests might be sufficient for us to implement the feature.</p>
+
+<h3>But you just wrote code before writing a test!</h3>
+
+<p>Sure! TDD gives you feedback on design. When you already know what's required (say you're filling in pieces to comply with a set architecture) the design part of TDD is not giving you much benefit. The only real positive of writing a test first in this case is that you ensure the test fails first; it's a way of testing the test. This is test-first development, not TDD.</p>
+
+<p>The less unknowns we have, the less our tests need to teach us, and the larger steps we can take.</p>
+
+<h3>You picked an MVVM pattern and defined a view without a test!</h3>
+
+<p>We've already learnt that TDD constrains the problem space we are looking at, as well as provides feedback on how well we are addressing this problem. Of course TDD isn't the only thing imposing constraints on us, nor our only source of feedback. Our choice of UI technology (WPF, an MVC framework, GTK, WebForms etc) imposes very real constraints on how we deal with our UI.</p>
+
+<p>One way to address these constraints is to use a <a href="http://martinfowler.com/eaaDev/SeparatedPresentation.html">separated presentation pattern</a> such as <a href="http://www.davesquared.net/2010/02/attempt-at-simple-mvvm-with-wpf.html">MVVM</a>. In that case, we might define the properties and commands we need on a ViewModel without a single test. We're constrained by our UI technology, the UI pattern we've chosen, and the screen design we've worked out during discussions (another medium with rapid feedback) with our customers.</p>
+
+<p>TDD isn't our only source of constraints and feedback. Where real constraints exist we don't need to force new ones by using TDD and ignoring reality.</p>
+
+<div class="note"><b>Aside</b>:  I struggled with how to derive separated presentation patterns from first principles a lot when I first started: how could I use only tests to end up with MVP, MVVM etc? I think this becomes very difficult because at one end you have reality, the UI toolkit you need to work with, and at the other you just have your imagination and your tests. There are some hard constraints that simply don't pop out from tests, and they are just as relevant drivers as the feedback from the tests themselves. (That said, if anyone has derived a nice separated presentation implementation purely from TDD please share.)</div>
+
+
+<h3>I'm stuck! I've test-driven myself into a hole and can't get out</h3>
+
+<p>I've done this an embarrassing number of times. I've used tests to guide every line of code, <a href="http://www.davesquared.net/2010/05/test-driving-while-refactoring.html">including lines I write as part of refactoring</a>, and ended up stuck in a maze of pointless abstraction. Remember, TDD is not a substitute for thinking, <a href="http://www.davesquared.net/2010/02/improving-tdd-skills-via-treatment-of.html">you still need to be able to code</a>.</p>
+
+<p>If TDD is not giving you the information you need, back up and try something else. Go through some ideas with colleagues as a white board. Use test coverage at a higher level of abstraction for feedback and work from there. Maybe spike some solutions (it is often faster to try out 3 different solutions than try and figure the best solution up front). TDD is one way of getting good constraints and feedback, but it is not the only way. Do what works for your situation, but make sure you think about it later and try and find the reason you got stuck.</p>
+
+<div class="note"><b>Note:</b> If you can't get TDD to help you with a problem, make a note of it before trying something else, and come back to it later. It is important to see if it was just a problem TDD was ill-suited for, or whether a gap in your knowledge has been exposed. You'll never know the difference if you give up too easily on TDD. Pursuing these leads is what led me to discover mocking, IoC containers, conventions, BDD etc. And I'm far from finished finding gaps in my knowledge. ;)</div>
+
+
+<h3>TDD? BDD? ATDD? Which should I use?</h3>
+
+<p>You might notice that the use of TDD is very problem-specific (and developer-specific for that matter). Different problems raise different design issues that will require different types of feedback. This means we're going to have to apply TDD in different ways to give us the feedback we need to drive out our application's design. This can be top-down or bottom-up. In some cases we could lean very heavily on acceptance tests. Other times we might like to drive out implementation by a whole lot of unit tests. Still other problems may be well-served by end-to-end tests that actually hit an external database or service (these have their own issues, but if they are helping you get the feedback and design you need, then go for it!).</p>
+
+<p>There isn't one right answer; you need to focus on getting the feedback that helps you get the job done.</p>
+
+<h2>Conclusion</h2>
+
+<p>While the rules for the TDD process are simple, learning to use it effectively is anything but. The rules themselves give us only minimal assistance when we're starting out, and the hype surrounding TDD can give us unrealistic expectations about what it will do for us.</p>
+
+<p>We can address this by trying to understand how TDD works; the rationale behind the rules. We've seen that TDD is really just a way of constraining a problem, encapsulating the process of design by using the abstraction of a test, and providing rapid feedback as to how well our design is going. The process essentially gives us a nice way to think about and iteratively do design.</p>
+
+<p>Once we understand this we can start trying to apply TDD in a more targeted manner, deliberately applying it in ways to give us the feedback we need to make design decisions. We won't restrict ourselves to unit tests alone, but will switch between testing at different levels of abstraction without feeling guilt over not using an unit test as all the introductory examples seem to. Nor will we feel guilty when we make a decision without TDD's feedback, instead relying on other feedback like other systems we're interacting with, the UI technology we're using, or the persistence technology that's been mandated company-wide.</p>
+
+<p>We're also not going to feel inept when we fail to apply the deceptively simple TDD rules, as we realise TDD is just a tool to help us think about design problems, and that there are always going to be gaps in our knowledge and experience we need to fill before we can solve new problems. The fact TDD has illustrated these gaps quickly gives us an opportunity to learn right away, rather than leaving us in blissful ignorance until things explode as a deadline looms, or worse, keeping us unaware of and repeating the same mistakes time after time.</p>
+
+<p>Design is hard. TDD gives us one great way of thinking about it and learning how to do it better.</p>
+
+<p>If you're currently learning TDD I hope these ramblings have given you a different way of thinking about it that will help make your journey a little easier. Best of luck -- I think you'll find TDD well worth the effort! :)</p>
+
+<h2>In case this post wasn't long enough for you...</h2>
+
+<p>This post summarises what I've learned to date from my TDD journey. Have a look at the following posts if you'd to read how my thoughts on this have evolved over the years (they're listed from oldest to latest). They'll also provide some more details and/or examples of some of the ideas discussed in this post.</p>
+
+<ul>
+<li><a href="http://www.davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">Scenario-based testing</a></li>
+<li><a href="http://www.davesquared.net/2009/09/example-of-driving-design-through-top.html">Example of driving design through top-down testing</a></li>
+<li>Calculators and a tale of two TDD styles <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">Part 1</a>, <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">Part 2</a>, <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-3.html">Part 3</a></li>
+<li><a href="http://www.davesquared.net/2009/11/favour-test-driving-logic-over-data.html">Favour test driving logic over data</a></li>
+<li><a href="http://www.davesquared.net/2010/02/what-exactly-is-tdd-driving.html">What exactly is TDD driving?</a></li>
+<li><a href="http://www.davesquared.net/2010/02/improving-tdd-skills-via-treatment-of.html">Improving TDD skills via treatment of test infection</a></li>
+<li><a href="http://www.davesquared.net/2010/05/test-driving-while-refactoring.html">Don't test drive while refactoring</a></li>
+<li><a href="http://www.davesquared.net/2010/06/tdd-not-utdd.html">TDD vs UTDD</a></li>
+</ul>

@@ -1,0 +1,62 @@
+---
+layout: "post"
+title: "Nothin' but .NET, Sydney 2009: Day 5"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7439379759346378389"
+categories: ["+nbdn"]
+date: "2009-08-12T11:43:00+10:00"
+updated: "2009-08-12T11:43:08.318+10:00"
+---
+
+<p>The fifth and final day of <a href="http://www.jpboodhoo.com/training.oo">Nothin' but .NET</a> kicked off a bit later than normal (once the breakfast chats were over it was closer to 10am, but wound up around 1:45am (I think, my brain was well and truly fried by that point).</p>
+
+<h2>Tell, don't ask</h2>
+
+<p>We talked for quite a while on this. The idea is to push responsibilities on to the class that owns the data related to that responsibility. The most common violation of this principle is an object acting on data it asked another object for. For example, instead of having <code>if (game.genre == "Platform") { /* do something */ }</code>), we should push the <code>do something</code> code into the game itself. That way we are telling the <code>game</code> to do something, rather than asking it for information and doing it ourselves. Violating <a href="http://www.pragprog.com/articles/tell-dont-ask">tell don't ask</a> strips our objects of behaviour and leads to things like anaemic domain models.</p>
+
+<h2>Testing</h2>
+
+<p>I think I've rolled most of the testing stuff from the course into previous posts, but I'll rehash some of the stuff that came up on day 5 about using tests to drive design.</p>
+
+<p>Again I saw that the context/SetUp of the scenario/test seems to drive most of the design. The way the context is setup determines the responsibilities and API for the SUT's collaborators and dependencies. By the time they become the SUT and their assertions are being written most of those decisions are made. In that case the only remaining decisions are the design of dependencies' dependencies. :) It is this relationship that really lets us use the tests to drive the design from the top down.</p>
+
+<p>The &quot;because&quot; block is the API generated from the assertion and the context of the higher level component's tests. For example, if a test for our <code>FrontController</code> asserts that <code>command.AssertWasCalled(c =&gt; c.Run());</code>, then the &quot;because&quot; blocks of our tests around <code>Command</code> implementations become <code>command.Run();</code>. We get a similar result when we stub return values for dependencies while setting up the test context: we need to write scenarios around those calls.</p>
+
+<p>Here's a pseudo-code example. Say we have a test for an <code>HttpRequestHandler</code> class which asserts that <code>frontController.AssertWasCalled(fc =&gt; fc.Process(request))</code>. We can then write tests for the <code>FrontController</code> around that scenario:</p>
+
+<pre>
+When the FrontController is told to process a request:
+  It should run the command able to handle this request:
+    command.AssertWasCalled(c =&gt; c.Run());
+  Because:
+    sut.Process(request);
+  Context:
+    request = MockRepository.GenerateStub&lt;Request&gt;();
+    command = MockRepository.GenerateStub&lt;Command&gt;();
+    commandRegistry = MockRepository.GenerateStub&lt;CommandRegistry&gt;();
+
+    commandRegistry.Stub(c =&gt; c.GetCommandFor(request)).Returns(command);
+    sut = new FrontController(commandRegistry);
+</pre>
+
+<p>This scenario is telling us that when our <code>FrontController</code> is told to process a request, it needs to <code>Run()</code> a command. This is its sole responsibility. Note how well this responsibility is summarised by the scenario and test name, &quot;When the FrontController is told to process a request, it should run the command able to handle this request&quot;. In our context/SetUp method, we've made a design decision to have a <code>CommandRegistry</code> responsible for mapping a request to the right command. We'll then need to drive out the behaviour of what happens when the <code>CommandRegistry.GetCommandForm(Request r)</code> method is called.</p>
+
+<p>I also noticed there a two different styles of TDD: incrementally driving the design vs. incrementally driving the implementation. JP's "simplest thing that makes sense" approach (see <a href="http://www.davesquared.net/2009/08/nothin-but-net-sydney-2009-day-3.html">Day 3 wrap up</a>) tends to focus the developer on driving the design, whereas sometimes the "simplest thing that works" can lead me to procedural thinking (first it should do this, test, refactor, then it should do that, test, refactor...). I'm sure this is due to me misusing TDD in this manner, but I'm reasonably confident I'm not the only TDD novice to fall into this trap of driving implementation from the tests instead of design.</p>
+
+<h2>Other notes from Day 5</h2>
+<ul>
+<li>With a FrontController architecture Commands are similar to MVC actions.</li>
+<li>Pipelines (Pipes and Filters pattern) can be a good way to get into event-driven and message-passing architectures.</li>
+<li>Moving away from layered and onion architectures to component layers that are loosely affiliated. The direction of communication can be guided by the Dependency Inversion Principle and specific requirements (like having Query objects accessible from anywhere via their interface, but consumed only below the service layer).</li>
+<li>Query object pattern (as used for NHibernate's Criteria and DetachedCriteria). Related to the Specification pattern.</li>
+<li>Collaborators for a test can be injected into the SUT, retrieved from another dependency, or retrieved from a Static Gateway (although be careful with that last one).</li>
+<li>Don't bother creating interfaces for DTOs.</li>
+<li>The Service Layer is responsible for unwrapping DTOs packaged by higher layers. DTOs shouldn't go lower down than that, they are strictly for communication between the Service Layer and higher levels.</li>
+<li>Had a whirlwind tour of some Domain Driven Design (DDD) concepts.</li>
+<li>Separating data updates using repositories from queries using Query Object pattern. Don't just dump create/read/update/delete functions on a repository. Enforce Command Query Separation (CQS).</li>
+<li>Command and Visitor design patterns are really under-used and under-appreciated.</li>
+<li>Introducing Pure Fabrications over primitives to help encapsulate behaviour and make writing aggregates and entities easier. An example, instead of using an <code>IDictionary&lt;Product,int&gt;</code> to map products to quantities in a shopping cart, introduce a <code>CartItem</code> fabrication that can be used to track both and encapsulate useful behaviour for the <code>Cart</code> aggregate.</li>
+<li>Concept of <a href="http://en.wikipedia.org/wiki/Shuhari">Shu Ha Ri</a> for describing the stages of learning.</li>
+<li><code>if</code> and <code>for</code> (loops and conditions) are a tad evil. Getting rid of them makes code nice. :)</li>
+<li>Problem decomposition is more important than patterns.</li>
+<li>Always look for the higher level of abstraction. Step back from the details of the problem, and tackle the abstraction instead.</li>
+</ul>

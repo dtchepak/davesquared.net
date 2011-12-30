@@ -1,0 +1,179 @@
+---
+layout: "post"
+title: "An example of driving design through top-down testing"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-90437225413153389"
+categories: [".net", "tdd"]
+date: "2009-09-01T23:53:00.0+10:00"
+updated: "2009-09-02T22:15:41.07+10:00"
+---
+
+<p>My last post on <a href="http://www.davesquared.net/2009/08/coding-tiger-hidden-responsibility.html">anonymous delegates/lambdas being a source of hidden responsibilities</a> included a test written using the <a href="http://www.davesquared.net/2009/08/nothin-but-net-sydney-2009-day-4.html#aug2009_nbdn_day4_writingtestssteps">guidelines I picked up from Day 4 of Nothin' but .NET</a>. This prompted <a href="http://murrayon.net/">Mike</a> to leave me some interesting questions on how we get from responsibility identification to a test and on to the design and implementation. This post is my attempt to explain the discussion and basic approach that my <a href="http://twitter.com/guywithbeard">bearded pair</a> and I went through to write the test (as usual, <a href="http://twitter.com/guywithbeard">the bearded guy</a> got everything right, any mistakes written in this post are my own). It's not the best example, but it's something that came up as an actual requirement and so has the benefit of realism at the expense of the clarity of a contrivance.</p>
+
+<p>Just to be clear for anyone new to my blog: I have no idea what I'm doing. This was my first attempt at applying some of the stuff I extracted from <a href="http://www.davesquared.net/search/label/*nbdn">Nothin'but .NET</a>. It could be completely wrong, cause your computer to spontaneously combust, and/or sell your kittens to a pack of hungry dogs and then gamble the profit away at the track without leaving you a cent.</p>
+
+<h2>Starting out</h2>
+
+<p>The start of the <a href="http://www.davesquared.net/2009/08/coding-tiger-hidden-responsibility.html">original post</a> includes a summary of the problem we are trying to solve and the approach we're taking. We just need a <code>PersistenceService</code> that will save an array of ints to a file as serialised binary (something like <code>persistenceService.SaveResults(results, path)</code>). And we're going to start by writing a test for this (i.e. the <code>PersistenceService</code> is out SUT, or Subject Under Test. Yes I know it's meant to be System Under Test, but for unit tests I like thinking of it as our subject). At each step in the process of writing our test we'll be making design decisions about both this concern and also decisions about the concerns one abstraction level beneath our SUT.</p>
+
+<p>I'll try and show one decision at a time to make it easier to follow, but generally when writing these things I'd go back and forth between sections and make changes based on the feedback the test was giving me.</p>
+
+<h2>A single responsibility</h2>
+
+<p>What's the responsibility of our SUT, the <code>PersistenceService</code>? In the previous section I mentioned it &quot;will save an array of ints to a file as serialised binary&quot;. So, being a touch more abstract, our SUT's reason for existence is to save data. Let's put that as our scenario name.</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class When_saving_data {}
+</pre>
+
+<p>Now I've seen this name be very long and descriptive. The more descriptive it is, the more design hints this can give you later on. In our case, this is all I can really think of, so let's move on.</p>
+
+<h2>Breaking down the responsibility</h2>
+
+<p>So we know our SUT's responsibility is to save data. We started off with the more specific requirement that we need to &quot;save an array of ints to a file as serialised binary&quot;. What's involved to meet that requirement? We need to serialise an array of ints. We also need to open a file for writing and dump our serialised array into it. We'll also need to dispose of the file once we're done. Now there is no way we can possibly put all that into our SUT and still conform to the <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">Single Responsibility Principle (SRP)</a>. So we'll push these responsibilities down into our SUT's dependencies and let them handle it.
+</p>
+
+<p>Being mindful of our current level of abstraction, our SUT is responsible for saving data. We've thought about all the sub-responsibilities this entails, but what's a neat way to break these up that is abstract enough to keep a simple design, but more specific than our current level of abstraction? Essentially: what is the next level of abstraction down we can use?</p>
+
+<p>For this example, let's decide to break our &quot;save data&quot; responsibility into managing the file stream we're going to use for writing, and writing the serialised data to a stream. Now the managing file stream stuff will need to include opening a writeable stream to a file and disposing our stream when we're done, but that's at a different level of abstraction, so we don't need to worry about that just yet.</p>
+
+<p>We haven't really done much other than thought about the problem at this stage. But this will give us some valuable information we can use to make design decisions as we write the rest of the test.</p>
+
+<h2>How does the SUT meet its responsibility?</h2>
+
+<p>We've now got a better idea of what is involved in getting our SUT to do what it needs to do. Let's add an assertion/test to our scenario that describes the required behaviour.</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class When_saving_data {
+    [Test]
+    public void Should_write_serialised_results_to_file_stream_from_given_file_path() {        
+    }
+}
+</pre>
+
+<p>What are we going to assert for this test? Well we have broken down our responsibility and we know we're going to do stuff with a file stream. In C# this looks a bit like this:</p>
+
+<pre>
+using (var stream = File.OpenWrite(path)) {
+    //do stuff using stream
+}
+</pre>
+
+<p>We're into implementation details here. You could conceivably put this off and use another level of abstraction, but eventually you'll have to touch the framework and you'll need to start dealing with these concrete constraints.</p>
+
+<p>Now in the &quot;do stuff&quot; section we want to write data to that stream. Let's pass in a delegate that takes a stream and does stuff do it. But from the last blog post remember that creating a delegate instance is a creational responsibility. So our SUT will need something that can create this delegate instance. We also know a sub-responsibility we have is to serialise some array data, so what ever is creating our delegate will have to be able to return a delegate that can do that. Let's fill out our assertion based on a design we might like to have to cover all this:</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class When_saving_data {
+    [Test]
+    public void Should_write_serialised_results_to_file_stream_from_given_file_path() {        
+        fileStreamer.AssertWasCalled(x => x.Write(path, streamProcessor));
+    }
+}
+</pre>
+
+<p>Now we've made loads of design decisions here. We've got a <code>fileStreamer</code> that will handle the stream lifecycle stuff, and we're expecting it will have a write method that will take a path, and also a <code>streamProcessor</code> function of type <code>Action&lt;Stream&gt;</code> that will write the serialised data.</p>
+
+<p>Like I said at the start, this example is a bit odd. This is because of the decision we took to have a collaborator responsible for the lifetime of the stream: opening it and disposing it. This has a nice appeal to it, but dividing the responsibilities a different way gives a very different (and in some ways a cleaner) design. (Go ahead! Try it!)</p>
+
+<h2>Where did all these object references come from?</h2>
+
+<p>So where did we get the <code>fileStreamer</code>, <code>path</code> and <code>streamProcesser</code> that our test referred to? Well, nowhere currently. What we have written is what we would <i>like</i> to have. The details of where we get all this from will go in our context.</p>
+
+<p>Now writing the context is itself a design activity. Almost everything that goes into our context will be something we'll need to drill down into for future tests.</p>
+
+<p>First let's start with why this whole scenario is happening -- it is because our <code>PersistenceService</code> (our SUT) has been told to save some results (I already have a <code>Results</code> class from a previous test).</p>
+
+<pre class="brush:csharp">
+[SetUp]
+public void Context() {
+    sut = new PersistenceService();
+    sut.SaveResults(new Results(data), path);
+}
+</pre>
+
+<p>Now the assertion we wrote previously is checking that a <code>fileStreamer</code> received a call to its <code>Write()</code> method, so we'll need to add one of these to our context. It also needs a <code>path</code> to save it to, so we'll create a fake path we can use for the purpose of our test.</p>
+
+<pre class="brush:csharp">
+[SetUp]
+public void Context() {
+    path = "some path"; 
+    fileStreamer = MockRepository.GenerateStub&lt;IFileStreamer&gt;();
+    sut = new PersistenceService(fileStreamer);
+    sut.SaveResults(new Results(data), path);
+}</pre>
+
+<p>The next bit is a tad trickier: we want a <code>streamProcessor</code> delegate of type <code>Action&lt;Stream&gt;</code> that will be able to serialise data to the stream it is given as an argument. Now because the creation of this delegate is a responsibility we don't want to put this into the SUT itself, so let's pretend we have a class with a factory method capable of doing this. Let's call this class <code>IIntegerArrayDataSerialiser</code> (bad name, but it's what I called it last post). We'll need to be able to call a method on this so that, given some <code>data</code> it will return an <code>Action&lt;Stream&gt;</code>.</p>
+
+<pre class="brush:csharp">
+[SetUp]
+public void Context() {
+    streamProcessor = stream =&gt; { };
+    data = new[] { 1, 2, 3, 4, 5 };
+    path = &quot;some path&quot;; 
+    fileStreamer = MockRepository.GenerateStub&lt;IFileStreamer&gt;();
+    serialiser = MockRepository.GenerateStub&lt;IIntegerArrayDataSerialiser&gt;();
+    serialiser.Stub(x =&gt; x.GetStreamSerialiser(data)).Return(streamProcessor);
+
+    sut = new PersistenceService(fileStreamer, serialiser);
+    sut.SaveResults(new Results(data), path);
+}</pre>
+
+<p>Let's quickly review the design decisions we have made here. Our SUT will have two dependencies injected, a <code>IFileStreamer</code> for managing the lifetime of a file stream, and a <code>IIntegerArrayDataSerialiser</code>, which will create an <code>Action&lt;Stream&gt;</code> to serialise data to the stream. By stubbing a call to our <code>IIntegerArrayDataSerialiser</code> we have determined it will have a method called <code>GetStreamSerialiser()</code> which takes some <code>data</code> and returns a delegate to write it out to the stream.</p>
+
+<div class="note"><b>Note: </b> We've chosen to violate the OCP here with a reference to a particular serialiser. We could have made the entire thing more generic but it wasn't required. This should be fine provided we are happy to take the hit if this changes in future. With any luck the class will be small enough to refactor easily if this requirement emerges.</div>
+
+<h2>Passing our scenario</h2>
+
+<p>We obviously need a constructor that takes our two dependencies (Resharper helps here). We also need a <code>SaveResults(Results results, string path)</code> method.</p>
+
+<pre class="brush:csharp">
+public class PersistenceService {
+    IFileStreamer _fileStream;
+     IIntegerArrayDataSerialiser _serialiser;
+
+    public PersistenceService(IFileStreamer fileStream, IIntegerArrayDataSerialiser serialiser) {
+        _fileStream = fileStream;
+        _serialiser = serialiser;
+    }
+
+    public void SaveResults(Results results, string filePath) {
+        //TODO
+    }    
+}
+</pre>
+
+<p>Now let's have a look at our assertion, as well as a line within our test context:</p>
+
+<pre class="brush:csharp">
+//Assertion:
+fileStreamer.AssertWasCalled(x => x.Write(path, streamProcessor));
+
+//Context, stubbed IIntegerArrayDataSerialiser call:
+serialiser.Stub(x =&gt; x.GetStreamSerialiser(data)).Return(streamProcessor);
+</pre>
+
+<p>This means our SUT's <code>SaveResult()</code> method needs to get a stream processor from its <code>IIntegerArrayDataSerialiser</code>, then use it in a call to the <code>IFileStreamer.Write()</code> method.</p>
+
+<pre class="brush:csharp">
+public void SaveResults(Results results, string filePath) {
+    _fileStream.Write(filePath, _serialiser.GetStreamSerialiser(results.GetData()));
+}    
+</pre>
+
+<p>And we're done!</p>
+
+<h2>Wrap up and next steps</h2>
+
+<p>Notice how when we go to the trouble to break down our responsibilities our implementation becomes trivial, and the test becomes pretty simple too. We didn't need to dig deep into the capabilities of our mocking framework, as we already had references to all the arguments being used and could easily stub out the call we needed. The hardest bit was breaking down the problem. And this wasn't a particularly nice breakdown (the use of delegates made it a bit uglier than necessary), but even still it made things very simple.</p>
+
+
+<p>Better yet, we have a clear idea of the next steps to take. We have two interfaces, <code>IFileStreamer</code> and <code>IIntegerArrayDataSerialiser</code>, that do not have implementations. But our test has told us exactly what methods they need so far, and how they are to behave. Our <code>IFileStreamer</code> will need a write method and it should open a file stream, call the stream processor, and dispose of the stream (we can work out how many responsibilities this actually is while writing the test -- we may choose to push some of it out into other dependencies). Our <code>IIntegerArrayDataSerialiser</code> will need a <code>GetStreamSerialiser()</code> method that given the data, will create an <code>Action&lt;Stream&gt;</code> delegate that will serialise the data to the stream (again, we'll design this via the test, but an easy way to do it is to wrap <code>BinaryFormatter</code> from the .NET Framework<).</p>
+
+<p>One thing that probably isn't clear from this post is that both the test and the implementation took only a few minutes to write. The hardest bit is decomposing the problem and figuring out what abstractions to use, but the very act of writing the test helps give you immediate feedback as to how well you are going with this. And better yet, there's no stopping to think &quot;what's next?&quot;, we just jump straight to the next lot of tests.</p>
+
+<p>For the record, we ended up with a change in requirements and refactored this approach, including scrapping the stream processor delegate and using something simpler. The good thing about having such small pieces was that this was really easy to do.</p>
+
+<p>I hope this has helped give people some ideas as to how tests can be used to drive out design and keep classes small and focussed.</p>

@@ -1,0 +1,89 @@
+---
+layout: "post"
+title: "The (very) basics of AAA with Rhino Mocks 3.5"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4204873532475900853"
+categories: [".net", "testing", "dev practices"]
+date: "2008-10-01T23:16:00.02+10:00"
+updated: "2009-01-21T22:11:01.609+11:00"
+---
+
+<p>A small contingent from my work made the trek out to the first <a href="http://sydneyaltdotnet.blogspot.com/">Sydney ALT.NET</a> meeting last night. It was great to be in a room full of people all intent on finding better ways to develop software. Afterward I was dragged kicking and screaming (<code>&lt;/sarcasm&gt;</code> :)) by my colleagues to a local pub for debriefing over beers and a laptop. One topic discussed was the Arrange, Act, Assert (AAA) style of mocking using <a href="http://ayende.com/Blog/archive/2008/05/16/Rhino-Mocks-3.5-Beta-Released.aspx">Rhino Mocks 3.5</a>.</p>
+
+<p>I thought I'd quickly run through my (admittedly basic) understanding of AAA, as I tend to use a slightly different approach to the one shown in the meeting. If I've got anything hideously wrong please leave a comment and let me know. I'm not going to cover anything about how to use mocking, but will just attempt to outline the difference between record/replay and AAA.</p>
+
+<h2>Record / Replay semantics</h2>
+
+<p>The traditional way of mocking has been to use record/replay. This means you <i>record</i> a number of expectations against a mock object, then change the mock to <i>replay</i> mode and exercise the subject under test (SUT). In replay mode, the mock will throw an exception if an unexpected method is called (for strict mocks). The final step is to <i>verify</i> the expectations you recorded, which will throw an exception if one of the expected methods was not called.</p>
+
+<p>Let's have a look at one of my dodgy-as-usual examples (probably even worse than normal, as it was written in a pub around 11 pm after a long day :))</p>
+
+<pre>
+public interface IEmailService {
+    void Send(MailMessage msg);
+}
+
+public class InvoiceSender {
+    private readonly IEmailService emailService;
+    public InvoiceSender(IEmailService emailService) {
+        this.emailService = emailService;
+    }
+
+    <b>public void SendInvoice(float amount, string to) {
+        var msg = new MailMessage(&quot;me@me.com&quot;, to, &quot;Invoice&quot;, string.Format(&quot;Please pay {0}&quot;, amount));
+        emailService.Send(msg);
+    }</b>
+}
+</pre>
+
+<p>Our subject under test is <code>InvoiceSender</code>, and we want to verify that the <code>IEmailService.Send(MailMessage)</code> method is being called from <code>SendInvoice(float, string)</code>.</p>
+
+<pre>
+[Test]
+public void Send_invoice_using_email_service_with_record_replay() {
+ var mockRepo = new MockRepository();
+ var mockEmailer = mockRepo.DynamicMock&lt;IEmailService&gt;();            
+ var invoiceSender = new InvoiceSender(mockEmailer); 
+ //Record expecations
+ mockEmailer.Expect(service =&gt; service.Send(null)).IgnoreArguments() ; 
+ mockRepo.ReplayAll();
+ //Exercise SUT
+ invoiceSender.SendInvoice(1.0F, &quot;me@me.com&quot;);  
+ //Verify expectations
+ mockRepo.VerifyAll();            
+}
+</pre>
+
+<p>Here we've used Rhino Mocks to generate a mock implementation of the <code>IEmailService</code> interface. We have recorded a single expectation against it: it is expecting to have its <code>Send(...)</code> method called with any argument (hence the <code>IgnoreArguments()</code> call -- for non-pub code we would probably want to check the argument).</p>
+
+<p>We then use <code>ReplayAll()</code> to switch to replay mode, which tells our mocks that we have finished recording expectations and are ready to see what is really called on our mock. We then exercise the SUT, and verify that our expectations were met (i.e. <code>Send()</code> was called on our mock). The test passes -- victory is ours!</p>
+
+<h2>Writing the test using AAA</h2>
+
+<p>There's nothing really wrong with the record/replay approach. If you like it that's great! Some people find it confusing (or at least <a href="http://www.clariusconsulting.net/blogs/kzu/archive/2007/12/26/48177.aspx">unnatural</a>), probably because it doesn't quite fit the <a href="http://xunitpatterns.com/Four%20Phase%20Test.html">four phase test</a> structure used for state-based testing (Setup, Exercise, Verify, Teardown).</p>
+
+<p>The AAA approach lets us use a more state-based testing approach with our mocks. Let's rewrite our previous test using AAA:</p>
+
+<pre>
+[Test]
+public void Send_invoice_using_email_service_with_AAA() {
+    //Arrange
+    var mockEmail = MockRepository.GenerateMock&lt;IEmailService&gt;();
+    var invoiceSender = new InvoiceSender(mockEmail);
+    //Act
+    invoiceSender.SendInvoice(1.0F, &quot;me@me.com&quot;);
+    //Assert
+    mockEmail.AssertWasCalled(service =&gt; service.Send(Arg&lt;MailMessage&gt;.Is.Anything)); 
+}
+</pre>
+
+<p>Here we are creating our mock using the new static <code>GenerateMock&lt;T&gt;()</code> method introduced in Rhino Mocks 3.5. We then exercise the SUT with an identical line of code to the one used in the first test. Finally, we assert that the <code>Send()</code> method on our mock was called as we expected. The test passes -- again we are victorious!</p>
+
+<p>First couple of things to notice are that we have no mention of recording or replaying expectations, and we've used less lines of code. Our test also fits in with the four phase test structure: Arrange -&gt; Setup, Act -&gt; Exercise, Assert -&gt; Verify, with optional Teardown. This avoids mixing expectations and assertions throughout the test. Depending on your prior experience with record/replay, you might find this easier to read and understand than our first test.</p>
+
+<p>Under the hood Rhino Mocks is still going off and doing pretty much the same thing as its always done. The static <code>GenerateMock&lt;T&gt;()</code> method simply creates a dynamic mock already in <i>replay</i> mode. The mock remembers all calls against it, and we can then use <code>AssertWasCalled()</code> and other methods to check these calls and make sure the ones we want are there.</p>
+
+<div class="note"><b>Aside:</b> One of the issues raised during the Sydney ALT.NET meeting was <a href="http://martinfowler.com/articles/mocksArentStubs.html">mocks vs. stubs</a>. I think AAA makes the distinction a bit more apparent. You'll tend to use a stub during the <i>Arrange</i> part of your test to provide indirect inputs to the SUT, whereas you will use mocks to verify behaviour and indirect outputs of the SUT during the <i>Assert</i> phase. From the <a href="http://ayende.com/wiki/Rhino+Mocks+3.5.ashx#Thedifferencebetweenstubsandmocks">Rhino Mocks wiki page on 3.5</a> (<a href="http://ayende.com/wiki/History.aspx?Page=Rhino+Mocks+3.5&Revision=40#Thedifferencebetweenstubsandmocks">rev. 40</a>), &quot;A stub will never cause a test to fail&quot;, whereas mocks will fail if the expectations on them aren't met.</div>
+
+<p>This is only a very simplistic example to illustrate the basic differences for each approach. For more realistic cases the benefits of AAA become more apparent (see <a href="http://www.lostechies.com/blogs/jimmy_bogard/archive/2008/07/24/arrange-act-assert-and-bdd-specifications.aspx">Jimmy Bogard's post on AAA with BDD tests</a> for a good example).</p>
+
+<p>These couple of lines of code are available from my Google Code repository if you want run the tests and have a bit of a play around: <a href="http://davesquared.googlecode.com/files/DaveSquared.MockSample.zip">DaveSquared.MockSample.zip</a>.</p>

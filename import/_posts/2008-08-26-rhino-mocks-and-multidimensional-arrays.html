@@ -1,0 +1,42 @@
+---
+layout: "post"
+title: "Rhino Mocks and multidimensional arrays"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2458607313941517165"
+categories: []
+date: "2008-08-26T16:16:00.0+10:00"
+updated: "2008-08-26T16:45:15.309+10:00"
+---
+
+<p>From the useless piece of trivia department, I just found out something very strange when trying to mock an interface with a <a href="http://msdn.microsoft.com/en-us/library/2yd9wwz4.aspx">multidimensional array</a> property with Rhino Mocks (well, more specifically, using <a href="http://www.castleproject.org/dynamicproxy/index.html">Castle's DynamicProxy</a> to generate classes from this interface). Take this mild-mannered, unassuming interface for example:</p>
+
+<pre>public interface IHazDoubleArray {
+ double[] IHazArray { get; set; }
+ double[][] IHazJaggedArray { get; set; }
+ <b>double[,] IHazArrayOfDoubleArrays { get; set; }</b>
+}</pre>
+
+<p>Now let's try and mock it:</p>
+
+<pre>[Fact]
+public void Mock_it() {
+ MockRepository mocks = new MockRepository();
+ mocks.DynamicMock&lt;IHazDoubleArray&gt;(); // <<< Doesn't work
+}
+
+/* Gives runtime error:
+
+System.TypeLoadException : Method '<b>get_IHazArrayOfDoubleArrays</b>' in type 'IHazDoubleArrayProxy2bd67b685aca41fdb90f81b9aed6189c' from assembly 'DynamicProxyGenAssembly2, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' does not have an implementation.
+
+*/
+</pre>
+
+<p>Apparently this is due to a <a href="http://groups.google.com/group/RhinoMocks/browse_thread/thread/d8344b48f214492f">bug in the CLR</a> (or a <a href="http://ayende.com/Blog/archive/2008/02/18/Rhino-Mocks-3.4-Released.aspx">bug in the BCL, Reflection.Emit</a>?). The <a href="http://msdn.microsoft.com/en-us/library/0a7fscd0.aspx">standard</a> and <a href="http://msdn.microsoft.com/en-us/library/2s05feca.aspx">jagged</a> arrays (<code>array[]</code> and <code>array[][]</code>) work fine, it is only the <a href="http://msdn.microsoft.com/en-us/library/2yd9wwz4.aspx">multidimensional ones</a> (<code>array[,]</code>) that trip things up (see <a href="http://msdn.microsoft.com/en-us/library/9b9dty7d.aspx">C# Array guidelines</a> for a refresher). Rhino Mocks 3.4 introduced remoting mocks to workaround this and other issues:</p>
+
+<pre>
+[Fact]
+public void Mock_with_remoting() {
+ MockRepository mocks = new MockRepository();
+ mocks.DynamicMockWithRemoting&lt;IHazDoubleArray&gt;(); //Hooray! Works!
+}</pre>
+
+<p>This obscure post is to improve my odds of remembering this in 18 months time when this bites me again. :)</p>

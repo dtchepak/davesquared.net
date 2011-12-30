@@ -1,0 +1,96 @@
+---
+layout: "post"
+title: "An assortment of basic TDD tips"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-9219534635000716683"
+categories: ["imho", "featured", "tdd"]
+date: "2008-04-18T09:24:00.0+10:00"
+updated: "2008-07-29T13:34:21.07+10:00"
+---
+
+<p>I spent most of last week working strictly TDD-style on a work project. Now all the stuff I do at home is done using TDD, and I sometimes manage to test-drive a feature into a work project, but for a number of reasons I've never jumped 100% into test driving stuff for work.</p>    
+
+<p>For the first few days I had mixed results. The code and design was probably not significantly better or worse that I would have come up with without TDD. I <em>did</em> end up with a decent suite of tests for the code, which was a nice bonus, and the code took a similar amount of time to non-TDD for me.</p>    
+
+<p>The last couple of days were a very different story: I felt the code and design turned out significantly better and was written much faster than I would generally have done sans TDD. The whole process flowed wonderfully.</p>    
+
+<p>I thought I'd jot down a couple of rambling points I learned or re-learned during the week, for my own future reference and on the off chance I help someone else experimenting with TDD. These are all pretty basic points, but ones which I sometimes lose sight of while coding in anger :-).</p>    
+
+<h2>When I'm not sure <i>how</i> to do something, my tests tend to drive the procedure instead of the design</h2>  
+
+<p>This was something that occurred to me while test-driving some code to generate XML schemas (XSD). It had been a while since I had done anything manual with XSD, so while I knew roughly <i>what</i> what I was trying to do, I was not really sure of the details on <i>how</i> to do it. So I started writing tests about how I thought XSD worked, and responding to the feedback from those tests.</p>  
+
+<p>The end result was that my tests built up the <i>procedure</i> of <i>how</i> to generate XSD, rather than a good design for <i>what</i> I was trying to achieve.</p>    
+
+<p>While this can be helpful in itself to learn an API or something else that's a bit new to you, it is not what you really want for production code. So next time I'm in a similar situation I'll make sure I do a quick spike (possibly test-first if I think it will help) to learn <i>how</i>, before throwing it away and starting to test-drive the production code.</p>    
+
+<h2>Avoid complex APIs until you really need them</h2>
+
+<p>Back to my previous XSD example, we have a few options as of .NET 3.5. First up, XSDs are just strings, so we could work at that level. They are also valid XML documents, so we could use <code>XmlDocument</code>, <code>XDocument</code>, or <code>XmlWriter</code>. Finally, .NET has a built in <code>XmlSchema</code> and related classes specifically for dealing with XSD documents. So which would you chose?</p>    
+
+<p>I started with strings, but quickly ran into the problem mentioned in my previous point: I had forgotten many of the details of XSDs that I needed to build up the right string. So I back tracked and jumped straight into <code>XmlSchema</code>, leaning on the API a bit to relearn everything. This introduced a lot of needless complexity into my design to enable it to play nicely with the API.</p>    
+
+<p>In retrospect I think I'd have been better off sticking with strings or another basic construct until I really needed a full featured API.</p>    
+
+<h2>Have a clear Subject Under Test (SUT)</h2>
+
+<p>Especially when starting out with testing (any testing, not just TDD), I have occasionally managed to confuse myself setting up the test context -- the data and dependencies required for the test. I would sometimes end up testing the test data, rather than exercising the production code.</p>  
+
+<p>This is probably (hopefully?) a bit less stupid than it sounds, as sometimes your code will simply delegate to another object, in which case you can test the state (test data that comes back) or the iteraction itself (usings mocks).</p>  
+
+<p>It pays to be very concious of exactly what your <a href="http://xunitpatterns.com/SUT.html">Subject Under Test (SUT)</a> is. I've found myself thinking increasingly in terms of the SUT, its dependencies, and its behaviour to be exercised in the test*. Once clear on these points, it's time to setup the dependencies to provide a specific testing context and test data, exercise the SUT, then verify that the SUT performs correctly in that context. Using a <a href="http://xunitpatterns.com/Four%20Phase%20Test.html">four-phase test structure</a> can help here.</p>  
+
+<p style="font-size: xx-small">* I'm getting crazy ideas about single test contexts per class, where the test context becomes the class state. A bit like <a href="http://blog.eleutian.com/CommentView,guid,762249da-e25a-4503-8f20-c6d59b1a69bc.aspx">AMC</a> but less to do with mocking and more to do with structure and easy reproduction of test context across related tests/specifications.</p>
+
+<h2 id="postAnchor_BasicTddTips_TestSmells">Use test difficulties to drive design</h2>
+  
+<p>After completing a couple of tests on a class, I found there was a method that seemed like it should be <code>protected</code>, but that I still wanted to have tests around. There are lots of valid approaches to do this: using inheritance (either a test double, or self-shunt <a href="http://www.objectmentor.com/resources/articles/SelfShunPtrn.pdf">[PDF]</a>), <a href="http://msdn2.microsoft.com/en-us/library/system.runtime.compilerservices.internalsvisibletoattribute.aspx"><code>InternalsVisibleTo</code></a>, generated mocks, reflection tricks, or just <a href="http://c2.com/cgi/wiki?MethodsShouldBePublic">leaving the method <code>public</code></a>. But why should we have to go through these hoops just for testability's sake? Why is something so trivial requiring any complexity or workarounds?</p>
+
+<p>This kind of signal is generally referred to as a &quot;smell&quot; -- something that just doesn't seem right, and it is this kind of feedback that TDD is very good at providing.</p>
+
+<p>In this case the smell prompted me to have another look at the code, and I discovered that the method actually seemed to belong on another object. So I <a href="http://www.refactoring.com/catalog/moveMethod.html">moved the method</a> to the other class, and had the original SUT delegate to it. This meant I could test the now <code>public</code> method on its new class, while keeping proper encapsulation for the original class. And even more importantly, the design was now much cleaner and clearer (IMHO).</p>
+
+<p>So if you come across something that seems a bit messier to test than necessary, it might be your test's way of telling you there is something amiss with your design. Sometimes you may look at it and decide it is worth a bit of mess, but other times it is a clear cue to refactor.</p>
+
+<h2>Use tests to drive through uncertainty</h2>
+
+<p>I was test driving a controller class that accepted requests for specific resources. I had tests for a <code>VerifyAccess(Guid id)</code> method which loaded some information about the resource with that ID, then ensured the caller had access. A few tests later and I had another method, <code>GetResource(Guid id)</code>, which actually retrieved the resource. Now <code>GetResource</code> should really check the access as well.</p>
+
+<pre>//Pseudocode
+public void VerifyAccess(Guid id) {
+  <b>//Get details about resource with id
+  //Check access, throw if access denied</b>
+}
+public Resource GetResource(Guid id) {
+  <b>//Get details about resource with id
+  //Check access?</b>
+  //return resource
+}
+</pre>
+
+<p>So I had the situation where both methods wanted to call each other. As the access verification logic was important, I also wanted to keep it testable in isolation from the code to retrieve the resource. It looked like a simple matter of extracting a private, helper method called from both methods, but I was not sure... there were a few ways I could do it, but the resulting method names and code structure all seemed a bit convoluted and unnatural.</p>
+
+<p>My approach was to write a test that exposed the required behaviour. When doing something that calls <code>GetResource</code>, the attempt should fail if <code>VerifyAccess</code> would also fail. It was then just a matter of getting the test to pass.</p>
+
+<p>My final implementation was much nicer than my initial, uncertain guess. Turns out that <code>GetResource</code> would be better suited as a protected method called <code>GetResourceAndCheckAccess</code>. Callers never actually had to <i>get</i> a resource, they only needed to <i>use</i> one. So the old tests around <code>GetResource</code> became tests around <code>UseResource(Guid id)</code> (I'm changing the scenario from the original problem as don't want to post work stuff verbatim, so the real names are a lot more natural. Hopefully the main idea is clear though). <code>VerifyAccess</code> also called <code>GetResourceAndCheckAccess</code>. I also ended up with a nice, private helper method, <code>verifyAccessToResource(Resource resource)</code>, that took a loaded resource rather than an ID. The intention of the code was now obvious from the names and structure, and the tests acurately specified the required behaviour.</p>
+
+<pre>//Psuedocode
+public void VerifyAccess(Guid id) {
+  GetResourceAndCheckAccess();
+}
+protected Resource GetResourceAndCheckAccess() {
+  <b>//Get details about resource with id</b>
+  verifyAccessToResource(resource);
+  return resource;  
+}
+private void verifyAccessToResource(Resource resource) {
+  <b>//Check access, throw if access denied.</b>
+}
+public SomeOutput UseResource(Guid id) {
+  Resource resource = GetResourceAndCheckAccess();
+  return resource.DoSomething();
+}
+</pre>
+
+<p>While it's obviously pretty simple to come up with a solution without going test-first, once the required behaviour was specified correctly and protected by automated tests, I found it much easier to work towards a usable implementation without having to worry about correctness all the time. Provided the tests stayed green, I knew the implementation satisfied the requirement. For me, this approach lets me focus on incrementally getting it right, without being distracted by the uncertainties caused by having many ways of proceeding to a &quot;final&quot; answer.</p>
+
+<p>Hope this is of some help to someone. It was definitely helpful for me to explain it all in any case, so if you made it this far, thanks for listening! :-)</p>

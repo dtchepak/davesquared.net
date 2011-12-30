@@ -1,0 +1,46 @@
+---
+layout: "post"
+title: "Finding functional neatness with Haskell"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5252728597681910656"
+categories: ["functional programming", "haskell"]
+date: "2011-01-13T00:13:00+11:00"
+updated: "2011-08-16T01:35:10.498+10:00"
+---
+
+<p>I've recently started to learn Haskell (used it at Uni over a decade ago, but I'm trying to actually appreciate it this time :)). Here is an example I found when working through the recursion chapter of the excellent <a href="http://learnyouahaskell.com/">Learn you a Haskell tutorial</a>. Yes, I know this is a very corny example, but the fact I was able to figure it out just from the algorithm description in the tutorial, despite being a Haskell newbie, really impressed the beauty of the language upon me.</p>
+
+<p>Remember <a href="http://en.wikipedia.org/wiki/Quicksort">quicksort</a>? Picking a pivot, then putting it in the middle of the sorted smaller elements and sorted larger elements? Typically you end up with a wad of procedural code, such as <a href="http://en.csharp-online.net/Quick_Sort">this fairly typical C# example</a>.</p>
+
+<p>In Haskell, you work more with describing what something <em>is</em>, rather than how it works. So we end up with something like this:</p>
+
+<pre>quicksort :: (Ord a) =&gt; [a] -&gt; [a]
+quicksort [] = []
+quicksort (x:xs) = smaller_sorted ++ [x] ++ larger_sorted
+    where smaller_sorted = quicksort [y | y &lt;- xs, y &lt;= x]
+          larger_sorted = quicksort [y | y &lt;- xs, y &gt; x]
+</pre>
+
+<p>The first line is defining the type of the function, it takes a list of orderable types and returns a list of those types. The second line is our recursion edge case: sorting an empty list returns an empty list. </p>
+
+<p>The third line is the definition of our algorithm. Given <code>(x:xs)</code>, the list head (<code>x</code>) and tail (<code>xs</code>), we put the head between the sorted list of everything smaller and the sorted list of everything larger. </p>
+
+<p>The <code>where</code> clause has our recursive calls using list comprehensions. The line <code>[y | y &lt;- xs, y&lt;=x]</code> selects the elements of the tail (<code>xs</code>) which are less that our pivot (<code>x</code>).</p>
+
+<p>Neat huh?</p>
+
+<p>We can also try and bring the functional-style with us to C#, but you pretty quickly start missing pattern matching, and built-in list syntax like head, tail and concatenation. In many cases (like this one) the C# compiler also won't be able to get you the <a href="http://en.wikipedia.org/wiki/Tail_recursion">tail call elimination</a> possible in functional languages like Haskell, which tends to make recursive implementations less desirable.</p>
+
+<pre class="brush:csharp">public static IEnumerable&lt;int&gt; QuickSort(IEnumerable&lt;int&gt; elements) {
+    if (!elements.Any()) return new int[0];
+
+    var head = elements.First();
+    var tail = elements.Skip(1);
+
+    var sortedSmaller = tail.Where(x =&gt; x &lt;= head);
+    var sortedLarger = tail.Where(x =&gt; x &gt; head);
+
+    return QuickSort(sortedSmaller).Concat(new [] {head}).Concat(QuickSort(sortedLarger)); 
+}
+</pre>
+
+<p>This is simpler than the more procedural version, but not as simple as the Haskell version. And we still have to stay concious of differences such as how tail recursion is handled over different platforms which can have a huge impact on performance. With that in mind though, it's neat enough for me to keep digging into functional programming, as even if I don't end up doing much with pure functional languages the techniques can provide some very interesting alternative ways of solving problems in any language.</p>

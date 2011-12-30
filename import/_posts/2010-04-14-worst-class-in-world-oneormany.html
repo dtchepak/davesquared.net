@@ -1,0 +1,145 @@
+---
+layout: "post"
+title: "The worst class in the world: OneOrMany"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2745514641614862238"
+categories: [".net"]
+date: "2010-04-14T23:51:00.0+10:00"
+updated: "2010-04-15T09:27:23.741+10:00"
+---
+
+<p>Psst! Hey you! Yes, you - the one reading this post. Do you want to see something truly terrible? Do you dare peer into the depths of ridiculous coding? Then read on, friend! And rejoice in the fact that you don't work with me! :)</p>
+
+<h2>Some background</h2>
+
+<p>I have a class that holds some parameters. This gets passed around a bit -- a parameters instance starts life with some defaults given to it by a factory, has some parameters overidden by whatever presenter happens to be display a view to the user, gets routed through a controller that executes some logic on a device based on the provided parameters, and finally ends its life in a persistence class being written out to disk.</p>
+
+<p>There are several different variations on the logic run on the device, but all revolve around these core parameters -- the parameters are the sole differentiator between all these variations. This lets us use common plumbing to pass these parameters around, and the only thing that changes is how these parameters are interpretted to run specific logic on the device.</p>
+
+<p>Now say that one of these parameters is Frequency, and integer property that is used to determine the frequency with which the device widgets the throddle. This works fine for almost all cases -- except the one case where we want the throddle to be widgetted at a number of different frequencies.</p>
+
+<p>So what do we do? Do we create a subclasses of <code>Parameters</code>, some with an <code>int Frequency</code> and the other with <code>IEnumerable&lt;int&gt; Frequency</code>? As we deal with <code>Parameters</code> everywhere, that would mean some ugly casting going on. And, in this case, frequency doesn't really seem to suit being pushed into another place in the design so we can follow the &quot;Tell don't ask&quot; principle.</p>
+
+<p>We could also replace make the <code>Frequency</code> property be of type <code>IEnumerable&lt;int&gt;</code>. But that would mean that in the majority of cases we'd need to call <code>Frequency.First()</code> -- there would be an implicit contract buried in the code that was not obvious just by looking at the <code>Parameters</code> class. We'd also be optimising for the least common case -- we only need the enumerable once, the rest of the time we just want a single value.</p>
+
+<p>Maybe we could provide two properties: <code>Frequency</code> and <code>Frequencies</code>? This is an ugly but workable solution, although it does mean our persistence service needs to be smart enough to exclude one property or the other, which will introduce some tight coupling.</p>
+
+<p>And then there is the option of committing object-oriented evil. Let's try that... what could possiblie go rong?</p>
+
+<h2>My eyes! The googles do nothing!</h2>
+
+<p>Let's write a class that can hold either one value, or many values. I shall call it: <strike>mini-Me</strike> OneOrMany&lt;T&gt;.</p>
+
+<pre class="brush:csharp">
+public class OneOrMany&lt;T&gt; : IEnumerable&lt;T&gt; {
+    private readonly IEnumerable&lt;T&gt; _manyValues;
+    private readonly T _singleValue;
+
+    public OneOrMany(T value) { _singleValue = value; }
+    public OneOrMany(IEnumerable&lt;T&gt; manyValues) { _manyValues = manyValues; }
+
+    public static implicit operator T(OneOrMany&lt;T&gt; oneOrMany) {
+        if (oneOrMany._manyValues != null) 
+            throw new InvalidOperationException(&quot;This instance contains more than one value, so you cannot it treat as a single value.&quot;);
+        return oneOrMany._singleValue;
+    }
+        
+    public static implicit operator OneOrMany&lt;T&gt;(T value) {
+        return new OneOrMany&lt;T&gt;(value);
+    }
+        
+    public static implicit operator OneOrMany&lt;T&gt;(T[] values) {
+        return new OneOrMany&lt;T&gt;(values);
+    }        
+
+    public IEnumerator&lt;T&gt; GetEnumerator() {
+        return (_manyValues ?? new[] {_singleValue}).GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
+
+    public override string ToString() {
+        var values = this.Select(x =&gt; x.ToString()).ToArray();
+        return string.Join(&quot;,&quot;, values);
+    }
+}
+</pre>
+
+<p>Say we now have our parameters defined like this:</p>
+
+<pre class="brush:csharp">
+public class Parameters {
+    /* lots of different parameters here */
+    public OneOrMany<int> FrequencyInHertz { get; set; }
+}
+</pre>
+
+<p>We can now treat frequency as a single value (the standard case):</p>
+
+<pre class="brush:csharp">
+[Test]
+public void Can_use_frequency_as_single_value() {
+    var parameters = new Parameters {FrequencyInHertz = 10};
+    int asOneValue = parameters.FrequencyInHertz;
+    Assert.That(asOneValue, Is.EqualTo(10));
+}
+</pre>
+
+<p>And occasionally as multiple values:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void Can_use_frequency_as_many_values() {
+    var parameters = new Parameters {FrequencyInHertz = new[] {1, 2, 3, 4, 5}};
+    Assert.That(parameters.FrequencyInHertz, Is.EqualTo(new[] {1,2,3,4,5}));
+}
+</pre>
+
+<p>And our persistence service can simply use <code>ToString()</code> to write the frequency used out to disk:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void Can_write_out_frequency_as_string_without_worrying_how_many_values_it_has() {
+    var paramsWithSingleFrequency = new Parameters {FrequencyInHertz = 10};
+    var paramsWithMultipleFrequencies = new Parameters {FrequencyInHertz = new[] {1,2,3,4,5}};
+    Assert.That(paramsWithSingleFrequency.FrequencyInHertz.ToString(), Is.EqualTo(&quot;10&quot;));
+    Assert.That(paramsWithMultipleFrequencies.FrequencyInHertz.ToString(), Is.EqualTo(&quot;1,2,3,4,5&quot;));
+}
+</pre>
+
+<h2>I told you it was bad!</h2>
+
+<p>Wow that's nasty. I'm hacking around with implicit cast operators to make assignments react in a completely non-obvious way. This post is a fantastic justification for the Java folk to keep disallowing operator overloading. :) We are completely and utterly reliant on users of our <code>Parameters</code> class knowing the context in which it is being used. In my particular case, this is always true. But still... ugh.</p>
+
+<h2>Cue the excuses!</h2>
+
+<p>The one redeeming feature of this code is that it sort of matches the domain. Generally our parameters specify one frequency to use. In one specific case multiple frequencies will be used. The only place that really needs to know about this difference is a class handling one particular variation of communications with our device. It absolutely, positively <b><i>has</i></b> to have multiple frequencies -- it is its sole purpose for existence. It can iterate over the <code>OneOrMany&lt;T&gt;</code> instance and know for certain that it makes sense to do so. Everything else can go on blissfully using frequency as an int.</p>
+
+<p>Another possible excuse is that I think this is pretty similar to what I'd do using a dynamic language. I'd have a Frequency property, and fill it with an single int or several ints. For example, this would work fine in Ruby:</p>
+
+<pre>
+class Parameters
+  attr_accessor :freq
+end
+
+param_with_one_freq = Parameters.new
+param_with_one_freq.freq = 5
+
+param_with_many_freqs = Parameters.new
+param_with_many_freqs.freq = [1..5]
+</pre>
+
+<p>Sure, we might miss a bit of compiler help, but we have everything covered by unit tests, so this kind of dynamic approach (both the Ruby and C# class) are pretty safe.</p>
+
+<p>If we wanted to make the code a bit more robust we could have a <code>Value</code> property for accessing the single value, and <code>HasManyValues</code> to determine whether it needs to be iterated over. Sort of similar to <code>Nullable&lt;T&gt;</code> in a way.</p>
+
+<p>As a final plea for mercy, the fact that we have a strange <code>OneOrMany&lt;T&gt;</code> type on our <code>Parameters</code> class immediately tells the reader that something a bit whacky is going on. Unlike the option of using <code>IEnumerable&lt;T&gt;</code> and accessing the first one most of the time, we are being explicit about the use of that property.</p>
+
+<p>That's about as far as I got grasping at the short straws of justification... :)</p>
+
+<h2>Conclusion</h2>
+
+<p>Don't do this. I've been playing around with it, but I don't know if I can bring myself to commit it. My main problem is that the other solutions, despite being less ethically despicable, still sort of suck.</p>
+
+<p>I have seen (and written) a number of fairly bad classes in my time, but I think this one takes the cake for one main reason. It's not that there is a poor, constraining process in place; there's no ivory-tower architects requiring classes with thousands of lines; no push to use every buzzword under the sun; no defence of language ignorance or of being a well-intentioned but misguided newbie. No, the reason this code is so bad is because the author should have known better. And so I declare this class the worst class ever.</p>
+
+<p><i>Think you've seen worse? Let me know. :)</i></p>

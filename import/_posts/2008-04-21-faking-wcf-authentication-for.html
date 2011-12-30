@@ -1,0 +1,96 @@
+---
+layout: "post"
+title: "Faking WCF authentication for integration tests"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1327391119665901254"
+categories: [".net", "wcf"]
+date: "2008-04-21T16:48:00.0+10:00"
+updated: "2008-05-01T09:04:07.716+10:00"
+---
+
+<p>I am currently trying to write some integration tests for a WCF service. The service itself calls a controller that uses <a href="http://davesquared.blogspot.com/2008/04/getting-current-identity-in-wcf.html"><code>ServiceSecurityContext.Current.PrimaryIdentity</code></a> to get the current user, then checks what the user can do. For the purpose of my integration tests, I wanted to hard code the current user, and then expect certain results back for that user.</p>
+
+<p>Now the username lookup is nicely abstracted behind an identity provider interface, so I would ideally just use a dependency injection tool to replace the identity lookup with something that suits my tests. For a number of reasons this wasn't possible, so instead I had to override the WCF authentication process to always return the required user.</p>
+
+<p>First thing was to setup a <code>ServiceHost</code> so the test runner could self-host the WCF service. You can test the service directly without hosting, but in this case we wanted to test things through a host. This implementation isn't careful about disposing of resources properly, so I'd think twice about copying any of this for real use if I were you :-).</p>
+
+<pre>
+[TestFixture]
+public class MyServiceIntegrationTests {
+
+  private ServiceHost host;
+  private ServiceEndpoint serviceEndpoint;
+
+  [TestFixtureSetUp]
+  public void FixtureSetup() {
+    host = new ServiceHost(typeof(MyService), new Uri(&quot;http://localhost:8080/TestMyService&quot;));
+
+    //Hack up host security for testing
+    <b>host.Authorization.ExternalAuthorizationPolicies
+        = new List&lt;IAuthorizationPolicy&gt; { new TestAuthPolicy() }.AsReadOnly();
+    host.Authorization.PrincipalPermissionMode = PrincipalPermissionMode.Custom;</b>
+
+    //Add endpoint
+    serviceEndpoint = host.AddServiceEndpoint(typeof (IMyService), new BasicHttpBinding(), String.Empty);
+    
+    host.Open();
+  }
+  [TestFixtureTearDown]
+  public void CleanupAfterAllTests() {
+    host.Close();
+  }
+  ...
+}  
+</pre>
+
+<p>The emphasised bit is where we rip into the WCF authorisation process, by setting the permission mode to <code>PrincipalPermissionMode.Custom</code>, and substituting our own <code>IAuthorizationPolicy</code> instance, <code>TestAuthPolicy</code>, which looks like this:</p>
+
+<pre>
+internal class TestAuthPolicy : IAuthorizationPolicy {
+  public string Id { get { return &quot;TestAuthPolicy&quot;; } }
+
+  public bool Evaluate(EvaluationContext evaluationContext, ref object state) {  
+    evaluationContext.Properties[&quot;<b>Principal</b>&quot;] = <b>new TestPrincipal()</b>;
+    IList&lt;IIdentity&gt; identities = new List&lt;IIdentity&gt; {<b>new TestIdentity()</b>};
+    evaluationContext.Properties.Add(&quot;<b>Identities</b>&quot;, identities);
+    return true;
+  }
+
+  public ClaimSet Issuer { get { return ClaimSet.System; } }
+}
+</pre>
+
+<p>Here we implement the <code>Evaluate</code> method to update the <code>EvaluationContext</code> properties. We set the Principal property to our own <code>TestPrincipal</code> object, and to set the Identities property to use our own <code>TestIdentity</code>. These test objects are rigged to always return our required test principal and identity:</p>
+
+<pre>
+internal class TestPrincipal : IPrincipal {
+  public bool IsInRole(string role) { return true; }
+  public IIdentity Identity { get { <b>return new TestIdentity();</b> } }
+}
+
+internal class TestIdentity : IIdentity {
+  <b>public string Name { get { return @&quot;MyTestDomain\MyTestUser&quot;; } }</b>
+  public string AuthenticationType {
+    get { return &quot;Dodgy auth&quot;; }
+  }
+  public bool IsAuthenticated { get { return true; } }
+}
+</pre>
+
+<p>The integration test can then be run like this:</p>
+
+<pre>
+[Test]
+[Category("Integration")]
+public void Should_be_able_to_call_my_poxy_WCF_service() {
+  using (var channelFactory = new ChannelFactory&lt;IMyService&gt;(serviceEndpoint)) {  
+    var service = channelFactory.CreateChannel();
+    var output = service.DoStuff("Please work!");
+    Assert.That(output, Is.EqualTo("Worked! Hurrah!"));
+    ((IChannel)service).Close();
+  }
+}
+</pre>
+
+<p>So here's what we've done. We've self-hosted a WCF service in the test fixture, and overridden the authorisation process used by that host to make it look like we always have an authenticated &quot;MyTestDomain\MyTestUser&quot; user. We then created a <code>ChannelFactory</code> to connect to that host and test the service from end-to-end (well, except for the authorisation part things ;-)). You can obviously muck around with the custom authorisation bits to change the user on the fly, so you can test different users and situations where the user is not authenticated.</p>
+
+<p>Hope this helps. Let me know if I've missed easier ways of doing this :-)</p>

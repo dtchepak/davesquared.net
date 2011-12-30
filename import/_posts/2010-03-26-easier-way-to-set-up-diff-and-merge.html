@@ -1,0 +1,35 @@
+---
+layout: "post"
+title: "An easier way to set up diff and merge tools for Git on Windows"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4324976115343514669"
+categories: ["git"]
+date: "2010-03-26T10:33:00.0+11:00"
+updated: "2010-04-23T00:05:44.359+10:00"
+---
+
+<p>I've noticed a fair number of people are looking at my older posts on <a href="http://www.davesquared.net/2009/02/setting-up-diff-and-merge-tools-for-git.html">setting up diff and merge tools</a> and the update on <a href="http://www.davesquared.net/2009/05/setting-up-git-difftool-on-windows.html">configuring git difftool</a>. These posts cover how to write wrapper scripts around your diff and merge tool of choice (I was using <a href="http://www.sourcegear.com/diffmerge/">DiffMerge</a> at the time) and get Git to use them.</p>
+
+<p>I'm not doing this any more, opting for a much simpler method. I thought I'd share it in the event you just want to get something up and running as fast as possible, and that you aren't too particular about which diff tool you use.</p>
+
+<p>First step, install <a href="http://kdiff3.sourceforge.net/">KDiff3</a>. It's not the prettiest GUI in the world, but once you get used to it it is quite usable and has the added advantage of working quite naturally with Git without having to configure much.</p>
+
+<p>Second step, open your <code>.gitconfig</code> (in your home directory, <code>C:\Users\(username)</code>, or down ye olde Documents and Settings path), and add the following:</p>
+
+<pre>
+[diff]
+    tool = kdiff3
+
+[merge]
+    tool = kdiff3
+
+[mergetool &quot;kdiff3&quot;]
+    path = C:/Program Files/KDiff3/kdiff3.exe
+    keepBackup = false
+    trustExitCode = false
+</pre>
+
+<p>Now all calls to <code>git difftool</code> and <code>git mergetool</code> should default to KDiff3. That's all you need to be good to go! Much simpler than bothering with all those wrappers. Hope this helps! :)</p>
+
+<div><img src="http://lh4.ggpht.com/_wEsHWMWy090/SYg42J2XdHI/AAAAAAAAA7Q/hHGvPBogwWY/s800/works-on-my-machine-starburst.png" /></div>
+
+<p><i>Certified as <a href="http://www.codinghorror.com/blog/archives/000818.html">working on my machine</a>, running Git 1.7.0.2 (msysgit).</i></p>

@@ -1,0 +1,31 @@
+---
+layout: "post"
+title: "Removing chrome from SharePoint page"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2620356051900378709"
+categories: ["imho", "sharepoint"]
+date: "2007-03-16T14:47:00+11:00"
+updated: "2007-10-16T21:24:29.711+10:00"
+---
+
+<p>MS Dynamics CRM has some info on removing chrome from <a href="http://blogs.msdn.com/crm/archive/2006/07/06/658157.aspx">Web Part pages</a> and <a href="http://blogs.msdn.com/crm/archive/2006/06/20/639918.aspx">document libraries</a>. This is useful when combined with the Page Viewer Web Part so you can embed a list into another page. These methods involved mucking around with HTML, embedding styles, or embedding javascript to muck with styles and HTML.</p>
+
+<p>An <a href="http://blogs.msdn.com/crm/archive/2006/07/06/658157.aspx#1044299">example of an embedded style</a> is given in a comment posted to the first link first link. This involves adding the following to a content editor web part:</p>
+<pre>
+&lt;style&gt;
+.ms-navframe {
+  display:none;
+}
+.ms-bannerframe {
+  display: none;
+}
+.ms-titleareaframe {
+  display:none;
+}
+&lt;/style&gt;
+</pre>
+
+<p>Another way is using <a href="http://msdn.microsoft.com/library/en-us/spptsdk/html/SPPTWSSRPC_SV01072919.asp">WSS RPC methods</a> with the <code>dialogview</code> parameter as described <a href="http://mzaki.spaces.live.com/blog/cns!E3340AEAC1CDD449!413.entry">here</a>. This method involves using owssvr.dll to view the information via a URL in this format:</p>
+
+<code>http://[Server]/[Site Path]/_vti_bin/owssvr.dll?dialogview=FileOpen&location=Shared%20Documents</code>
+
+<p>I'm a bit surprised there isn't a simple <a href="http://blogs.msdn.com/danielmcpherson/archive/2004/10/11/240863.aspx">querystring </a> parameter or similar to do this.</p>

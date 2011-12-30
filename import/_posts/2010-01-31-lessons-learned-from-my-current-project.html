@@ -1,0 +1,89 @@
+---
+layout: "post"
+title: "Lessons learned from an Agile project"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-9089148738027493670"
+categories: ["imho", "agile"]
+date: "2010-01-31T23:44:00.0+11:00"
+updated: "2010-11-17T11:55:01.112+11:00"
+---
+
+<div class="note"><b>Update 2010-11-17: </b> This post was included in the <a href="http://davidburela.wordpress.com/2010/11/14/developer-blog-banter-3-project-retrospective/">third instalment of David Burela's Developer Blog Banter series</a>. You can check there for other project post-mortems, and read <a href="http://en.wordpress.com/tag/developer-blog-banter/">developer conversations about other topics too</a>.</div>
+
+<p>We're at a pretty important milestone of my current project at the moment, so I thought it would be a good time to look back on some of the lessons I've learned about Agile projects over the last 18 months or so.</p>
+
+<p>Just to provide some context for this post, the project has been run from the outset as an Agile project based on Scrum and XP practices. We've been using 2 week iterations, user stories on index cards which are also recorded in Jira, and many, many whiteboards. </p>
+
+<p>Overall I'd have to say our process gave us a tremendous insight as to how we were tracking against features and timelines from very early on, and the iterative approach to development has resulted in the most pleasant code base I have ever worked on (this is not actually saying much ;)). Even after 18 months the code has proved very resilient to the code rot that I've normally seen on projects after just a couple of weeks.</p>
+
+<p>I won't go in to all the details of what worked and what didn't, but I would like to pick out the key things I've learned during the project.</p>
+
+<h2>Short stories</h2>
+<p>This has been the single most important thing I've learned during this project. Stories need to be short -- the shorter the better. I'm sure there's some theoretical minimum story size that is useful, but I've only ever seen stories that are right-sized or too big. Ideally each story can be done-done (i.e. developed, reviewed, tested, closed) in one or two days.</p>
+
+<p>We were pretty militant that, except under exceptional circumstances, all stories must have a clear value to our users. I still consider this an essential part of a feature or user story (if it is not valuable to the user then why are you doing it?), but where we went wrong was where we set the bar for &quot;valuable&quot;.</p>
+
+<p>As a contrived example, say the application needs to display a screen for entering the operator's details. This should include name, birth date, phone and address details. The entry fields should prefill based on the country, postcode, state etc. the operator enters. The screen also needs some validation to ensure the operator has entered the information properly before they can proceed. At first glance all aspects of this feature are very important and our users consider it all essential to the value of the feature.</p>
+
+<p>If you can get all this done in a day then it might be worth a shot, but we can actually divide this feature into smaller pieces that still provide <i>some</i> value to the users, even if it is not the entirity. Maybe our first story is just to enter a name and continue. The second might be to add the other fields, but with no autocompletion. Third might be to add validation. And forth might be some sub-set of the autocomplete. Some of these may only bear a tenuous link to the full value the user requires, but even the smallest amount of relevance is enough when story size is on the line.</p>
+
+<p>We started off with more of the former approach, and ended up at the latter. The difference was amazing. Although there were other contributing factors at work (maturity of the codebase, clarity of requirements etc), I'm pretty comfortable in ascribing much of the success later in the project with our shift to very short stories.</p>
+
+<p>Why is story size so important? For lots of reasons, but two big ones are momentum and feedback.</p>
+
+<h2>Momentum</h2>
+
+<p>This probably sounds a bit touchy-feely, but I think dismissing it on those grounds is ignoring a fairly fundamental part of human nature. If every day, every task is a thankless struggle, the intertia will pull down your team's morale, motivation, concentration, and reduce their creativity and ability to innovate. On the flip side, once the team gets up a bit of steam and starts churning through stories, seeing visible progress as they move across the task board and into the Done column, the team's enthusiasm and creativity soars. They start kicking around new ideas on how to remove some duplication from the code and reduce some overhead for future stories. </p>
+
+<p>It is really important to cultivate momentum early in the project, and work hard to sustain it. A great way of doing this is to make progress visible. Small stories and a task board and/or burn down chart really help with this.</p>
+
+<h2>Feedback</h2>
+
+<p>Agile revolves around rapid feedback cycles. The sooner you get feedback, the sooner you can adjust and improve. It is vitally important to ensure that you have feedback on as many of your decisions as possible, and the most important, difficult to change decisions should be deferred until you have enough feedback to make an informed decision.</p>
+
+<p>We had a very, very long Sprint 0, which sort of mushed up the envisioning phase of the project with a whole lot of process decisions, story identification, risk analysis and more. The problem was we did all this in a complete vaccuum -- we had little if any feedback to be able to sanity check the decisions being made. It turned out that alot of these decisions became irrelevant once we hit the trenches, and many of the good decisions could quite adequately been made just-in-time at the frontline, rather than behind a whiteboard several weeks prior.</p>
+
+<p>This is the other big reason to keep stories short -- you can get rapid feedback from your testers, users, PM, and/or fellow devs.</p>
+
+<h2>Acceptance testing</h2>
+
+<p>I don't think we had a clear idea of exactly what we wanted to achieve with acceptance tests. Instead of deciding what we needed them, and then running with it and refining it over subsequent iterations (based on the feedback we would get from trying it), we picked a wiki-based acceptance testing tool and tried to bludgeon it into some sembalance of what we actually needed.</p>
+
+<p>We had a fair bit of trouble moving between the application world and the acceptance test world.  Expressing what we wanted in the tool, and then piping that through a path in the application became a bit of a nightmare. I think this could have been alleviated by having our acceptance tests closer to the code, maybe even written in NUnit.</p>
+
+<p>Part of the reason for using a wiki-based tool was to let users write and review the acceptance tests. I am really skeptical of the idea that users are generally going to be intimately involved in authoring acceptance tests. I think it is great for the conversations to take place, and to have the resulting specifications in a format where users can easily review them, but the writing itself I think needs to be done by a programmer-type person. I am sure this isn't the case everywhere, but I think it is a reasonable guess that this best suits the majority. In our case it was great get the tests in a reviewable format, but I don't think we got any benefit from having user-editable specs.</p>
+
+<p>Another problem we faced was defining how deep we needed our tests to go. Because we were working with a few different bits of hardware returning non-deterministic results, we had to fake out some important behaviour to get tests to work. This led us to write tests which only went through sub-sections of the application, which made them less-than-reliable as integration tests. Sometimes the tests told us something was working which wasn't actually working when going through the real application path.</p>
+
+<p>I am still not sure how to do these right, but I think as close to end-to-end as you can get would be a good aim. If you need to fake external dependencies, spend a bit of time to do it effectively rather than avoid the issue until it is too late.</p>
+
+<h2>Do what works</h2>
+
+<p>The end goal of getting feedback is to respond to it. If you are getting feedback that something isn't working -- change it!</p>
+
+<p>At one point we realised that our stories were too large to get much done in a single, two week sprint. We tried to break them up, but couldn't (at that stage of our learning anyway). It wasn't until a few sprints later that someone suggested the simple, practical solution of increasing the sprint length to 3 weeks. The process is not sacred. You are not a slave to it. If it is not working, change it. :)</p>
+
+<p>As an aside, the three weeks worked well, but we ended up figuring out how to break up our stories better and reverting to two weeks.</p>
+
+<p>Another place this approach served us well was in moving to <a href="http://www.davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based unit tests</a>. We had existing tests in place that did not follow this format, but the feedback we were getting was pushing us toward the scenario approach. We chose to do what works instead of keep consistency with the existing tests (consistently painful isn't a good thing :)), and it worked very well. When we touched some of the older tests we often ended up upgrading them to the new approach.</p>
+
+<p>We probably should have done this with our approach to acceptance testing and in a few other areas, but we had invested a too much to make it worth our while. If you don't respond to feedback early enough then sometimes you miss the boat.</p>
+
+<h2>Stay close to your domain</h2>
+<p>One of the hazards I found with trying to do the "simplest thing that could work" was straying too far from the domain. In our application we had to run through a number of different tests (where test is a domain concept, not a unit test test), but we held off from adding a <code>Test</code> class because we just didn't need it. Once we did, the concepts relating to tests were so scattered that it was not worth the redesign to put it right. Funnily enough, the <code>Test</code> concept would have been just as easy to implement at the start, but because it wasn't demanded by our current requirements we avoided it.</p>
+
+<p>More recently I've started following JP Boodhoo's alternative: "simplest thing that makes <i>sense</i>". When you're not sure where to put some behaviour or what to name it, pick the options that makes sense to your domain.</p>
+
+<h2>End-to-end as fast as possible</h2>
+<p>At the start of our project we took one small slice of the application and started getting it to a state we were happy with. I think the "happy with" part was our undoing. We were polishing up one slice without taking it end-to-end, and without the feedback of other slices to guide us (there's that need for feedback again).</p>
+
+<p>By end-to-end, I mean from the spot where the users fires off some behaviour, to the point where it is processed and back again. Not with any faked pieces. If the user fires up the application then the slices needs to function correctly. This doesn't mean polished, it just means working correctly.</p>
+
+<p>I think we would have faired better by keeping our slices thinner, making them completely end-to-end, and then not bloating them by unguided polish. Once you start bloating your slices then there is less room to slot in your remaining slices. </p>
+
+<p>And remember that until you get there, end-to-end is generally further than you think. There can be all sorts of nasty surprises lurking in the unreached parts of your slice of functionality. If you are basing future decisions on the feedback you've received from an incomplete slice then you are going to compound the problem.</p>
+
+<h2>Final thoughts</h2>
+
+<p>This project has been a fantastic and educational experience. I still can't believe that after 18 months the code is still malleable. I'm looking forward to trying to apply some of these lessons to future projects, and make a whole lot of new mistakes to learn from. :)</p>
+
+<p>Have you encountered any of the same problems in your Agile projects? What has been the most valuable lesson you've taken away from a recent project? Would love to get your comments. :)</p>

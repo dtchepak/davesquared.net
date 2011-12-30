@@ -1,0 +1,40 @@
+---
+layout: "post"
+title: "Explicitly test what you are trying to test"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1016764244850093485"
+categories: [".net", "testing"]
+date: "2009-04-02T00:09:00+11:00"
+updated: "2009-04-02T00:09:07.613+11:00"
+---
+
+<p>Had a problem today that initially took me by surprise. The problem was that this test passed:</p>
+
+<pre>
+[Test]
+public void EmptyBlocksShouldBeEqual() {
+    var first = new Block();
+    var second = new Block();
+    Assert.That(first, Is.EqualTo(second));
+}
+</pre>
+
+<p>Why was this a problem? Because <code>Block</code> is a reference type and I had not overridden <code>Equals(Object o)</code>, so we should fall back to the default <code>Object.Equals(Object o)</code> method which compares object references. The references are clearly different, so this test should fail.</p>
+
+<p>To figure out why this test passes we need two pieces of information. First we need to know how <code>Block</code> is defined:</p>
+
+<pre>
+public class Block : IEnumerable&lt;FrameParameters&gt;  { /* ... snip ... */ }
+</pre>
+
+<p>Second, we need to know that the NUnit <code>EqualConstraint</code> implementation has specific handling for <code>IEnumerable</code> classes. So when I called <code>Assert.That(first, Is.EqualTo(second));</code>, this was just comparing the values returned via enumerating both <code>Block</code> instances. This really wasn't what I wanted -- I was trying to test the <code>Equals()</code> implementation. Here's the corrected test:</p>
+
+<pre>
+[Test]
+public void EmptyBlocksShouldBeEqual() {
+    var first = new Block();
+    var second = new Block();
+    Assert.That(<b>first.Equals(second)</b>);
+}
+</pre>
+
+<p>The moral of the story: make sure you explicitly test what you are trying to test. :)</p>

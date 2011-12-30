@@ -1,0 +1,176 @@
+---
+layout: "post"
+title: "Learning C# lambda syntax from delegates"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1364301814268100847"
+categories: [".net"]
+date: "2008-10-22T01:21:00.0+11:00"
+updated: "2008-10-22T15:32:06.286+11:00"
+---
+
+<p>As a sweeping generalisation, I've found that developers who are really proficient with delegates / anonymous delegates seem to have a bit of an adverse reaction to seeing the <a href="http://msdn.microsoft.com/en-us/library/bb397687.aspx">lambda syntax in C# .NET 3.5</a>. Luckily I'm proficient with very little, so the transition was easy for me :). This is a post to try and make the transition easier for people more competent than me :).</p>
+
+<h2>From delegates to lambdas</h2>
+<p>Say I have a <code>Widget</code> class, which just contains a <code>Name</code> and a <code>WeightInGrams</code>.</p>
+<pre>
+public class Widget {
+        public Widget(string name, int weightInGrams) {
+            Name = name;
+            WeightInGrams = weightInGrams;
+        }
+        public string Name { get; set; }
+        public int WeightInGrams { get; set; }
+    }
+}</pre>
+
+<p>Now we want to search through an array of these and find how many are under 300 grams. Why? Er, why not? We'll use <code>Array.FindAll</code> to do this old skool (as opposed to fancy LINQy stuff like using <code>Where()</code>). <code>FindAll</code> takes an array of type <code>T</code> and a <code>Predicate&lt;T&gt;</code>, which is a delegate that takes a <code>T</code> and returns a <code>bool</code> indicating whether the predicate has been matched.</p>
+
+<pre>
+[TestFixture]
+public class LambdaTests {
+ [Test]
+ public void SearchArrayUsingDelegate() {
+  var widgets = SixWidgetsFrom100GramsTo600Grams();
+  var widgets300GramsOrLess = Array.FindAll(widgets, <b>Weighs300GramsOrLess</b>);
+  Assert.That(widgets300GramsOrLess.Length, Is.EqualTo(NumberOfWidgets300GramsOrLess));
+ }
+
+ <b>private bool Weighs300GramsOrLess(Widget widget) {
+  return widget.WeightInGrams &lt;= 300;
+ }</b>
+
+ private const int NumberOfWidgets300GramsOrLess = 3;
+ static Widget[] SixWidgetsFrom100GramsTo600Grams() {
+  return new[] {
+    new Widget(&quot;W1&quot;, 100), new Widget(&quot;W2&quot;, 200), new Widget(&quot;W3&quot;, 300),
+    new Widget(&quot;W4&quot;, 400), new Widget(&quot;W5&quot;, 500), new Widget(&quot;W6&quot;, 600)
+     };
+ }
+} 
+</pre>
+
+<p>As of .NET 2.0 we can use an anonymous delegate to do this inline:</p>
+
+<pre>
+[Test]
+public void SearchArrayUsingAnonymousDelegate() {
+ var widgets = SixWidgetsFrom100GramsTo600Grams();
+ var widgets300GramsOrLess = 
+  Array.FindAll(widgets, <b>delegate(Widget widget) { return widget.WeightInGrams &lt;= 300; }</b>);
+ Assert.That(widgets300GramsOrLess.Length, Is.EqualTo(NumberOfWidgets300GramsOrLess));
+}
+</pre>
+
+<p>As of .NET 3.5 we have lambda syntax, which provides a terser way of expressing our predicate function:</p>
+
+<pre>
+[Test]
+public void SearchArrayUsingLambda() {
+ var widgets = SixWidgetsFrom100GramsTo600Grams();
+ var widgets300GramsOrLess = 
+  Array.FindAll(widgets, <b>widget =&gt; widget.WeightInGrams &lt;= 300</b>);
+ Assert.That(widgets300GramsOrLess.Length, Is.EqualTo(NumberOfWidgets300GramsOrLess));
+}
+</pre>
+
+<p>Clear as mud? Let's have a closer look at how we convert from delegate to a lambda expression.</p>
+
+<pre>
+//Original delegate:
+delegate(Widget widget) { return widget.WeightInGrams &lt;= 300; }
+
+//Drop the &quot;delegate&quot; keyword, and add a funky &quot;=&gt;&quot; operator, which goes by all sorts of creative names :)
+(Widget widget) =&gt; { return widget.WeightInGrams &lt;= 300; }
+
+//The C# 3.0 compiler has type inference, so we can also drop the argument type and let the compiler figure it out.
+//If we have a single statement to the right of the &quot;=&gt;&quot; operator, this will be returned from the function,
+//so we can also drop the braces, end-of-statement semicolon and the explicit return.
+widget =&gt; widget.WeightInGrams &lt;= 300
+</pre>
+
+<p>So what's the difference between our anonymous delegate and our lambda expression? In this example, absolutely nothing other than a terser (and somewhat addictive IMO) syntax. Let's compare the generated code for both just to prove this:</p>
+
+<pre>
+[CompilerGenerated]
+private static bool &lt;SearchArrayUsingAnonymousDelegate&gt;b__0(Widget widget) {
+    return (widget.WeightInGrams &lt;= 300);
+}
+[CompilerGenerated]
+private static bool &lt;SearchArrayUsingLambda&gt;b__2(Widget widget) {
+    return (widget.WeightInGrams &lt;= 300);
+}
+</pre>
+
+<p>So based on this example anonymous delegates and lambdas are exactly the same, it's just a matter of getting used to writing a bit less noise code. :)</p>
+
+<h2>Exactly the same, except when they're different...</h2>
+<p>Of course there's a catch. Actually, I can think of two, and they both relate to <a href="http://msdn.microsoft.com/en-us/library/bb397951.aspx">expression trees</a>. To support a lot of LINQ magic, lambda expressions can be converted to expression trees at compile time. An expression tree is basically just a bunch of objects representing each part of the lambda expression. A query provider, like the one provided by LINQ to SQL, can then process the expression tree and execute the expression in a different way, say, by converting it to TSQL and running it against database.</p>
+
+<p>To get the compiler to generate an expression tree from a lambda expression we just need to specify the type differently:</p>
+
+<pre>
+Predicate&lt;Widget&gt; lambda = widget =&gt; widget.WeightInGrams &lt;= 300;
+Expression&lt;Predicate&lt;Widget&gt;&gt; expressionTree = widget =&gt; widget.WeightInGrams &lt;= 300;
+</pre>
+
+<p>So how does this relate to differentiating anonymous delegates and lambdas?</p>
+
+<pre>
+//Compiles fine:
+Expression&lt;Predicate&lt;Widget&gt;&gt; expressionTree = <b>widget =&gt; widget.WeightInGrams &lt;= 300</b>;
+
+//WON'T COMPILE:
+Expression&lt;Predicate&lt;Widget&gt;&gt; expressionTree = <b>delegate(Widget widget) { return widget.WeightInGrams &lt;= 300; }</b>;
+<b>/* error CS1946: An anonymous method expression cannot be converted to an expression tree */</b>
+
+</pre>
+
+<p>As you can see from the code sample above, the compiler will simply refuse to convert the delegate form to an expression tree. So the way the compiler handles the two are quite different as soon as you introduce expression trees. I also mentioned a second catch. Take a look at this modification of the previous example:</p>
+
+<pre>
+//WON'T COMPILE:
+Expression&lt;Predicate&lt;Widget&gt;&gt; expressionTree = <b>widget =&gt; { return widget.WeightInGrams &lt;= 300; }</b>;
+<b>/*  error CS0834: A lambda expression with a statement body cannot be converted to an expression tree */</b>
+</pre>
+
+<p>This second catch is that there is actually a <a href="http://www.lostechies.com/blogs/jimmy_bogard/archive/2008/07/18/expressions-and-lambdas.aspx">difference between lambda <b>expressions</b> and lambda <b>statements</b></a>. A lambda statement contains braces and a function body, and can potentially have multiple lines like a standard delegate. A lambda expression is the single line with an implicit return. So in our original, Array-searching example, the following two statements are actually are different if you are trying to assign them to expression trees.</p>
+
+<pre>
+//Lambda statement
+widget =&gt; { return widget.WeightInGrams &lt;= 300; }
+
+//Lambda expression
+widget =&gt; widget.WeightInGrams &lt;= 300
+</pre>
+
+<div class="note">
+<p><b>Aside:</b> In case you were wondering, here is the expression tree generated by the compiler for the <code>widget =&gt; widget.WeightInGrams &lt;= 300</code> lambda expression, care of Reflector:</p>
+
+<pre>
+ParameterExpression CS$0$0000;
+Expression&lt;Predicate&lt;Widget&gt;&gt; expressionTree = 
+  Expression.Lambda&lt;Predicate&lt;Widget&gt;&gt;(
+ Expression.LessThanOrEqual(
+  Expression.Property(
+   CS$0$0000 = Expression.Parameter(typeof(Widget), &quot;widget&quot;), 
+   (MethodInfo) methodof(Widget.get_WeightInGrams)), 
+   Expression.Constant(300, typeof(int))), 
+   new ParameterExpression[] { CS$0$0000 }
+  );
+</pre>
+</div>
+
+<h2>Conclusion</h2>
+<p>So in conclusion, lambdas are simply, for most intents and purposes, a neater syntax for defining delegates.</p>
+
+<pre>
+//Delegate:
+delegate(Widget widget) { return widget.WeightInGrams &lt;= 300; }
+
+//Drop the delegate and add the &quot;=&gt;&quot; operator to get a lambda statement
+(Widget widget) =&gt; { return widget.WeightInGrams &lt;= 300; }
+
+//Use type inference and implicit return to get a lambda expression
+widget =&gt; widget.WeightInGrams &lt;= 300
+</pre>
+
+<p>The only differences that can bite you are when you are dealing with expression trees, either explicitly via the <code>Expression&lt;&gt;</code> type, or implicitly by using the LINQ operators. Hope this helps, or at least has caused no significant damage to your understanding of lambdas :)</p>

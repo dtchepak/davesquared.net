@@ -1,0 +1,116 @@
+---
+layout: "post"
+title: "Unhelpful flaming is unhelpful"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7998040006669625804"
+categories: ["imho"]
+date: "2011-09-20T23:47:00.0+10:00"
+updated: "2011-09-21T11:58:41.432+10:00"
+---
+
+<p>I recently read an excellent post on <a href="http://ecomwriter.com/2011/09/08/patience-and-respect/">patience and respect</a> from Andrew Sharp, suggesting the radical idea of trying to empathise with the much-maligned <i>whoever-wrote-this-steaming-pile-of-code-that-I-now-have-the-misfortune-of-having-to-work-with</i> instead of the usual cursing of the previous author's name, professionalism, family, and very existence in a bout of barely contained nerd-rage.</p>
+
+<p>This is often quite embarrassing when you realise the previous author was you, but this isn't the only reason to stop the practice of flaming the authors of rotten code.</p>
+
+<p>Yes, this post is basically a rehash of <a href="http://ecomwriter.com/2011/09/08/patience-and-respect/">Andrew's post</a>, but as it resonated with me I felt compelled to write down my perspective on the topic. His is concise and beautifully written, but mine briefly teases SharePoint, so take your pick. :D</p>
+
+<h2>The situation</h2>
+
+<p>You open the code. It's worse than you thought. Your face falls as you flick through the files you need to change, and see one or more of the following:</p>
+
+<ul>
+<li>Classes with thousands of lines.</li>
+<li>Methods with thousands of lines.</li>
+<li>Nested <code>if</code>s so deep you need to scroll horizontally to find the end of the arrow.</li>
+<li>Constructors with 17 arguments.</li>
+<li><a href="http://www.richard-banks.org/2011/02/anti-region-campaign.html">Regions</a>.</li>
+<li>No trace of automated testing. Or of even having been manually tested.</li>
+<li>Code that only works due to some obscure side-effects.</li>
+<li>Code that only works on Tuesdays.</li>
+<li>Liberal sprinklings of <code>Thread.Sleep</code>.</li>
+<li>Object Oriented code where all object members are static.</li>
+<li>No.respect_for.the_law().of.demeter()</li>
+<li>SharePoint involved somewhere.</li>
+<li>Incredibly clever code featuring an abstract factory pattern to produce strategies which are injected into commands applied with double dispatch using the visitor pattern, proxying through to WCF calls batched into units of work and persisted using an EF entity data model. You can't help but think this is overkill to print FizzBuzz.</li>
+</ul>
+
+
+<h2>The initial reaction</h2>
+
+<ul>
+<li>WTF!?!?</li>
+<li>No seriously; WTF?!!?!?</li>
+<li>What were they thinking?</li>
+<li>What an unprofessional jerk!</li>
+<li>How do they sleep at night?!?!</li>
+<li>I've got to post this to twitter. Everyone will get a good laugh at this.</li>
+<li>Oh, and I'll blog it! There's another couple of hundred people to pour scorn and ridicule on this deserving schmuck!</li>
+<li>Even better, I'm posting this to thedailywtf.com!</li>
+</ul>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://www.osnews.com/story/19266/WTFs_m" imageanchor="1"><img border="0" height="377" width="400" src="http://1.bp.blogspot.com/-4CiPswTgHgc/TniTwHNuCBI/AAAAAAAABwg/MytpFULYBSc/s400/wtfm.jpg" /></a></div>
+
+<h2>Stop! Hammertime!</h2>
+
+<p>What exactly are we doing here? We're all puffed up with self-righteous indignation, but what is this vehement response going to accomplish? Shame an incompetent person out of programming, thereby ridding the glorious profession of software development of one of those rare dullards that somehow slip into the ranks of the brilliant, intellectual master-craftsmen and women that dominate the industry? (In case it isn't clear, that sentence carries a &lt;sarcasm/&gt; tag :P).</p>
+
+<p>Probably not. All we're doing is stroking our own egos, delighting in someone else screwing up for a change, and further fostering the culture of competitiveness, elitism and macho-attitudes that seem to keep <a href="http://www.jamesthigpen.com/blog/2009/02/28/altnet-seattle-2009-why-so-mean/">popping up in our industry</a>.</p>
+
+<p>Sure, short-term you may feel better for venting, but adding to the bile on the internet is a bit like peeing in the dam that supplies your own drinking water.</p>
+
+<p>So what could we do instead?</p>
+
+<h2>Consider the context</h2>
+
+<p>Let's take a deep breath, then start thinking about why this code stinks. It is important to realise that people are generally trying to do good work. There are probably valid reasons the code you are currently staring at seems wrong, and most of them probably have nothing to do with trying to spite you.</p>
+
+<ul>
+<li>The author is inexperienced.</li>
+<li>The author does not have experience with that particular problem.</li>
+<li>The author is trying a new approach in an attempt to learn.</li>
+<li>The author doesn't know about a language feature, pattern, or project convention.</li>
+<li>The author was working to an insane deadline that would cost the company millions if the feature wasn't out the door in 33 minutes.</li>
+<li>The author was actually confronted with worse code, and did substantial tidy up of a whole bunch of classes and extracted the most ugly bit to a place where it could be refactored later (i.e. where you currently need to modify ;)). The reason you are not currently fighting another 3 fires is because of the work they did.</li>
+<li>The author knew the code wasn't perfect, but it wasn't obvious at the time how else to factor it.</li>
+<li>The author just seperated from their long term partner, they have a parent in hospital, their car was smashed by an uninsured driver, their bank just increase its mortgage rate and their pet just died in a tragic canoeing accident. They had trouble concentrating on the code they wrote that week.</li>
+<li>The author implemented a bunch of awesome classes, and this one.</li>
+<li>The author wrote the code in a way that was perfect at the time, it's just that times have changed.</li>
+<li>The code is actually really good. We just don't see the beauty of it.</li>
+<li>The author made a mistake. You may remember making one or two of these yourself in your younger days.</li>
+<li>The author was forced at gunpoint to write the code by a rogue PM who was also holding the author's family hostage, dangling them precariously over a vat of potent hydrochloric acid while screaming "add another responsibility to the class or they all get it! Add more regions and superfluous comments! And CLOSE THAT CLASS FOR EXTENSION!!! DO IT!!!1!"</li>
+</ul>
+
+<p>None of this means the author is a bad person, and yet us programmers seem to take perverse delight in opening some code and sniggering "WTF?!!? What were they thinking?" while firing up our favourite blame tool. Maybe it just makes us feel better about all the cruddy code we've written?</p>
+
+<h2>Opportunities</h2>
+
+<p>Instead of dwelling on the negatives, let's look at the opportunities the code has given us to do some more constructive things than suggested by our initial reactions.</p>
+
+<ul>
+<li>If this is public code, we could contact the author, thank them for being brave enough to share the code in the first place, and <a href="http://ecomwriter.com/2011/09/08/patience-and-respect/">constructively suggest alternate approaches</a>, explaining the rationale for doing so and being careful to keep the person and the code separate (e.g. favour "this class could use a factory to create this instance" or "we could use a factory..." over "you shouldn't create this here, use a factory". This helps get past people's natural tendency to become defensive, and prevents you from slipping into flame mode.)</li>
+<li>If you work with the person, maybe consider how <a href="http://www.davesquared.net/2010/08/there-is-no-u-in-collective-ownership.html">collective ownership</a> applies, and think about how the team can improve things in future.</li>
+<li>If you can see how the code ended up in its present state and what to do about it, take the general concepts (not the personal attack) and blog that, post it to a programming mailing list, conduct a brownbag session at work, present the general principles at your local usergroup, talk at a conference, get on a podcast, start a podcast. Teach it. Educate. Play a small but valuable part in lifting the community and advancing the practice of programming.</li>
+<li>Think about how APIs or patterns could change or be used to prevent the problem. Release an open source project that makes getting it right easy and obvious (as well as an explanation of why this approach works).</li>
+<li>Practice giving criticism in a constructive, respectful way. This is a skill worth developing.</li>
+<li>Recognise that <a href="http://www.davesquared.net/2011/08/technical-debt.html">there is no perfect, tech debt-free solution</a>, and think up of lots of ways to fix the problems you see in the code. This will help you to improve both your coding and your perspective. Combine this with aforementioned blogging, presenting, teaching etc.</li>
+<li>Encourage the author. Programming is hard; praising anything good about the code and encouraging them to try improvements can give them more confidence to tackle future problems more creatively. It's amazing what being freed from the fear of failure can do.</li>
+<li>We could, hmm, I dunno, maybe FIX THE DARN CODE AND MOVE ON WITH OUR LIVES!!! ;)</li>
+</ul>
+
+<div class="note"><b>Tip:</b> While explaining a techinical concept, avoid condescending words or words that diminish the task like "simply", "basic", "trivial", and "obvious". It may be to you, or it may be in hindsight. Recognise that if it were any of these things to the author, then they would have done it that way in the first place.</div>
+
+<h2>Why bother?</h2>
+
+<p>Because programming culture seems filled with large egos, worthless competitiveness, negativity, and cults around celebrities which discourage both creative thinking and challenges to the status quo. And yet we also have many examples of selflessness and generosity: people pouring hundreds of hours into OSS projects, donating their time to usergroups and mailing lists, and blogging stuff they learn so that others may benefit. Let's spend more time on these positives within the dev community. By focusing on the opportunities finding "bad" code gives us, I believe we can get a community where:</p>
+
+<ul>
+<li>People can ask honest questions without being told to "RTFM n00b".</li>
+<li>People spend more time discussing different approaches than defending previous ones.</li>
+<li>People can post sample code or OSS projects without being ripped apart and mocked, but instead given constructive advice and congratulations for having the guts to risk failing in public.</li>
+<li>All people can contribute; not just the loudest, most extroverted, most confident personalities. A more diverse group of people will provide more diverse ideas and innovations.</li>
+<li>Failure starts to be considered a wonderful thing, as even a single failure is an opportunity for many people to learn and improve as developers.</li>
+</ul>
+
+
+<p>Please leave your flames and ad hominem attacks in the comments. ;)</p>
+

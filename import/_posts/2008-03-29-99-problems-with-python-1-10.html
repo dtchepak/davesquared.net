@@ -1,0 +1,470 @@
+---
+layout: "post"
+title: "99 problems with Python (1-10)"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3064348945630898356"
+categories: ["featured", "python", "kata"]
+date: "2008-03-29T22:16:00.01+11:00"
+updated: "2008-05-01T09:04:07.717+10:00"
+---
+
+<p>No, this is not a rant about problems I have with Python. I actually quite like it. Rather, it's my attempt to complete some of the <a href="https://prof.ti.bfh.ch/hew1/informatik3/prolog/p-99/">Dr Werner Hett's 99 Prolog logic problems</a> using Python, as a way of getting to learn a bit about the language. I first heard about the 99 Problems from <a href="http://www.frickinsweet.com/99problems/post/Starting-things-off.aspx">Joel and Ryan Lanciaux's efforts to solve the problems using F#</a>, who were in turn inspired by the <a href="http://curiouscoding.wordpress.com/2008/02/11/learning-ruby-with-ninety-nine-problems-1-10/">Ruby implementations on the Curious Coding blog</a>.</p>
+
+<p>Keep in mind that I'm new to Python (have jumped into this exercise straight after reading the excellent <a href="http://www.diveintopython.org/">Dive into Python</a>), so much of this might be pretty clumsy. I'd love to hear any suggestions for improvements. I am also not entirely keeping with the original spirit of the Prolog exercise in terms of <a href="http://en.wikipedia.org/wiki/Logic_programming">logic programming</a>, as my main purpose is familiarising myself with Python. I have, however, tried to do things in a fairly Pythonic, <a href="http://en.wikipedia.org/wiki/Functional_programming">functional-style</a> rather than C/C++/Java/C#, <a href="http://en.wikipedia.org/wiki/Imperative_programming">imperative</a>-style. I'm also not concerned with error handling or edge cases, just in getting the basic syntax and approach right. I'm not sure I'll get through all 99 problems, but at the very least here's the first 10.</p>
+
+<ul id="postAnchor_99ProbsPython_1to10_ToC">
+<li><a href="#postAnchor_99ProbsPython_1to10_Intro">Implementation overview</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P01">Problem 1: Find the last element of a list</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P02">Problem 2: Find the last but one element of a list</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P03">Problem 3: Find the K'th element of a list</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P04">Problem 4: Find the number of elements of a list</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P05">Problem 5: Reverse a list</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P06">Problem 6: Find out whether a list is a palindrome</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P07">Problem 7: Flatten a nested list structure</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P08">Problem 8: Eliminate consecutive duplicates of list elements</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P09">Problem 9: Pack consecutive duplicates of list elements into sublists</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_P10">Problem 10: Run-length encoding of a list</a></li>
+<li><a href="#postAnchor_99ProbsPython_1to10_Conclusion">Conclusion</a></li>
+</ul>
+
+<h2 id="postAnchor_99ProbsPython_1to10_Intro">Implementation overview</h2>
+<p>I did the exercise in <a href="http://www.eclipse.org/">Eclipse</a> with <a href="http://pydev.sourceforge.net/">PyDev plugin</a>, and used the Python <a href="http://docs.python.org/lib/module-unittest.html">unittest</a> module to implement each solution as a test to make it easy to run and verify each solution. You can obviously run all this using IDLE or whatever Python runner you like. Here's the basic file structure I started off with:</p>
+
+<pre>
+import unittest
+
+class NinetyNineProblemsFixture(unittest.TestCase):
+    
+  def testXX_Description(self):
+    def solutionToProblem(input): pass          
+    input = "some input"
+    expected = "expected output for successful implementation"    
+    self.assertEqual(expected, solutionToProblem(input))  
+  
+if __name__ == '__main__':
+  unittest.main()
+</pre>
+
+<p>I wrote a test for each problem, then implemented the solution as an inner function within the test. The <code>if __name__ == '__main__'</code> line lets you run the tests by simply running your *.py file through Python. I tended to run using PyTest.py from within Eclipse/PyDev.</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P01">P01 Find the last element of a list</h2>
+<pre>
+  def test01_FindLastElementOfList(self):
+    <b>def getLast(list):
+      return list[-1]</b>
+    list = [1, 3, 7, 14]
+    self.assertEqual(14, getLast(list))
+</pre>
+<p>Lists are great in Python. They have lots of nice features that make them very pleasant to work with. This example shows one of these features, you can use a negative index to get list items from the end of the list. For example, <code>list[-3]</code> will get the third last item in the list. In this case, we want the last element, so we use <code>list[-1]</code>.</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P02">P02 Find the last but one element of a list</h2>
+<p>Same as P01, but we want the second last item:</p>
+<pre>
+  def test02_FindLastButOne(self):
+    <b>def getLastButOne(list):
+      return list[-2]</b>
+    list = [1, 3, 7, 14]
+    self.assertEqual(7, getLastButOne(list))
+</pre>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P03">P03 Find the K'th element of a list</h2>
+<p>Basic array index for this. Lists indicies are zero-based in Python (as they should be :)), but the problem definition wants to translate the reference to 1-based.</p>
+<pre>
+  def test03_FindKthElement(self):
+    def getKth(list, k):
+      return list[k-1]
+    list = [1, 3, 7, 14]
+    self.assertEqual(3, getKth(list, 2))
+</pre>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P04">P04 Find the number of elements of a list</h2>
+<p>Cheating for this one and just use the built in <code>len</code> function:</p>
+<pre>
+  def test04_NumberOfElementsInList(self):
+    <b>def getCount(list):
+      return len(list)</b>
+    list = [1, 3, 7, 14]    
+    self.assertEqual(4, getCount(list))   
+</pre>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P05">P05 Reverse a list</h2>
+<p>Here I played around with two different approaches so as to learn a bit about Python list slicing.</p>
+
+<div class="note">
+<p><b>Update (2 April 2008):</b> Initially I did not realise that there was a built-in <code>reversed()</code> function. I originally had something silly like this:</p>
+<pre>
+    def reverse(l):
+      newList = list(l)      
+      return newList.reverse() or newList
+</pre>
+
+<p>The <code>list.reverse</code> function does an in-place reversal of the list elements and returns <code>None</code> (the Python null value), so I had to clone the list first so as not to affect the original, then OR it to return the list reference itself. Thanks to <a href="http://reddit.com/r/Python/info/6e168/comments/c03l8i6">Mark</a> et al. on <a href="http://reddit.com/r/Python/info/6e168/comments">Reddit</a> for showing me the light! :)</p>
+</div>
+
+<pre>
+  def test05_ReverseAList(self):
+    <b>def reverse(l):
+      return list(reversed(aList))</b>
+    <b>def manualReverse(list):          
+      return list[::-1]</b>
+    sampleList = [1, 3, 7, 14]
+    self.assertEqual([14, 7, 3, 1], reverse(sampleList))
+    self.assertEqual([14, 7, 3, 1], manualReverse(sampleList))
+</pre>
+
+<p>The <code>reversed()</code> function returns an iterator, so it is wrapped in a <code>list()</code> constructor to convert it to a new list. I used <code>l</code> for the method parameter, as I couldn't figure out how to appropriately qualify references to the <code>list</code> class when it was hidden by a parameter called <code>list</code> (cue embarrassed smiley).</p>
+
+<h3>List slicing</h3>
+<p>The second approach was to use Python's list <em>slicing</em>. A <em>slice</em> is a range of values copied from an original list. This means we have no side effects like we do using the in place <code>reverse()</code>. The basic syntax for a slice is:</p>
+
+<pre>list[indexOfFirstElementInSlice : indexOfFirstElement_Not_InSlice : optionalStep]</pre>
+
+<p>Omitting the first argument starts the slice from the first list element. Omitting the second argument takes the remainder of elements in the list. The step can be set to, say, 2 to take every second list element. It's worth noticing that the second argument is exclusive, so that we can the following from the Python interpreter:</p>
+
+<pre>
+&gt;&gt;&gt; aList = range(0, 6)
+&gt;&gt;&gt; aList
+[0, 1, 2, 3, 4, 5]
+&gt;&gt;&gt; #From index 1 up to, but excluding, index 5:
+&gt;&gt;&gt; aList[1:5]
+[1, 2, 3, 4]
+&gt;&gt;&gt; aList[1::2]
+[1, 3, 5]
+</pre>
+
+<p>In our case we want the slice to include all the elements, but we want to take them in reverse order, which is how we end up with <code>list[::-1]</code>. Right, that was all a lot of explanation for not-much-code, but I thought I'd point out some Python basics along the way.</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P06">P06 Find out whether a list is a palindrome</h2>
+<p>A palindrome is something that reads the same forward as it does backwards, like &quot;Go hang a salami, I'm a lasagna hog&quot;* (well, ignoring punctuation and spaces). I tried two different approaches for this one too.</p>
+
+<pre>
+  def test06_IsListAPalindrome(self):
+    <b>def isPalindrome(aList):
+      return aList == aList[::-1]</b>
+    <b>def isPalindromeRecursive(aList):
+      if (len(aList)&lt;=1): return True
+      top, tail = aList[0], aList[-1]          
+      if (top != tail): return False
+      return isPalindromeRecursive(aList[1:-1])</b>
+    palindromes = [
+                   ['a', 'b', 'c', 'b', 'a'],
+                   [1, 10, 20, 30, 30, 20, 10, 1],
+                   ['a', 'a']                    
+                   ]
+    nonPalindromes = [
+                      ['a', 'b', 'c', 'd'],
+                      [1, 10, 20, 20, 10, 2],
+                      ['a', 'v']
+                      ]    
+    self.assertTrue(all([isPalindrome(x) for x in palindromes]))
+    self.assertTrue(all([not isPalindrome(x) for x in nonPalindromes]))
+    
+    self.assertTrue(all([isPalindromeRecursive(x) for x in palindromes]))
+    self.assertTrue(all([not isPalindromeRecursive(x) for x in nonPalindromes]))
+</pre>
+
+<p>The first way is cheating, but effective. Simply use <code>return aList == aList[::-1]</code> to compare the list with a reverse slice, using the same slicing syntax used for P05. This will obviously ensure the list reads the same forwards as backwards.</p>
+
+<p>The second way uses recursion, as well as logical list operations to get the same effect. Let's break it down:</p>
+
+<pre>if (len(aList)&lt;=1): return True</pre>
+
+<p>A list of 0 or 1 elements will read the same forwards as backwards, right? So yes, we have a palindrome.</p>
+
+<pre>top, tail = aList[0], aList[-1]          
+if (top != tail): return False</pre>
+
+<p>Ok, now we look at first and last elements of the list (the latter of which I inconveniently named <code>tail</code>, which is normally used to refer to the remainder of the list besides the first element, head/tail semantics). This line also shows how you can do multiple assignments over one line in Python. You can also use a similar syntax return multiple values from one function, which we'll see later if you make it that far without getting bored :). The second line of the fragment then compares these elements -- if they are not equal then the list can't be a palindrome (e.g. <b>1</b> 2 3 2 <b>7</b>, the 1 and 7 don't match so the list isn't a palindrome).</p>
+
+<p>If the first and last elements <b>are</b> equal, then we have a potential palindrome, and use <a href="http://en.wikipedia.org/wiki/Tail_recursion">tail recursion</a> to check whether a slice of the list, excluding the first and last elements, is a palindrome. Which seems to work nicely.</p>
+
+<p style="font-size: x-small">* A fine <a href="http://en.wikipedia.org/wiki/Bob_(song)">lesson in palindromes</a> is available from Mr Yankovic album. You might be able to find a version <a href="http://www.youtube.com/watch?v=Nej4xJe4Tdg">somewhere</a> without too much trouble, strictly for educational purposes.</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P07">P07 Flatten a nested list structure</h2>
+<p>This problem just wants us to take a nested list, like <code>[1, [2, 3], [4, 5, [6, 7]]]</code>, and flatten it out to a 1-dimensional list, like <code>[1, 2, 3, 4, 5, 6, 7]</code>. After coming up with a fairly ugly solution I ended up peeking at the <a href="http://curiouscoding.wordpress.com/2008/02/20/p07-flatten-a-nested-array-structure/">Curious Coding solution</a>, and adapted it to Python. This is also the first problem in the set marked as a 2-star problem, or &quot;intermediate difficulty&quot; (the others have all been marked as 1-star, or &quot;easy&quot;).</p>
+<pre>
+  def test07_FlattenAList(self):
+    <b>def flatten(aList):
+      flatList = []      
+      for item in aList:
+        if (type(item)==list):
+          flatList.extend(flatten(item))
+        else:
+          flatList.append(item)          
+      return flatList</b>
+    self.assertEqual(
+                     [1, 2, 3, 4, 5, 6, 7], 
+                     flatten([1, [2, 3], [4, 5, [6, 7]]])
+                     )
+</pre>
+<p>Points of note from this problem is the use of the <code>type()</code> method (well, <code>type</code> is actually a &quot;type&quot;, which, like everything in Python, is an object). This is used to check if the current element is a list. If so, the flattened list is extended by the flattened version of that sub-list (via a recursive call to <code>flatten()</code>). If not, the element is appended to the flatList.</p>
+
+<p>The <code>extend()</code> method adds the items from a list to another list, whereas <code>append()</code> adds the item from as a single element to the list. This is probably best shown with an example:</p>
+
+<pre>
+&gt;&gt;&gt; aList = range(0,6)
+&gt;&gt;&gt; aList
+[0, 1, 2, 3, 4, 5]
+&gt;&gt;&gt; bList = list(aList)
+&gt;&gt;&gt; bList
+[0, 1, 2, 3, 4, 5]
+&gt;&gt;&gt; anotherList
+[6, 7]
+&gt;&gt;&gt; <b>aList.append(anotherList)</b>
+&gt;&gt;&gt; <b>bList.extend(anotherList)</b>
+&gt;&gt;&gt; aList
+[0, 1, 2, 3, 4, 5, <b>[6, 7]</b>]
+&gt;&gt;&gt; bList
+[0, 1, 2, 3, 4, 5, <b>6, 7</b>]
+</pre>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P08">P08 Eliminate consecutive duplicates of list elements</h2>
+<p>This is another 2-star, intermediate problem, but it was pretty easy to whip through using Python's <a href="http://en.wikipedia.org/wiki/List_comprehensions">list comprehensions</a>. Let's have a quick look at the list comprehension syntax first:</p>
+
+<pre><b>[</b>itemInNewList <b>for</b> itemInNewList <b>in</b> someList <b>if</b> someConditionIsMet<b>]</b></pre>
+
+<p>The square braces (<code>[, ]</code>) indicate we are creating a new list. In the new list we will include <code>itemInNewList</code> as an element, for the <code>itemInNewList</code> values in <code>someList</code> (or other iterable), that meet <code>someConditionIsMet</code> (the <code>if someConditionIsMet</code> is optional). Quick example:</p>
+
+<pre>&gt;&gt;&gt; aList = range(0,6)
+&gt;&gt;&gt; aList
+[0, 1, 2, 3, 4, 5]
+&gt;&gt;&gt; [item for item in aList if item &lt; 3]
+[0, 1, 2]
+</pre>
+
+<p>All a bit LINQ-like to me (well, more correctly <a href="http://research.microsoft.com/~emeijer/Papers/LINQ20.pdf">LINQ is inspired by features in functional programming, such as monads [PDF]</a>).</p>
+
+<p>Back to problem 8, the aim is to eliminate consecutive duplicates from a list. So we would like to create a new list by iterating over a source list, and only including elements that are not the same as the previous element.</p>
+<pre>
+  def test08_EliminateConsecutiveDuplicates(self):
+    <b>def compress(aList):
+      return [item for index, item in enumerate(aList) if index==0 or item != aList[index-1]]</b>
+    sampleList = ['a','a','a','a','b','c','c','a','a','d','e','e','e','e']
+    self.assertEqual(
+                     ['a','b','c','a','d','e'],
+                     compress(sampleList)                     
+                     )
+</pre>
+
+<p>The only tricky bit with this list comprehension compared with the trivial example given above is the use of the <code>enumerate(aList)</code> function which returns two values per iteration, the <code>item</code> and the <code>index</code> of that item. We use these variables in the list comprehension condition to check whether this is the first list item (which we want to include), or if the list item duplicates the previous one (which we want to exclude).</p>
+
+<p>I think that's awesome :)</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h3>From comments: avoiding <code>enumerate()</code></h3>
+<p>Arnar <a href="http://www.blogger.com/profile/12073820949049315334">(Blogger profile link)</a> left a nice solution for this problem in the <a href="http://davesquared.blogspot.com/2008/03/99-problems-with-python-1-10.html?showComment=1206981120000#c3437122901944431864">comments</a> that doesn't require the use of <code>enumerate()</code>. I've reproduced it here (updating the naming convention to match the example above):</p>
+
+
+<pre>
+    def compress(aList):
+        return aList[:1] + [aList[i] for i in range(1, len(aList)) if aList[i-1] != aList[i]]
+</pre>
+
+<p>This first creates a list containing only the head element (<code>aList[:1]</code>), and concatenates it with a list comprehension that eliminates duplicates. Rather than using <code>enumerate()</code> to get the index and item, Arnar used <code>range(1, len(aList))</code> (which I have <a href="http://davesquared.blogspot.com/2008/01/python-like-range-implementation-in-c.html">blogged about before</a>) to generate the relevant indexes and then accesses the items direct from the list.</p>
+
+<p>The nice thing about this approach is that by starting with <code>aList[:1]</code>, we simplify the list comprehension condition I originally had (<code>if <b>index==0</b> or item != aList[index-1]</code>). I'm not sure if there is a clear advantage of using <code>enumerate()</code> or <code>range()</code> to iterate over, but it definitely gave me another way of thinking about the problem. Thanks Arnar! :)</p>
+
+<h3>From comments: using itertools.groupby</h3>
+<div class="note">This example added 3 April 2008</div>
+<p>I had a number of helpful comments suggesting I use the <a href="http://docs.python.org/lib/itertools-functions.html"><code>itertools</code></a> standard Python library for a number of these examples. Thanks to <a href="http://www.blogger.com/profile/12073820949049315334">Arnar</a>, <a href="http://davesquared.blogspot.com/2008/03/99-problems-with-python-1-10.html?showComment=1207152840000#c1065796923200770025">Niall</a>, <a href="http://davesquared.blogspot.com/2008/03/99-problems-with-python-1-10.html?showComment=1207153740000#c8507599583786575534">Mohammad</a> and everyone else that suggested this and wrote in with examples. I originally intended to do this exercise without using any imports (well, except for <code>unittest</code>), but <a href="http://davesquared.blogspot.com/2008/03/99-problems-with-python-1-10.html?showComment=1207044600000#c3670614047789933344">Arnar</a> managed to <a href="http://davesquared.blogspot.com/2008/03/99-problems-with-python-1-10.html?showComment=1207078140000#c1479086697219868845">convince me</a> to stop being so silly. :)</p>
+<p>The particular <code>itertools</code> function we are looking at is <code>groupby(iterable[, key])</code>. This function returns a list of tuples. The first item in the tuple is the key for a particular group, and the second is an iterator over the group itself (i.e. <code>(key, group)</code>). So how are keys specified? By default, it is the item's identity or value (so if you group [1, 1, 1, 2, 3], you will get a group of 1s, like this:</p>
+<pre>
+&gt;&gt;&gt; from itertools import groupby
+&gt;&gt;&gt; aList = [<b>1,1,1</b>,2,3]
+&gt;&gt;&gt; [<b>list(group)</b> for key, group in groupby(aList)]
+[<b>[1, 1, 1]</b>, [2], [3]]
+&gt;&gt;&gt; [key for key, group in groupby(aList)]
+[1, 2, 3]
+</pre>
+
+<p>Note we have to import the function from the <code>itertools</code> library first using <code>from itertools import groupby</code> (<a href="http://diveintopython.org">Dive Into Python</a> has a <a href="http://diveintopython.org/object_oriented_framework/importing_modules.html">great explanation about how to import stuff</a>). As the <code>group</code> returned is an iterator over a group, we can turn it into a list using the constructor <code>list(group)</code>. The last command issue also shows what keys <code>groupby()</code> finds when no <code>key</code> argument is supplied. We can also provide <code>groupby()</code> with a function used to calculate keys:</p>
+
+<pre>
+&gt;&gt;&gt; aList
+[1, 1, 1, 2, 3]
+&gt;&gt;&gt; [list(group) for key, group in groupby(aList, <b>lambda x: x&lt;3</b>)]
+[[1, 1, 1, 2], [3]]
+</pre>
+
+<p>Here we use a simple lambda function to sort the list into groups: those less than 3, and not. :) Armed with just enough knowledge to be dangerous, let's try and solve problem 8 again. To eliminate consecutive duplicates, all we really want to do is get the keys from the list:</p>
+
+<pre>
+  def test08_EliminateConsecutiveDuplicates(self):
+    <b>def compress(aList):        
+        return [key for key, group in groupby(aList)]</b>
+    sampleList = ['a','a','a','a','b','c','c','a','a','d','e','e','e','e']
+    self.assertEqual([<b>'a'</b>,'b','c',<b>'a'</b>,'d','e'], compress(sampleList))
+</pre>
+
+<p>And this passes nicely. But hold on a minute! How come we have duplicated keys in there? There are to <b>'a'</b> elements! I said the default keys were each item's identity, and they are both <b>'a'</b>! Why are you lying Dave? WHY?!?!</p>
+
+<p>Ok, I'm better now. The reason is that <code>groupby()</code> is implemented using an iterator. It goes through the list picking out items in the <b>'a'</b> group, then hits <b>'b'</b>. This has a different identity, and so starts a new group. The function's iterator has now moved past the initial group of 4 <b>'a'</b> elements, and has basically completely forgotten about them, so the next time it hits an <b>'a'</b> it creates a new group. Clear as mud? Check out the <a href="http://docs.python.org/lib/itertools-functions.html#l2h-1064">documentation</a> and it should clear things up ( worked for me :) )</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P09">P09 Pack consecutive duplicates of list elements into sublists</h2>
+<p>Another 2 star problem, this one wants us to convert consecutive duplicates in a list into a sub-lists. The <a href="https://prof.ti.bfh.ch/hew1/informatik3/prolog/p-99/">original problem</a> says something about only packing duplicates if list contains duplicates, but the example and implementations I have seen do not seem to do this, so I'll follow convention of blindly packing each element into a sub-list.</p>
+
+<pre>
+  def test09_PackDuplicatesIntoSubLists(self):
+    <b>def pack(aList):
+      packedList = []
+      for index, item in enumerate(aList):
+        if index==0 or item != aList[index-1]:
+          packedList.append([item])
+        else:  
+          packedList[-1].append(item)
+      return packedList</b>
+    
+    sampleList = ['a','a','a','a','b','c','c','a','a','d','e','e','e','e']
+    self.assertEqual(
+                     [['a','a','a','a'],['b'],['c','c'],['a','a'],['d'],['e','e','e','e']],
+                     pack(sampleList)                     
+                     )
+</pre>
+
+<p>I couldn't find a nice way of doing this list comprehension style, so I resorted to a simple imperative operation. We start with an empty <code>packedList</code>, and use the nice <code>enumerate()</code> that was so useful in problem 8 to iterate over the source list. If this is the first element, or if this element is not duplicating the previous item, we will append a one element, sub-list to <code>packedList</code> (<code>packedList.append(<b>[</b>item<b>]</b>)</code>). This means that every element of <code>packedList</code> will be a list itself. This is important, because the <code>else</code> branch of this condition relies on this fact to simply add duplicate elements to the previous sub-list (<code>packedList[-1].append(item)</code>).</p>
+
+<p>At this point I'm seriously loving how easy it is to use Python lists: slicing, list comprehensions, negative indexing etc. Test passes, so it's off to our final question for this set.</p>
+
+<h3>From comments: another itertools.groupby alternative</h3>
+<div class="note">This example added 3 April 2008.</div>
+<p>As noted in the follow ups to <a href="#postAnchor_99ProbsPython_1to10_P08">problem 8</a>, a number of commenters pointed me to the <code>groupby()</code> function (see <a href="#postAnchor_99ProbsPython_1to10_P08">problem 8</a> for an explanation). We can use it here too, but this time we want the groups rather than the keys:</p>
+
+<pre>
+  def test09_PackDuplicatesIntoSubLists(self):
+    <b>def pack(aList):
+        return [list(group) for key, group in groupby(aList)]</b>
+    sampleList = ['a', 'a', 'a', 'a', 'b', 'c', 'c', 'a', 'a', 'd', 'e', 'e', 'e', 'e']
+    self.assertEqual(
+                     [['a','a','a','a'], ['b'], ['c','c'], ['a','a'], ['d'], ['e','e','e','e']],
+                     pack(sampleList)                     
+                    )
+</pre>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_P10">P10 Run-length encoding of a list</h2>
+<p>This problem relates to problem 9, but instead of showing multiple elements in each sub-list, we just want a count of how many duplicates there are. Let's have a look at the test assertion to make this clearer:</p>
+
+<pre>
+    ...
+    sampleList = ['a','a','a','a','b','c','c','a','a','d','e','e','e','e']
+    self.assertEqual(
+                     [[4,'a'],[1,'b'],[2,'c'],[2,'a'],[1,'d'],[4,'e']],
+                     encode(sampleList)
+                     )
+</pre>
+
+<p>First I tackled this the easy way, using copy-and-paste reuse from problem 9 and changing the action on each branch. The implementation is show below, with differences from problem 9 emphasised:</p>
+
+<pre>
+    def encode(aList):
+      encodedList = []
+      for index, item in enumerate(aList):
+        if index==0 or item != aList[index-1]:
+          <b>encodedList.append([1, item])</b>
+        else:  
+          <b>encodedList[-1][0] += 1</b>
+      return encodedList
+</pre>
+
+<p>Here, rather than appending to sub-lists all the time, we are keeping a structure that contains the number of duplicates and the item being duplicated in each list. That worked, passing the test show above, but I also tried a less-objectional form of reuse of the <code>pack()</code> function from P09 by calling it from a list comprehension:</p>
+
+<pre>
+    def encode2(aList):
+      return [<b>[len(packed), packed[0]]</b> for packed in <b>pack(aList)</b>]    
+</pre>
+
+<p>This list comprehension is making a new list from every sub-list returned by the <code>pack()</code> function. Each item is a two item list (<code>[len(packed), packed[0]]</code>). The first item is the length of the sub-list (i.e. how many duplicates we have), and the second is the first item of the sub-list (i.e. the item being duplicated). Here is the complete test:</p>
+
+<pre>
+  def test10_RunLengthEncodeList(self):    
+    <b>def encode(aList):
+      encodedList = []
+      for index, item in enumerate(aList):
+        if index==0 or item != aList[index-1]:
+          encodedList.append([1, item])
+        else:  
+          encodedList[-1][0] += 1
+      return encodedList</b>
+    def pack(aList):
+      packedList = []
+      for index, item in enumerate(aList):
+        if index==0 or item != aList[index-1]:
+          packedList.append([item])
+        else:  
+          packedList[-1].append(item)
+      return packedList
+    <b>def encode2(aList):
+      return [[len(packed), packed[0]] for packed in pack(aList)]</b>
+      
+    sampleList = ['a','a','a','a','b','c','c','a','a','d','e','e','e','e']
+    self.assertEqual(
+                     [[4,'a'],[1,'b'],[2,'c'],[2,'a'],[1,'d'],[4,'e']],
+                     encode(sampleList)
+                     )
+    self.assertEqual(
+                     [[4,'a'],[1,'b'],[2,'c'],[2,'a'],[1,'d'],[4,'e']],
+                     encode2(sampleList)
+                     )   
+</pre>
+
+<h3>From comments: yet another itertools.groupby alternative</h3>
+<div class="note">This example added 3 April 2008.</div>
+<p>As noted in the follow ups to <a href="#postAnchor_99ProbsPython_1to10_P08">problem 8</a> and <a href="#postAnchor_99ProbsPython_1to10_P09">problem 9</a>, I really should have been using the <code>groupby()</code> function for some of these problems (see <a href="#postAnchor_99ProbsPython_1to10_P08">here</a> for an explanation).</p>
+
+<pre>
+  def test10_RunLengthEncodeList(self):    
+    <b>def encode3(aList):
+      return [[len(list(group)), key] for key, group in groupby(aList)]</b>
+    sampleList = ['a','a','a','a','b','c','c','a','a','d','e','e','e','e']
+    self.assertEqual(
+                     [[4,'a'], [1,'b'], [2,'c'], [2,'a'], [1,'d'], [4,'e']],
+                     encode3(sampleList)
+                    )
+</pre>
+
+<p>This is pretty similar in form to the second approach used (<code>encode2()</code>), but without having to call <code>pack</code> first.</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2 id="postAnchor_99ProbsPython_1to10_Conclusion">Conclusion</h2>
+<p>Because all the problems so far revolved around lists, an area in which Python excels, I think all of these implementations came out quite well, especially considering I have no idea what I am doing when it comes to Python (or at all, some might argue!).</p>
+
+<p>Looking at the <a href="http://curiouscoding.wordpress.com/2008/02/11/learning-ruby-with-ninety-nine-problems-1-10/">Ruby implementations</a>, there are a number of similarities between the Python versions I came up with. To be fair, I did peek at some of the Ruby solutions for hints in keeping to a functional programming style, but my main point here is that the language differences for basic stuff <a href="http://groups.google.com/group/comp.lang.python/msg/28422d707512283">seem fairly superficial</a>. I found both the Ruby versions and the Python versions very easy to understand.</p>
+
+<p>Perhaps because it has been many, many years since I worked with Haskell, I found the <a href="http://www.frickinsweet.com/99problems/post/Starting-things-off.aspx">F# samples from the Lanciaux brothers</a> much more difficult to understand. The language semantics are just so different. Although all of them seem more natural to me than the <a href="https://prof.ti.bfh.ch/hew1/informatik3/prolog/p-99/">original Prolog solutions</a> :-) Take a look at the solutions to problem 8 and see if you agree:</p>
+
+<ul>
+  <li><a href="https://prof.ti.bfh.ch/hew1/informatik3/prolog/p-99/p08.pl">Problem 8 in Prolog</a></li>
+  <li><a href="http://curiouscoding.wordpress.com/2008/02/21/p08-eliminate-consecutive-duplicates-of-array-elements/">Problem 8 in Ruby</a></li>
+  <li><a href="http://www.frickinsweet.com/99problems/post/Problem-8.aspx">Problem 8 in F#</a></li>
+  <li><a href="#postAnchor_99ProbsPython_1to10_P08">Problem 8 in Python</a></li>
+</ul>
+
+<p>All in all I had a thoroughly good time using Python for this exercise, and will definitely be looking for any excuse to use it again in future. At least for this basic stuff, the language just seems so concise and easy express your intention through the syntax. If you have suggestions for improvements or find any bugs with this please leave a comment or send me an email (tchepak at gmail). [UPDATE: Thanks to all those who have helped out with comments so far!]</p>
+
+<p style="font-size: x-small"><a href="#postAnchor_99ProbsPython_1to10_ToC">Back to table of contents...</a></p>
+
+<h2>Change log</h2>
+<ul>
+<li>2008-04-03: Added <code>itertools.groupby()</code> versions of problems 8, 9, 10 after some more helpful comments. Added this change log.</li>
+<li>2008-04-01: Added non-<code>enumerate</code> version for problem 8 after getting some helpful comments.</li>
+</ul>

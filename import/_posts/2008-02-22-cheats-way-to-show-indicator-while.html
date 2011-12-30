@@ -1,0 +1,28 @@
+---
+layout: "post"
+title: "Cheat's way to show an indicator while images are loading"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6821520907914648717"
+categories: ["dhtml"]
+date: "2008-02-22T16:02:00.0+11:00"
+updated: "2008-02-22T16:31:06.567+11:00"
+---
+
+<p>There are several cool, interesting ways to <a href="http://www.subnetsurfer.com/entries/really-easy-progress-bars/">use Javascript to show progress indicators</a> while images are downloading to your page. The method shown in this post is not one of them.</p>
+<p>I have a simple ASP.NET page that has two dynamically generated images. The images are charts streamed from another ASPX page (e.g. <code>&lt;img src=&quot;MakeChart.aspx?someParamsHere&quot; /&gt;</code>), and they can sometimes take a couple of seconds to render on the page. This delay means people temporarily see a very bare page that looks like it has finished loading, and might start clicking around or navigating away before they get to see the pretty pictures. What I wanted was to give people some indication that stuff was happening, and that they should stick around for a few seconds.</p>
+<p>Rather than whipping out ye olde JavaScript, I chose to keep things really simple. I created a CSS class to display the progress indicator as a background on the element holding the dynamic image. While the image is loading the background shows through. Once it is done, the background is covered by the final image.</p>
+<pre>&lt;style&gt;
+.ChartPlaceholder {
+  background-image: url(&quot;Images/loadingPlaceholder.png&quot;);
+  background-position: center;
+  background-repeat: no-repeat;
+  height: &lt;%= ChartHeight %&gt;px;
+  width: &lt;%= ChartWidth %&gt;px;
+}
+&lt;/style&gt;
+...
+&lt;div class=&quot;ChartPlaceholder&quot;&gt;
+  &lt;asp:Image runat=&quot;server&quot; ID=&quot;SomeDynamicChart&quot;  /&gt;
+&lt;/div&gt;
+</pre>
+<p>In this case I have embedded the DIV's height and width defined in the ASPX straight into the CSS declaration, as it seemed reasonable in the context in which I am currently using it, but you can obviously use other methods to make the DIV render sensibly prior to the image coming through.</p>
+<p>A bit hacky, but very simple and worked nicely in FireFox and IE7.</p>

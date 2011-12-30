@@ -1,0 +1,287 @@
+---
+layout: "post"
+title: "An attempt at simple MVVM with WPF"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3119966336512921292"
+categories: ["wpf", "patterns", "downloads"]
+date: "2010-02-15T11:16:00.0+11:00"
+updated: "2010-05-02T22:38:38.368+10:00"
+---
+
+<p>I have very little practical experience with MVVM and WPF, so I thought it would be incredibly useful for me to post some misinformation on the subject. Please feel free to correct any (or all) of my mistakes in the comments or via email, and I'll update the post accordingly.</p>
+
+<p>At work a few of us went through a very simple practice exercise to try and get the basics of the pattern. The goal was to create a screen that accepts two numbers and displays their sum, but do it using MVVM as if it were a real problem rather than a trivial one.</p>
+
+<p>MVVM, or <a href="http://msdn.microsoft.com/en-us/magazine/dd419663.aspx">Model - View - ViewModel</a> (a.k.a. <a href="http://www.martinfowler.com/eaaDev/PresentationModel.html">Presentation Model</a>), is a <a href="http://martinfowler.com/eaaDev/SeparatedPresentation.html">separated presentation pattern</a> for use with frameworks like WPF that have good support for data-binding and other view interations. This differs from Model View Presenter (MVP) in that MVP tends to be more prescriptive, the presenter explicitly controlling everything the view does (at least in the <a href="http://www.martinfowler.com/eaaDev/PassiveScreen.html">Passive View</a> incarnation of the pattern). This tends to result in a lot of plumbing code (these items should go in this list on the view, when a new item is selected the view should display a new list of items, etc.).</p>
+
+<p>MVVM relies on databinding, commands etc. in the framework to remove some of this plumbing code, leaving us to focus on the logical model of our view (or the ViewModel), and our application/domain logic (the Model). The View is then just the physical representation of our logical ViewModel, containing no logic other than how to physically represent the logical view.</p>
+
+<p>For this example we'll design a view for our adder screen, test drive a ViewModel representation of the screen, then wire them together using WPF databinding.</p>
+
+<h2>Designing our view</h2>
+
+<p>For our very useful Adder screen we'll need two text boxes so the user can enter the numbers to add, and a label that will display the result of the addition. Whenever one of the numbers is changed our result will need to be updated to reflect the number total. When we are done it might look a bit like this:</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://1.bp.blogspot.com/_wEsHWMWy090/S3iRexGNmrI/AAAAAAAABb4/4KyZhPE_ods/s1600-h/AdderMockUp.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="245" alt="Mockup of how the adder application should look." src="http://1.bp.blogspot.com/_wEsHWMWy090/S3iRexGNmrI/AAAAAAAABb4/4KyZhPE_ods/s320/AdderMockUp.png" width="320" /></a></div>
+
+<p>Because we are separating the physical from logical representation of the view, we will fairly easily be able to change how this looks, but in terms of how our screen will logically function, this contains all the details we need.</p>
+
+<h2>Test driving the ViewModel</h2>
+
+<p>Our view design requires input for two numbers. Whenever those numbers change our result will change. We'll write a test for that, and make it pass:</p>
+
+<pre class="brush:csharp">
+public class AdderViewModelTests {
+    [TestFixture]
+    public class When_both_numbers_are_provided {
+        private Adder _adder;
+        private AdderViewModel _adderViewModel;
+        private int _expectedResult;
+
+        [SetUp]
+        public void SetUp() {
+            const int firstNumber = 10;
+            const int secondNumber = 123;
+            _expectedResult = 4545;
+            
+            _adder = MockRepository.GenerateStub&lt;Adder&gt;();
+            _adder.Stub(x =&gt; x.Add(firstNumber, secondNumber)).Return(_expectedResult);
+            _adderViewModel = new AdderViewModel(_adder);
+            
+            _adderViewModel.FirstNumber = firstNumber;
+            _adderViewModel.SecondNumber = secondNumber;
+        }
+
+        [Test]
+        public void Should_set_result_from_adder() {
+            Assert.That(_adderViewModel.Result, Is.EqualTo(_expectedResult));
+        }
+    }
+}
+
+public class AdderViewModel {
+    private readonly Adder _adder;
+    public AdderViewModel(Adder adder) { _adder = adder; }
+    public int FirstNumber { get; set; }
+    public int SecondNumber { get; set; }
+    public int Result { get { return _adder.Add(FirstNumber, SecondNumber); } }
+}
+</pre>
+
+<p>This test is specifying that our <code>AdderViewModel</code> will use an <code>Adder</code>, and the result of the call to <code>_adder.Add(firstNumber, secondNumber)</code> will be used to set the <code>Result</code> in the view model.</p>
+
+<p>Now, logically, the element displaying our result will need to know when a new result is calculated so it can update. One way to do this in WPF is to make our ViewModel implement <code>INotifyPropertyChanged</code> and use a property changed event whenever the result changes . Let's add a test for that (there are better ways of doing this, but this will do for now):</p>
+
+<pre class="brush:csharp">
+[SetUp]
+public void SetUp() {
+    const int firstNumber = 10;
+    const int secondNumber = 123;
+    _expectedResult = 4545;
+    
+    _adder = MockRepository.GenerateStub<Adder>();
+    _adder.Stub(x => x.Add(firstNumber, secondNumber)).Return(_expectedResult);
+    _adderViewModel = new AdderViewModel(_adder);
+    RecordPropertyChangeOnViewModel();
+
+    _adderViewModel.FirstNumber = firstNumber;
+    _adderViewModel.SecondNumber = secondNumber;
+}
+
+private void RecordPropertyChangeOnViewModel() {
+    _adderViewModel.PropertyChanged += (sender, args) =&gt; _propertyChanged = args.PropertyName;
+}
+
+[Test]
+public void Should_indicate_that_result_has_changed() {
+    Assert.That(_propertyChanged, Is.EqualTo(&quot;Result&quot;), &quot;Should have raised property changed event for Result property&quot;);
+}
+
+[Test]
+public void Should_set_result_from_adder() {
+/* ... snip ... */
+</pre>
+
+<p>One thing I want to make absolutely, 100% clear here: <b><i>our tests are not driving this design decision</i></b>. We are doing this whole <code>INotifyPropertyChanged</code> thing because we know it is one of the ways to get our WPF view to update the displayed result. This is something that has tended to annoy me greatly when reading TDD UI examples, these patterns seem to pop out from nowhere and I can never see the link between the tests and the design. In this case there isn't any. I'll save my rant for another day, but just be aware that while tests can drive design, you still need to be aware of the basic direction you are heading: the fundamental algorithm you are building, and the UI framework you'll be interacting with. When I did this exercise I didn't even have the changed event tested. But it is an easy enough test to write, and is essential for our binding to work, so we may as well include it (before the code, after the code, it's all good!).</p>
+
+<p>We start by making <code>AdderViewModel</code> implement <code>INotifyPropertyChanged</code>, then add the <code>PropertyChanged</code> event. We'll then want to fire this event whenever the <code>Result</code> changes. As the result changes as the numbers do, we can do this from the setters of our <code>FirstNumber</code> and <code>SecondNumber</code> properties. While we could just raise the property changed event directly from these setters, I think it makes more sense to raise this when the <code>Result</code> itself changes. To me it is a bit more intention-revealing that way (in other situations where we had delayed execution or an out-of-proc service call then it would also make more sense to update when the value is set rather than when a dependency changes).</p>
+
+<div class="note">
+<p><b>Update 2010-05-02:</b> There is a problem with this approach! The ViewModel is meant to be a logical representation of the physical view. In the implementation below, if we set the <code>FirstNumber</code> or <code>SecondNumber</code> properties via code then there will not be <code>PropertyChanged</code> events raised specifically for those properties. As a result, the data-binding on our view will not be notified of the update and the text boxes will still show the old numbers. Not a good representation of our view!</p>
+
+<p>In this case we're only setting these properties from the view, so we won't see the problem, but the fact our ViewModel does not adequately represent the view could cause problems later. To fix it we can raise <code>PropertyChanged</code> when any data-bindable properties are changed (not just when <code>Result</code> changes). We can cover this with tests just as we did for when <code>Result</code> changes.</p>
+
+<p>Thanks a lot to Hüseyin Tüfekçilerli for <a href="http://www.davesquared.net/2010/02/attempt-at-simple-mvvm-with-wpf.html?showComment=1272737976310#c1288989468056178507">pointing this out</a> in the comments.</p>
+</div>
+
+<pre class="brush:csharp">
+public class AdderViewModel : INotifyPropertyChanged {
+    private readonly Adder _adder;
+    private int _firstNumber;
+    private int _secondNumber;
+    private int _result;
+
+    public AdderViewModel(Adder adder) {
+        _adder = adder;
+    }
+
+    public int FirstNumber {
+        get { return _firstNumber; }
+        set { _firstNumber = value; NumberChanged(); }
+    }
+
+    public int SecondNumber {
+        get { return _secondNumber; }
+        set { _secondNumber = value; NumberChanged(); }
+    }
+
+    private void NumberChanged() {
+        Result = _adder.Add(_firstNumber, _secondNumber);
+    }
+
+    public int Result {
+        get { return _result; }
+        set { _result = value; OnResultChanged(); }
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private void OnResultChanged() {
+        var handler = PropertyChanged;
+        if (handler == null) return;
+        handler(this, new PropertyChangedEventArgs(&quot;Result&quot;));
+    }
+}
+</pre>
+
+<p>Test's pass, so let's hit the XAML.</p>
+
+<h2>Implementing a physical view over our view model</h2>
+
+<p>When I created my project for this exercise I used the basic WPF Application template, which creates an <code>App.xaml</code> and <code>MainWindow.xaml</code>. Let's just get an ugly <code>MainWindow</code> working first.</p>
+
+<pre>
+&lt;Window x:Class=&quot;WpfCalculatorKata.MainWindow&quot;
+        xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+        xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;
+        Title=&quot;Adder&quot; Width=&quot;200&quot; Height=&quot;200&quot;&gt;
+    &lt;StackPanel&gt;
+        &lt;TextBox Name=&quot;firstNumber&quot; Text=&quot;{Binding FirstNumber}&quot; /&gt;
+        &lt;TextBox Name=&quot;secondNumber&quot; Text=&quot;{Binding SecondNumber}&quot; /&gt;
+        &lt;Label Name=&quot;result&quot; Content=&quot;{Binding Result}&quot; /&gt;
+    &lt;/StackPanel&gt;
+&lt;/Window&gt;
+</pre>
+
+<p>Here we're just shoving two textboxes and one label into a stack panel, and attempting to bind each control to the relevant property on the view model.</p>
+
+<h2>A word or two on XAML</h2>
+<p>We now interrupt this example to provide a 5 second overview of XAML. The easiest way I've found to think of XAML is an XML version of C#'s object initialisation syntax. For example, when I see <code>&lt;TextBox Name=&quot;FirstNumber&quot; Width=&quot;120&quot; /&gt;</code> I think of something more like this:</p>
+
+<pre class="brush:csharp">
+TextBox textBox = new TextBox {Name = &quot;FirstNumber&quot;, Width = 120};
+</pre>
+
+<p>Similarly for the <code>StackPanel</code> node shown above, I picture using a list initialisation to populate the control's <code>Children</code> property (or <code>Content</code> property for most other controls):</p>
+
+<pre class="brush:csharp">
+StackPanel stackPanel = new StackPanel { 
+    Children = new List&lt;Control&gt; {
+                    new TextBox {Name = &quot;FirstNunber&quot;},
+                    new TextBox {Name = &quot;SecondNumber&quot;}
+                }};            
+</pre>
+
+<p>This won't actually compile as the <code>Children</code> property is not settable, but the basic idea is the same. Nested elements get added to a property of the parent object (for many controls this is the <code>Content</code> property, but the exact mapping is object-specific).</p>
+
+<p>In the process of building the project, the compiler will create the code required to instantiate each object, initialise its properties (mainly via the XML attributes on the node), and basically build up a nice, big object graph. It also has some additional smarts to handle binding and other expressions, cascading properties etc. I'm not sure if this helps you at all, but this idea really helped demystify XAML for me, even if it is not an exact representation of what actually occurs.</p>
+
+<h2>Getting our view to work</h2>
+
+<p>How does our app know what <code>{Binding FirstNumber}</code> means? Well, if you try and run the code we have at the moment it's not going to work. While binding WPF searches the control's <code>DataContext</code> for the specific (and public!) property. If it can't find that it will check the parent's <code>DataContext</code>, and the parent's parent's and so on up the object tree. What we want to do is set our view's <code>DataContext</code> to our view model. We can easily do this in the <code>MainWindow.xaml.cs</code>  code behind:</p>
+
+<pre class="brush:csharp">
+public partial class MainWindow : Window {
+    public MainWindow(AdderViewModel viewModel) {
+        DataContext = viewModel;
+        InitializeComponent();
+    }
+}
+</pre>
+
+<p>Unfortunately our <code>App.xaml</code> is expecting <code>MainWindow</code> to have a default constructor, so we'll need to remove the startup attribute and override the application started event to show our view. For a real application this would be a great place for an IoC container call and/or screen activator, but we'll just new it up for now.</p>
+
+<pre>
+&lt;Application x:Class=&quot;WpfCalculatorKata.App&quot;
+             xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+             xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;&gt;
+    &lt;Application.Resources&gt;         
+    &lt;/Application.Resources&gt;
+&lt;/Application&gt;
+</pre>
+
+<pre class="brush:csharp">
+public partial class App : Application {
+    protected override void OnStartup(StartupEventArgs e) {
+        var window = new MainWindow(new AdderViewModel(new ConreteAdder()));
+        window.Show();
+    }
+}
+
+public class ConreteAdder : Adder {
+    public int Add(int firstNumber, int secondNumber) {
+        return firstNumber + secondNumber;
+    }
+}
+</pre>
+
+<p>You'll notice that to create our <code>AdderViewModel</code> we need an implementation of our <code>Adder</code> interface. I've just chucked in a <code>ConcreteAdder</code> here, completely and utterly uncovered by automated testing (gasp!). It looks close to right from here though, so let's run it.</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S3iRe5Y5f_I/AAAAAAAABb8/etRaHt2Cs3E/s1600-h/Adder.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" alt="Screenshot of the basic adder application" src="http://4.bp.blogspot.com/_wEsHWMWy090/S3iRe5Y5f_I/AAAAAAAABb8/etRaHt2Cs3E/s1600/Adder.png" /></a></div>
+
+<p>Here we see our UI, happily adding the numbers it's given. As an aside, if you enter an invalid number while debugging you'll see data binding errors appear in the output window, but the application will continue running. If you've got bindings setup but nothing is happening when you run the app, check the output window and see if there are any messages there.</p>
+
+<h2>Updating our view to match our initial mockup</h2>
+
+<p>To get a similar UI to our initial mockup, we just need to add some labels to our textboxes and adjust the spacing on our form. We'll use a <code>Grid</code> instead of our original <code>StackPanel</code> so we can easily align our labels with their textboxes, and we'll use a style to hard code in the height and vertical alignment of our text boxes. The final XAML and application look like this:</p>
+
+<pre>
+&lt;Window x:Class=&quot;WpfCalculatorKata.MainWindow&quot;
+        xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+        xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;
+        Title=&quot;Adder&quot; Width=&quot;250&quot; Height=&quot;200&quot;&gt;
+    &lt;Window.Resources&gt;
+        &lt;Style TargetType=&quot;{x:Type TextBox}&quot;&gt;
+            &lt;Setter Property=&quot;Height&quot; Value=&quot;23&quot; /&gt;
+            &lt;Setter Property=&quot;VerticalAlignment&quot; Value=&quot;Top&quot; /&gt;
+        &lt;/Style&gt;
+    &lt;/Window.Resources&gt;
+    &lt;Grid Margin=&quot;15&quot;&gt;
+        &lt;Grid.RowDefinitions&gt;
+            &lt;RowDefinition /&gt;
+            &lt;RowDefinition /&gt;
+            &lt;RowDefinition /&gt;
+        &lt;/Grid.RowDefinitions&gt;
+        &lt;Grid.ColumnDefinitions&gt;
+            &lt;ColumnDefinition Width=&quot;100&quot; /&gt;
+            &lt;ColumnDefinition /&gt;
+        &lt;/Grid.ColumnDefinitions&gt;
+        &lt;Label Content=&quot;First Number&quot; Grid.Row=&quot;0&quot; /&gt;
+        &lt;Label Content=&quot;Second Number&quot; Grid.Row=&quot;1&quot; /&gt;
+        &lt;Label Content=&quot;Result&quot; Grid.Row=&quot;2&quot; /&gt;
+        &lt;TextBox Name=&quot;firstNumber&quot; Text=&quot;{Binding FirstNumber}&quot; Grid.Row=&quot;0&quot; Grid.Column=&quot;1&quot; /&gt;
+        &lt;TextBox Name=&quot;secondNumber&quot; Text=&quot;{Binding SecondNumber}&quot; Grid.Row=&quot;1&quot; Grid.Column=&quot;1&quot; /&gt;
+        &lt;Label Name=&quot;result&quot; Content=&quot;{Binding Result}&quot; Grid.Row=&quot;2&quot; Grid.Column=&quot;1&quot;/&gt;
+    &lt;/Grid&gt;
+&lt;/Window&gt;
+</pre>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://3.bp.blogspot.com/_wEsHWMWy090/S3iRe7H1pHI/AAAAAAAABcA/dXC0_CMDSgs/s1600-h/FinalAdder.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" alt="Screenshot of the adder application with similar layout to the initial mockup." src="http://3.bp.blogspot.com/_wEsHWMWy090/S3iRe7H1pHI/AAAAAAAABcA/dXC0_CMDSgs/s1600/FinalAdder.png" /></a></div>
+
+<h2>Conclusion</h2>
+
+<p>We've implemented a tremendously useful calculator (well, more correctly, a completely useless small integer adder)  using MVVM and WPF. We represented the logical view of our screen using a testable <code>AdderViewModel</code>, which we then bind to from our XAML view. While we used TDD to flesh out how the <code>AdderViewModel</code> was going to interact with our domain model (the <code>Adder</code>), we also needed to know enough about the end goal (to bind to a WPF form) to tell us which tests to write -- our tests were not magically going to guide us to a bindable view model. Finally we changed our physical view to better match the layout of our initial mock up, but didn't have to change any non-XAML code as we did not change the logical model of the view.</p>
+
+<p>Feel free to <a href="http://davesquared.googlecode.com/files/WpfCalculatorKata.zip">download the code</a> and have a play. Hope this helps! And remember to correct any n00b mistakes I've made. :)</p>

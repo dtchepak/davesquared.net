@@ -1,0 +1,37 @@
+---
+layout: "post"
+title: "IEnumerable<T> and ForEach()"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4237302347714756044"
+categories: [".net", "linq"]
+date: "2008-03-20T14:35:00.0+11:00"
+updated: "2008-07-17T08:04:54.09+10:00"
+---
+
+<p>Why is there no <code>ForEach()</code> extension method defined for <code>IEnumerable&lt;T&gt;</code> in <code>System.Linq.Enumerable</code> for .NET 3.5? There is a <code>ForEach()</code> on <code>Array</code> and <code>List&lt;T&gt;</code>, but not for <code>IEnumerable&lt;T&gt;</code> which would seem a fairly natural place for it.</p>
+
+<pre>public static class Extensions {
+  public static void ForEach&lt;T&gt;(this IEnumerable&lt;T&gt; source, Action&lt;T&gt; action) {
+    foreach (var item in source) {
+      action(item);
+    }
+  }
+}</pre>
+
+<div class="note"><b>Update 2008-07-17</b>: An <a href="http://davesquared.blogspot.com/2008/03/ienumerable-and-foreach.html?showComment=1216228560000#c7276864086280257817">anonymous commenter</a> left a great point about returning <code>source</code> after finishing the iteration instead of using a void method. This breaks the standard signature used by the <code>Array</code> and <code>List&lt;T&gt;</code> classes, but fits in nicely with the general approach used in the <code>System.Linq.Enumerable</code> extension methods, and lets you do LINQy method chaining.</div>
+
+<p>For some reason, when I'm in LINQy mode, my natural reaction is to try <code>ForEach()</code> over <code>foreach</code>, and I'm always a bit surprised when it doesn't work for <code>IEnumerable&lt;T&gt;</code>:</p>
+<pre>
+//Lambda goodness:
+parameters.ForEach(parameter => doSomethingTo(parameter));
+
+//Old stylz:
+foreach (var parameter in parameters) {
+  doSomethingTo(parameter);
+}
+</pre>
+
+<p>Bit nit-picky I know, but I noticed <a href="http://www.clariusconsulting.net/blogs/kzu/archive/2008/01/20/PipelinesUsingIteratorsLambdaExpressionsExtensionMethods.aspx">Daniel Cazzulino made the same observation</a>:</p>
+
+<blockquote>&quot;I added a ForEach extension method to IEnumerable<T>. How come it's missing in .NET 3.5? :S&quot;</blockquote>
+
+<p>So at least I'm not completely alone on this :-) Anyone else wonder about this?</p>

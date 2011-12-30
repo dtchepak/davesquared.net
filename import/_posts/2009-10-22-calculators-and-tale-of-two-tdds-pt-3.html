@@ -1,0 +1,339 @@
+---
+layout: "post"
+title: "Calculators and a tale of two TDDs - Pt 3: Finishing up our BDD kata"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7810848158753350391"
+categories: [".net", "+Calculator TDD", "tdd"]
+date: "2009-10-22T10:53:00.0+11:00"
+updated: "2009-10-22T10:56:24.537+11:00"
+---
+
+<p>This is the wrap up of my second attempt at <a href="http://osherove.com/tdd-kata-1/">Roy Osherove's String Calculator kata</a>. You can read the details at the original site, but the overall gist is a calculator that has an <code>Add()</code> method. This method takes a string input, adds the numbers in the string together, then returns the result. </p>
+
+<p>In <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">Part 1</a> of this series we looked at using a traditional TDD approach to the calculator kata. In <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">Part 2</a> we attempted to use a variation of Behavioural Driven Development (BDD) . In this part we'll finish off our BDD example. So far our implementation handles empty strings, single numbers, and numbers delimited by a comma and/or a newline.</p>
+
+<p>To accomplish this, we have a <code>Calculator</code> class that uses an <code>INumberParser</code> to parse numbers from the string, and then an <code>IAdder</code> to calculate the sum of these numbers.</p>
+
+<p>The final part of the exercise (well, as far as we're going for this series) is to be able to parse expressions that specify a custom delimiter. So the input to our <code>Add()</code> method might be in the form <code>//[delimiter]\n[numbers]</code>. We also need to continue handling the case were there is no delimiter specified.</p>
+
+<p>This post is pretty code heavy, so if you're viewing it in an RSS reader you might find it more readable on my site where the code has syntax highlighting.</p>
+
+<h2>Where should customer delimiter logic go?</h2>
+
+<p>This seems like a different concern to me -- we are no longer just parsing out numbers, we are parsing out a delimiter message, then parsing out numbers from the remaining string based on that. Where should we add this concern? Well our <code>Calculator</code> itself is looking pretty tight already:</p>
+
+<pre class="brush:csharp">
+public class Calculator {
+    private readonly INumberParser _numberParser;
+    private readonly IAdder _adder;
+
+    public Calculator(INumberParser numberParser, IAdder adder) {
+        _numberParser = numberParser;
+        _adder = adder;
+    }
+
+    public int Add(string expression) {
+        var numbers = _numberParser.GetNumbers(expression);
+        return _adder.Add(numbers);
+    }
+}
+</pre>
+
+<p>This seems a really clear implementation of what we are trying to achieve: we are getting numbers from an expression and adding them. The current specification for this class also looks pretty neat. I don't really fancy mucking it up by shoehorning in this new concern at this level of abstraction.</p>
+
+<p>Maybe we can push this down into the <code>INumberParser</code>?  The intention behind the custom delimiter feature is to provide another way to parse numbers, so this sounds pretty reasonable. Let's try creating a <code>CalculatorExpressionParser</code> that implements <code>INumberParser</code>, which can parse out the delimiter and delegate to our original <code>NumberParser</code>. I'm unsure of exactly what this will look like at this stage (will we have a series of handlers selected using the Specification Pattern? Or decorate our current number parser?), but we'll let our tests/specification drive out the details.</p>
+
+<h2>Specifying our CalculatorExpressionParser</h2>
+
+<p>Let's start our <code>CalculatorExpressionParserSpec</code> and see where that leads us.</p>
+
+<pre class="brush:csharp">
+public class When_parsing_expression : ConcernFor&lt;CalculatorExpressionParser&gt; {
+    
+    [Test]
+    public void Should_parse_numbers_using_specified_delimiter() {
+        Assert.That(result, Is.EquivalentTo(numbers));
+    }
+
+    protected override void Because() {
+        result = sut.GetNumbers(expression);
+    }
+}
+</pre>
+
+<p>We still want the same basic <code>INumberParser</code> behaviour, so the spec isn't telling us much here. The context is where it is going to get a little scary. We want to parse out the delimiter from the expression, then remove the delimiter information from the expression and feed that into our standard <code>NumberParser</code>. Let's start with this:</p>
+
+<pre class="brush:csharp">
+protected override void Context() {
+    char[] delimiter = new[]{';'};
+    const string numbersExpression = &quot;1;2;3;4;5&quot;;
+    expression = &quot;//;\n1;2;3;4;5&quot;;
+    
+    delimiterParser = MockRepository.GenerateStub&lt;IDelimiterParser&gt;();
+    delimiterParser
+        .Stub(x =&gt; x.Parse(expression))
+        .Return(new DelimitedNumbersExpression(numbersExpression, delimiter));
+  
+    /*.... need to use this output somehow... */
+}
+</pre>
+
+<p>We've now pushed down the responsibility for parsing out the delimiter and updating the expression to an <code>IDelimiterParser</code>. Because C# functions only support single return values, we'll need a new class to hold these two pieces of information which I'll call <code>DelimitedNumbersExpression</code>. This will just be a DTO, so we may as well code this up now:</p>
+
+<pre class="brush:csharp">
+public class DelimitedNumbersExpression {
+    public char Delimiter { get; private set; }
+    public string DelimitedNumbers { get; private set; }
+
+    public DelimitedNumbersExpression(char delimiter, string delimitedNumbers) {
+        Delimiter = delimiter;
+        DelimitedNumbers = delimitedNumbers;
+    }
+}
+</pre>
+
+<p>Now we need to configure a <code>NumberParser</code> with this required delimiter, and give it our <code>numbersExpression</code> to parse. This is starting to sound like another responsibility, isn't it? Let's use a factory to create a configured <code>NumberParser</code> for us. We'll update the context like this:</p>
+
+<pre class="brush:csharp">
+protected override void Context() {
+    char[] delimiter = new[]{';'};
+    const string numbersExpression = &quot;1;2;3;4;5&quot;;
+    expression = &quot;//;\n1;2;3;4;5&quot;;
+    numbers = new [] {1, 2, 3, 4, 5};
+    
+    delimiterParser = MockRepository.GenerateStub&lt;IDelimiterParser&gt;();
+    delimiterParser
+        .Stub(x =&gt; x.Parse(expression))
+        .Return(new DelimitedNumbersExpression(numbersExpression, delimiter));
+    numberParserFactory = MockRepository.GenerateStub&lt;INumberParserFactory&gt;();
+    numberParser = MockRepository.GenerateStub&lt;INumberParser&gt;();
+    numberParserFactory.Stub(x =&gt; x.CreateWithDelimiters(delimiter)).Return(numberParser);
+    numberParser.Stub(x =&gt; x.GetNumbers(numbersExpression)).Return(numbers);
+}
+
+protected override CalculatorExpressionParser CreateSubjectUnderTest() {
+    return new CalculatorExpressionParser(delimiterParser, numberParserFactory);
+}
+</pre>
+
+<p>This is a bit scary, particularly if you haven't used a mocking framework before. :) We've given ourselves another dependency, an <code>INumberParserFactory</code> which has a <code>CreateWithDelimiter()</code> method. We'll then return a stubbed <code>INumberParser</code>, which in turn will process our <code>numbersExpression</code> and return our required result.</p>
+
+<div class="note">Notice how we are testing a lot of things implicitly here. We don't have a test called <code>Should_create_number_parser_from_factory()</code> or similar, although this is in fact tested indirectly via the context (i.e. if it were not setup in the context, our actual test would not pass!). This stops our tests from being too brittle -- we can change how the SUT does its job by modifying the context, while leaving most of the specification (the scenario name, test name, assertion, and the interface used in the <code>Because()</code> method) unchanged.</div>
+
+<p>On the positive side, this is trivial for us to implement:</p>
+
+<pre class="brush:csharp">
+public class CalculatorExpressionParser : INumberParser {
+    private readonly IDelimiterParser _delimiterParser;
+    private readonly INumberParserFactory _numberParserFactory;
+
+    public CalculatorExpressionParser(IDelimiterParser delimiterParser, INumberParserFactory numberParserFactory) {
+        _delimiterParser = delimiterParser;
+        _numberParserFactory = numberParserFactory;
+    }
+
+    public IEnumerable&lt;int&gt; GetNumbers(string expression) {
+        var delimitedNumbersExpression = _delimiterParser.Parse(expression);
+        var numberParser = _numberParserFactory.CreateWithDelimiters(delimitedNumbersExpression.Delimiters);
+        return numberParser.GetNumbers(delimitedNumbersExpression.DelimitedNumbers);
+    }
+}
+</pre>
+
+<p>I'm not 100% happy with this: that context is pretty mean and I think I have the names wrong, but the code is still flowing freely and seems fairly clean so let's press on.</p>
+
+<div class="note"><b>Confession:</b> I actually intially coded this with <code>INumberParserFactory</code> only accepting a single character delimiter, then refactored to support multiple delimiters for the default case of ',' and '\n' (this was a concious decision). I've omitted this step in consideration of your bandwidths costs and in the interest of finishing this post this year. :)</div>
+
+<h2>A delimiter parser</h2>
+
+<p>Our previous spec required the use of an <code>IDelimiterParser</code>. As I see it the <code>DelimiterParser</code> has to cope with two separate scenarios: when the expression contains a delimiter specifier, and when it doesn't. Let's start with the case where it actually needs to do some work.</p>
+
+<pre class="brush:csharp">
+public class When_parsing_expression_that_starts_with_a_delimiter_specifier : ConcernFor&lt;DelimiterParser&gt; {
+    private DelimitedNumbersExpression result;
+    private string expression;
+    private string delimitedNumbers;
+    private char delimiter;
+
+    [Test]
+    public void Should_return_specified_delimiter() {
+        Assert.That(result.Delimiters, Is.EquivalentTo(new[] {delimiter}));
+    }
+
+    [Test]
+    public void Should_return_delimited_numbers_without_delimiter_specifier() {
+        Assert.That(result.DelimitedNumbers, Is.EqualTo(delimitedNumbers));
+    }
+
+    protected override void Because() {
+        result = sut.Parse(expression);
+    }
+
+    protected override void Context() {
+        delimiter = ';';
+        delimitedNumbers = &quot;1;2;3&quot;;
+        expression = &quot;//&quot; + delimiter + &quot;\n&quot; + delimitedNumbers;
+    }
+
+    protected override DelimiterParser CreateSubjectUnderTest()
+    {
+        return new DelimiterParser();
+    }
+}
+
+//DelimiterParser.cs
+ public DelimitedNumbersExpression Parse(string expression) {
+     var delimiter = expression[2];
+    var delimitedNumbers = expression.Substring(4);
+    return new DelimitedNumbersExpression(delimiter, delimitedNumbers);
+ }
+</pre>
+
+<p>I actually did this in two steps, one to pass each test. Our second scenario and passing implementation looks like this:</p>
+
+<pre class="brush:csharp">
+public class When_parsing_expression_without_delimiter_specifier :ConcernFor&lt;DelimiterParser&gt; {
+    private DelimitedNumbersExpression result;
+    private char[] defaultDelimiters;
+    private string expression;
+
+    [Test]
+    public void Should_return_default_delimiters() {
+        Assert.That(result.Delimiters, Is.EqualTo(defaultDelimiters));
+    }
+
+    [Test]
+    public void Should_return_numbers_expression_unchanged() {
+     Assert.That(result.DelimitedNumbers, Is.EqualTo(expression));   
+    }
+
+    protected override void Because() {
+        result = sut.Parse(expression);
+    }
+
+    protected override void Context() {
+        defaultDelimiters = new[]{',', '\n'};
+        expression = &quot;1,2,3,4&quot;;
+    }
+
+    protected override DelimiterParser CreateSubjectUnderTest() {
+        return new DelimiterParser();
+    }
+}
+
+//DelimiterParser.cs
+public class DelimiterParser : IDelimiterParser {
+    private readonly char[] defaultDelimiters = new[] {',', '\n'};
+    private const string delimiterSpecifier = &quot;//&quot;;
+
+    public DelimitedNumbersExpression Parse(string expression) {
+        if (!expression.StartsWith(delimiterSpecifier)) { return new DelimitedNumbersExpression(expression, defaultDelimiters);}
+        var delimiter = expression[2];
+        var delimitedNumbers = expression.Substring(4);
+        return new DelimitedNumbersExpression(delimitedNumbers, delimiter);
+    }
+}
+</pre>
+
+<p>Our tests are now all green, and it looks like we have a good case for some refactoring. Let's use Extract Method to make our <code>DelimiterParser</code> a bit more readable:</p>
+
+<pre class="brush:csharp">
+public class DelimiterParser : IDelimiterParser {
+    private readonly char[] defaultDelimiters = new[] {',', '\n'};
+    private const string delimiterSpecifier = &quot;//&quot;;
+
+    public DelimitedNumbersExpression Parse(string expression) {
+        if (!StartsWithDelimiterSpecifier(expression)) { return ExpressionWithDefaultDelimiters(expression);}
+        return ExpressionWithDelimitedNumbersAndCustomDelimiter(expression);
+    }
+
+    private DelimitedNumbersExpression ExpressionWithDelimitedNumbersAndCustomDelimiter(string expression) {
+        const int positionOfDelimiter = 2;
+        const int positionOfFirstNewLine = positionOfDelimiter + 1;
+        const int startOfDelimiterNumbers = positionOfFirstNewLine + 1;
+
+        var delimiter = expression[positionOfDelimiter];
+        var delimitedNumbers = expression.Substring(startOfDelimiterNumbers);
+        return new DelimitedNumbersExpression(delimitedNumbers, delimiter);
+    }
+
+    private DelimitedNumbersExpression ExpressionWithDefaultDelimiters(string expression) {
+        return new DelimitedNumbersExpression(expression, defaultDelimiters);
+    }
+
+    private bool StartsWithDelimiterSpecifier(string expression) {
+        return expression.StartsWith(delimiterSpecifier);
+    }
+}
+</pre>
+
+<p>This is a longer class now, but I feel the <code>Parse()</code> method is much more understandable now. The ugliest bits are kept private.</p>
+
+<h2>A trivial factory implementation</h2>
+
+<p>Our <code>CalculatorExpresionParser</code> also needed an <code>INumberParserFactory</code>. As this will just be creating a <code>NumberParser</code> via a constructor, I don't see much benefit in unit testing it. You could write tests for it if you like, but I'm happy to assume that .NET constructors work ok. :)</p>
+
+<pre class="brush:csharp">
+public class NumberParserFactory : INumberParserFactory {
+    public INumberParser CreateWithDelimiters(char[] delimiters) {
+        return new NumberParser(delimiters);
+    }
+}
+</pre>
+
+<p>This will require us to refactor our <code>NumberParser</code> to take constructor arguments. Let's update our spec for it:</p>
+
+<pre class="brush:csharp">
+//NumberParserSepcs.cs, in abstract Concern class:
+protected override void Context() {
+    delimiters = new[] {',', '\n'};
+}
+
+protected override NumberParser CreateSubjectUnderTest() {
+    return new NumberParser(delimiters);
+}
+</pre>
+
+<p>This also lets us simplify our <code>NumberParser</code> specifications too, as we no longer need to test specific delimiters (',' and '\n'), but just test that it splits on whatever delimiters it has been created with. Let's make this pass:</p>
+
+<pre class="brush:csharp">
+public class NumberParser : INumberParser {
+    public readonly char[] Delimiters;
+
+    public NumberParser(char[] delimiters) { Delimiters = delimiters; }
+
+    public IEnumerable&lt;int&gt; GetNumbers(string expression) {
+        if (expression == &quot;&quot;) return new int[0];
+        return expression.Split(Delimiters).Select(x =&gt; int.Parse(x));
+    }
+}
+</pre>
+
+<h2>Please, not another spec! Have mercy!</h2>
+
+<p>Guess what? We're done. We don't have any unimplemented interfaces defined in specs. We should probably check this works now though. I'll add a default constructor to our <code>Calculator</code> class to wire up our dependencies (although for a real app we'd use an DI container).</p>
+
+<pre class="brush:csharp">
+//In Calculator.cs
+public Calculator() {
+    IDelimiterParser delimiterParser = new DelimiterParser();
+    INumberParserFactory numberParserFactory = new NumberParserFactory();
+    _numberParser = new CalculatorExpressionParser(delimiterParser, numberParserFactory);
+    _adder = new Adder();
+}
+</pre>
+
+<p>Just for good measure, I've added a file called <code>IntegrationTests.cs</code> and put in all the tests from our first attempt. And it all passed first go. Isn't that nice? :)</p>
+
+<h2>Post-mortem</h2>
+
+<p>So how'd this go? We ended up with a much more abstract design than our previous attempt. Because of this abstraction I felt code was easier to change, especially when it came to adding the custom delimiter behaviour. In that case we just picked the level of abstraction that seemed to work, then let the tests guide us. I also feel this level of abstractions helps prevent brittle tests. Because the majority of the test code focuses on the SUT's single responsibility, we only need to adjust the context to add or remove collaborators and change the behaviour.</p>
+
+<p>I found that the BDD-style approach tends to force me to think more about design issues up front, and the tests give me guidance as to how to think through these issues. It makes it very easy to adhere to SOLID principles, and makes it clear when I am violating them.</p>
+
+<p>I also found that when I got closer to the lowest levels of abstraction and I began hitting reality and the .NET framework code, I ended up reverting to a more TDD-style of testing. For example, the <code>NumberParserSpecs</code> test specific permutations of data, and it ends up just checking the use of the .NET <code>String.Split()</code> method and <code>int.Parse()</code>. I've had lots of trouble caused by focussing of testing data like this at the wrong levels of abstraction, so using the BDD-style was great for avoiding this until necessary. The majority of the time I could focus on telling dependencies to do something, not asking them for data and then acting on it.</p>
+
+<p>On the negative side, we have what could reasonably be described as an over-engineered design . With 7 classes and 4 interfaces, perhaps "over-engineered" is an understatement. ;) That said, each class has a trivial implementation. With the possible exception of the <code>DelimiterParser</code>, you can pretty much just inspect each class for correctness. I didn't find that coding additional classes slowed me down at all. Because I got so much guidance from my tests the implementation was fairly quick. If it's just as fast and cheap to over-design, but you get the ability to more easily change your code, is that still over-design?</p>
+
+<p>Of course, these posts have been more about looking at the how each approach influences the design direction, not if that level of design is a good idea. I'm quite sure you could easily end up with an identical design using either approach, but it is how each TDD style forces design decisions at different points that really interests me. I think the most illuminating part of this exercise from my perspective is that I need to work harder on my basic TDD skills -- at applying SOLID and being more aggressive in the refactoring step of the red-green-refactor cycle. Once I learn how to refactor both production and test code better, then I'll hopefully be able to move back and forward between styles as appropriate.</p>
+
+<p>Hope you enjoyed this series. Would love to get your thoughts, so feel free to leave a comment, email me or tweet me <a href="http://twitter.com/davetchepak">@davetchepak</a>.</p>

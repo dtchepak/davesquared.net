@@ -1,0 +1,13 @@
+---
+layout: "post"
+title: "Everything about dynamic search conditions in T-SQL"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1902386018649898242"
+categories: ["database"]
+date: "2007-09-25T14:02:00+10:00"
+updated: "2007-09-25T14:05:40.42+10:00"
+---
+
+<p>There are several common methods for using dynamic search conditions (a.k.a. optional parameters) in SQL. By dynamic search conditions, I am talking about passing through several criteria to a stored procedure or similar, but only filtering by the criteria that have values specified (i.e. are not null).</p> <p>To illustrate this, here is one <a href="http://weblogs.asp.net/rmclaws/archive/2004/02/18/75381.aspx">common method</a>:</p><pre>SELECT *<br>FROM Orders<br>WHERE<br> (@productName IS NULL OR Orders.ProductName LIKE @productName + '%')<br> AND<br> (@orderDate IS NULL OR Orders.DatePlaced = @orderDate)<br></pre><br>
+<p>This will let you filter the orders by product name, the date placed, or return all results unfiltered. Unfortunately SQL Server can't figure out how to use an index for this situation, so you end up with full table scans and the subsequent performance hit (which may or may not be a problem for you depending on things like your table size). </p>
+<p>There are several variations on this theme, including <a href="http://blogs.technet.com/wardpond/archive/2006/07/10/database-programming-one-last-gasp-on-optional-parameters.aspx">using COALESCE</a> (note retraction at top of that post), or inverting the conditions (using <code>(@productName IS NOT NULL AND Orders.ProductName=@productName) OR ...</code>) which can help by calculating the filter earlier and potentially allowing index scans. Another option is to use dynamic SQL to build up the appropriate condition, but that way is <a href="http://www.sommarskog.se/dynamic_sql.html">fraught with its own perils</a>.</p>
+<p><a href="http://www.sommarskog.se/">Erland Sommarskog's</a> article, <a href="http://www.sommarskog.se/dyn-search.html">Dynamic Search Conditions in T-SQL</a>, covers everything you ever wanted to know about this topic, but were afraid to ask. It really is a must read for anyone working with SQL (unless you've given up on the whole structured query language thing and are holding out for LINQ-to-SQL ;)).</p><hints id="hah_hints"></hints>

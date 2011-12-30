@@ -22,6 +22,16 @@ def find_images(collection, file)
     collection
 end
 
+def update_images(image_map, path)
+    image_map.
+        each do |image|
+            p "Updating " + image.file
+            s = IO.read(image.file.realpath)
+            s.gsub!(image.image, "/images/fromblogger/" + image.new_image)
+            IO.write(image.file.realpath, s)
+        end
+end
+
 class ImageInfo
     attr_accessor :file
     attr_accessor :image
@@ -44,7 +54,7 @@ def download_all(image_map)
             p "Processing " + image.new_image
             #Skip stupid picasaweb redirect:
             image_url = image.image.sub("/s1600-h/", "/s1600/")
-            download image_url, "images/" + image.new_image
+            download image_url, "images/fromblogger/" + image.new_image
         end
 end
 
@@ -64,6 +74,8 @@ end
 
 
 if __FILE__ == $0
-    image_map = map_images(File.expand_path(ARGV[0]))
+    working_dir = File.expand_path(ARGV[0])
+    image_map = map_images(working_dir)
     download_all(image_map)
+    update_images(image_map, working_dir)
 end

@@ -1,0 +1,45 @@
+---
+layout: "post"
+title: "Generics and overriding"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4799317728000722498"
+categories: ["imho", ".net"]
+date: "2007-10-30T11:56:00.0+11:00"
+updated: "2007-11-01T14:04:41.883+11:00"
+---
+
+<p>Academic experiment of the day. I was interested to see how overriding works with generics. First let's take a quick look at how overrides generally work.</p><pre>class BasicOverrider {
+  public String DoSomething(Object obj) { return "Object"; }
+  public String DoSomething(ICollection collection) { return "ICollection"; }
+}
+[Test]
+public void TestBasicOverriding() {
+  BasicOverrider overrider = new BasicOverrider();
+  ArrayList someCollection = new ArrayList();
+  Assert.That(overrider.DoSomething(5), Is.EqualTo("Object"));
+  Assert.That(overrider.DoSomething(someCollection), Is.EqualTo("ICollection"));		
+}
+</pre>
+<p>This test passes. In general, overriding picks the most specific match for your parameters. In the above example, <code>ICollection</code> is picked even though the <code>ArrayList</code> is also an <code>Object</code>. If we add another override that takes an <code>ArrayList</code>, that will take precedence over the <code>ICollection</code> and <code>Object</code> overrides.</p>
+<p>Contrast that to overriding a generic method:</p><pre>class GenericOverrider {
+  public String DoSomething&lt;T&gt;(T someValue) { return "Generic"; }
+  public String DoSomething(ICollection someValue) { return "ICollection"; }
+}
+</pre>
+<p>If I pass in an <code>ArrayList</code>, which overload is called? Here is a passing test:</p><pre>[Test]
+public void TestGenericOverriding() {
+  GenericOverrider overrider = new GenericOverrider 
+  ArrayList someCollection = new ArrayList();
+  ICollection sameCollectionAsICollection = someCollection;
+  Assert.That(overrider.DoSomething(5), Is.EqualTo("Generic"));
+<strong>  Assert.That(overrider.DoSomething(someCollection), Is.EqualTo("Generic"));
+  Assert.That(overrider.DoSomething(sameCollectionAsICollection), Is.EqualTo("ICollection"));
+</strong>  Assert.That(overrider.DoSomething((ICollection) someCollection), Is.EqualTo("ICollection"));
+}
+</pre>
+<p>The test shows that to call a specific overload of the generic method, your parameters need to match the signature exactly, in this case <code>ICollection</code>, otherwise the generic method will catch it instead. This is due to the <a href="http://davesquared.blogspot.com/2007/11/double-dispatch.html">single dispatching mechanism in C#</a>.</p>
+<p>You can see this binding if you open up the compiled code with IL DASM. The <code>ArrayList</code> binds to the generic method&nbsp;(!!0), whereas the <code>ICollection</code> reference picks up the expected method.</p><pre>IL_0028:  callvirt   instance string Workshop.UnitTests.GenericOverrider::DoSomething&lt;class [mscorlib]System.Collections.ArrayList&gt;(!!0)
+...
+IL_003f:  callvirt   instance string Workshop.UnitTests.GenericOverrider::DoSomething(class [mscorlib]System.Collections.ICollection)
+</pre>
+<p>Fairly academic I know, but might be of use if you are intending to have specific implementations over a general, generic method. 
+

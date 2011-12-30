@@ -1,0 +1,20 @@
+---
+layout: "post"
+title: "To var or not to var..."
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5516735763152154856"
+categories: [".net"]
+date: "2008-02-25T09:46:00.0+11:00"
+updated: "2008-03-05T08:04:22.745+11:00"
+---
+
+<p>Interesting thread on the ALT.NET mailing list, where <a href="http://resharper.blogspot.com/">Ilya</a> is talking about some of the <a href="http://tech.groups.yahoo.com/group/altdotnet/message/3381">debate on the ReSharper 4 team surrounding the new <code>var</code> keyword</a>, and the <a href="http://tech.groups.yahoo.com/group/altdotnet/message/3380">rules they ended up using for R# suggestions</a>.</p>  <p>In my .NET 3.5 work so far I have tended to shy away from <code>var</code>, preferring to be explicit about my type declarations. I even turned off R#'s suggestions to use <code>var</code> instead of an explicit type. After reading Ilya's messages on the thread, I am reconsidering the issue, especially now I understand the <a href="http://tech.groups.yahoo.com/group/altdotnet/message/3380">logic behind when R# suggests <code>var</code></a>.</p>  <p>One of the conditions is when the right hand side of an initialisation explicitly shows the type. For example:</p>  <pre>Dictionary&lt;A,B&gt; dict = new Dictionary&lt;A,B&gt;();
+/* OR */
+var dict = new Dictionary&lt;A,B&gt;();</pre>
+
+<p>In this case, why all the additional typing? We are already specifying what type we want, why duplicate it on the left and right sides of the expression? Both expressions are equivalent, we are just leaving the compiler to work out the obvious bits.</p>
+
+<p>I'm beginning to think eliminating this duplication is a good thing. It removes a bit of noise from the code and let's you focus on the important stuff, without losing any type safety.</p>
+
+<p>Obviously care needs to be taken not to abuse this feature, but for simple cases where the type is immediately obvious from the code then I'm starting to think <code>var</code> might be the way to go.</p>
+
+<p><strong>Update 2008-03-05:</strong> Ilya has posted some <a href="http://resharper.blogspot.com/2008/03/varification-using-implicitly-typed.html">more arguments in favour of using <code>var</code></a> on his blog.</p>  

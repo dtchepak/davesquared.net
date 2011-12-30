@@ -1,0 +1,25 @@
+---
+layout: "post"
+title: "Passing an arbitrary number of arguments to a JavaScript function"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3488462148578898753"
+categories: ["javascript"]
+date: "2007-10-05T15:28:00.0+10:00"
+updated: "2007-10-05T15:30:02.675+10:00"
+---
+
+<p>In C# you can specify that an arbitrary number of arguments / parameters&nbsp;can be passed to a function using the <code>params</code> keyword. This looks something like this:</p><pre>bool areAllChecked(params CheckBox[] checkBoxes) {
+  foreach (CheckBox checkBox in checkBoxes) {
+    if (!checkBox.Checked) return false;
+  }
+  return true;
+}
+...
+bool areAllChecked = areAllChecked(checkBox1, checkBox2, ..., checkBoxN);</pre>
+<p>Unsurprisingly (being a <a href="http://en.wikipedia.org/wiki/Dynamic_language">dynamic language</a> and all), <a title="you can do this in JavaScript as well" href="http://www.devguru.com/Technologies/ecmascript/QuickRef/arguments.html">you can do this in JavaScript as well</a> using the <code>arguments</code> object:</p><pre>function areAllChecked() {
+  for (var i=0; i&lt;arguments.length; i++) {
+    if (!arguments[i].checked) return false;
+  }
+  return true;
+}
+var areAllChecked = areAllChecked(checkBox1, checkBox2, ..., checkBoxN);
+</pre>

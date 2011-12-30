@@ -1,0 +1,147 @@
+---
+layout: "post"
+title: "Attempting to understand Dependency Injection"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-9209247493433878357"
+categories: ["patterns", ".net", "dev practices"]
+date: "2008-06-12T23:40:00.01+10:00"
+updated: "2008-06-13T10:51:34.211+10:00"
+---
+
+<p>Watching <a href="http://blog.wekeroad.com/">Rob Conery</a> and <a href="http://codebetter.com/blogs/jeremy.miller/default.aspx">Jeremy Miller</a> work through <a href="http://blog.wekeroad.com/mvc-storefront/mvcstore-part-13/">Dependency Injection for the MVC Storefront project</a> really helped me to piece together a few ideas that had been rattling around in my generally deserted cranium. Dependency injection (DI) is sometimes dismissed as &quot;just&quot; a tool for unit testing and mocking dependencies. But I think DI, and DI containers, offer a bit more to software design than simply providing a way to use mocks for interaction testing. So as usual I'm polluting the blogosphere with my ramblings in an effort to solidify my understanding. Let's work through an example and see what we can find.</p>
+
+<p>Here is how we could write a class to send invoice reminder emails without any thought given to design or testability:</p>
+
+<pre>
+public class InvoiceReminderService {
+  public void SendReminders() {
+    var emailService = <b>new EmailService()</b>;
+    var invoiceRepository = <b>new InvoiceRepository()</b>;  
+    var invoicesDueForReminderEmail = invoiceRepository.GetInvoicesDueForReminders();
+    foreach (var invoice in invoicesDueForReminderEmail) {
+      var reminderMessage = createReminder(invoice);
+      emailService.Send(reminderMessage);
+    }
+  }
+  //...
+}
+</pre>
+
+<p>Here we have dependencies on <code>InvoiceRepository</code>, for getting invoices due for reminder emails, and <code>EmailService</code>, for sending out the emails over SMTP. These dependencies could be instantiated at many different places all over our code base. Without worrying about design principles or testability, let's simply pull out these dependencies and rely on constructor injection to instantiate them.</p>
+
+<pre>
+public class InvoiceReminderService {
+  private EmailService emailService;
+  private InvoiceRepository invoiceRepository;
+
+  public InvoiceReminderService(<b>InvoiceRepository invoiceRepository, EmailService emailService</b>) {
+    this.invoiceRepository = invoiceRepository;
+    this.emailService = emailService;
+  }
+
+  public void SendReminders() {
+    var invoicesDueForReminderEmail = invoiceRepository.GetInvoicesDueForReminders();
+    foreach (var invoice in invoicesDueForReminderEmail) {
+      var reminderMessage = createReminder(invoice);
+      emailService.Send(reminderMessage);
+    }
+  }
+  //...
+}
+</pre>
+
+<p>Here we've just created a constructor that takes the required dependencies and adds them to private fields. <code>SendReminders()</code> has been updated so that it is no longer responsible for instantiating the dependencies. I can then instantiate an <code>InvoiceReminderService</code> by creating the dependencies and passing them to the constructor, or I can use a DI container (I'm using a pre-release build of StructureMap 2.5 for this post) to automatically create my dependencies for me:</p>
+
+<pre>var invoiceReminderService = ObjectFactory.GetInstance&lt;InvoiceReminderService&gt;();</pre>
+
+<p>By default our DI container looks at the <a href="http://structuremap.sourceforge.net/FAQ.htm#FAQ10">greediest constructor</a> (the one with the most parameters) to see what dependencies it needs to create. Because <code>InvoiceRepository</code> and <code>EmailService</code> are both concrete classes (i.e. not interfaces or abstract), we don't need to give StructureMap any additional information, it can simply instantiate the required objects and pass them through to the <code>InvoiceReminderService</code> constructor.</p>
+
+<p>So what has this accomplished? Well, <code>SendReminders()</code> is now a lot clearer without the dependencies in the way. And we also have an easy way to tell exactly what the dependencies of the class are (the constructor). We are also skirting dangerously close to having a testable class that could easily be modified to follow the <a href="http://en.wikipedia.org/wiki/Dependency_inversion_principle">Dependency Inversion Principle (DIP)</a> (by extracting interfaces from our dependencies and relying on those instead of on concrete classes) and the <a href="http://en.wikipedia.org/wiki/Open/closed_principle">Open/Closed Principle (OCP)</a> (by allowing us to change the behaviour of our class by providing different implementations for the dependencies).</p>
+
+<p>But the main, obvious thing this has accomplished is that our class is no longer responsible for instantiating its dependencies. I guess you could almost link this back to the <a href="http://en.wikipedia.org/wiki/Single_responsibility_principle">Single Responsibility Principle (SRP)</a> -- we are limiting this class' responsibilities and given it one less reason to change. Why is this good? Well, let's imagine our <code>EmailService</code> class is used by a number of classes throughout our application. We want to change our <code>EmailService</code> so that it no longer sends emails directly via SMTP. Now it simply queues up the email in a database, and another process is responsible for firing off emails from the queue. To create an <code>EmailService</code> without a DI container I now need to do this to every class that builds an <code>EmailService</code>:</p>
+
+<pre>emailService = new EmailService(new EmailRepository());</pre>
+
+<p>Or we can just let my DI container handle it for me, and keep our original <code>ObjectFactory</code> call unchanged. This reduces the friction experienced whenever we need to factor out a new class to provide new functionality or to avoid an SRP violation.</p>
+
+<pre>//No change need here, even though the EmailService constructor has changed...
+var invoiceReminderService = ObjectFactory.GetInstance&lt;InvoiceReminderService&gt;();</pre>
+
+<p>(Yes, this is slightly circular logic as I am assuming we using DI for the new <code>EmailRepository</code> class too, but the logic is equally valid if we want to change the constructor to include a connection string or some other parameter. The point is that we can vary the instantiation without affect dependent classes.)
+
+<p>Now I'm not suggesting for a moment that you want to globally replace <code>new</code> with a DI container, but for me the realisation that DI containers were all about abstracting the responsibility of dependency creation, rather than simply providing a testing seam, was a bit of an A-HA! moment. Of course, I am a bit slower than your average developer, so sometimes the things like this take me a while :-)</p>
+
+<h2>From abstracting dependency creation to SOLID designs</h2>
+
+<p>Now there are still a number of <a href="http://www.lostechies.com/blogs/chad_myers/archive/2008/03/07/pablo-s-topic-of-the-month-march-solid-principles.aspx">SOLID design principles</a> the code above is violating. This doesn't mean we need to instantly refactor to be compliant (you're never going to be, they are general guidelines that can be somewhat contradictory when taken to the n'th degree), but it is something we can look at.</p>
+
+<p>First up is the <a href="http://en.wikipedia.org/wiki/Dependency_inversion_principle">DIP</a>. We are depending on concrete types rather than abstractions. This also limits our options of altering the behaviour of the class via its dependencies to subclassing those dependencies, which is a minor strike against the <a href="http://en.wikipedia.org/wiki/Open/closed_principle">OCP</a>. This is easily fixed by extracting interfaces from the dependencies:</p>
+
+<pre>
+public class InvoiceReminderService {
+  private IEmailService emailService;
+  private IInvoiceRepository invoiceRepository;
+
+  public InvoiceReminderService(<b>IInvoiceRepository invoiceRepository, IEmailService emailService</b>) {
+    this.invoiceRepository = invoiceRepository;
+    this.emailService = emailService;
+  }
+  //...
+}
+</pre>
+
+<p>StructureMap will auto-wireup these dependencies, but if we are using our <code>EmailService</code> implementation that depends on an extracted <code>IEmailRepository</code> interface, then we'll need to tell StructureMap's configuration about it, either at compile time in code or using a configuration file:</p>
+<pre>
+public static class Bootstrapper {
+  public static void ConfigureIoC() {            
+    StructureMapConfiguration.AddRegistry(new DiSampleRegistry());
+  }  
+}
+public class DiSampleRegistry : Registry {
+  protected override void configure() {
+    ForRequestedType&lt;IEmailRepository&gt;()
+      .TheDefaultIsConcreteType&lt;EmailRepository&gt;();                
+  }
+}
+</pre>
+
+<p>We are now looking at a more traditional DI design. Our <code>InvoiceReminderService</code> is now completely independent of the specific implementations of its dependencies. All the code in the class is cohesive -- working at one responsibility with minimal background noise. This project doesn't even need a reference to the DLL containing the dependency implementations. This means we are fine changing implementations (although not interface contracts!) and we know our <code>InvoiceReminderService</code> is safe. If you were given this class to reuse, or simply to maintain, you wouldn't have to go pulling in a whole bunch of concrete dependencies. As a result and as a nice bonus, we have some good seams for running automated tests. We can easily stub or mock these dependencies and isolate the behaviour under test.</p>
+
+<p><i>Aside: DI containers are an obvious way to get plugin and provider-style implementations, by loading specific implementations of an interface at runtime. I'm focusing on more general design effects here -- if you're looking for a plugin/component/provider model you'll obviously be designing more explicitly for loose coupling and will choose your approach based on that.</i></p>
+
+<h2>Not all beer and Skittles?</h2>
+
+<p>That's the DI theory, as far as I can tell. But as always there is <a href="http://en.wikipedia.org/wiki/No_Silver_Bullet">no silver bullet</a>. It is now tougher for us to navigate from the <code>InvoiceReminderService</code> to the current implementations of its dependencies (as we've abstracted them away). We are also looking at a potential interface explosion. Why extract an interface for virtually every class you write? That's two units of code for every responsibility. And we now have a DI container to learn and troubleshoot when debugging. If we're happy with tight coupling between this class and its dependencies, then why go to these lengths? If you want to run unit tests why not just use <a href="http://www.typemock.com/">TypeMock</a> to break into tightly coupled dependencies? Or at the very least provide default implementations in the class' default constructor (a.k.a. the poor man's dependency injection, see <a href="http://blog.vuscode.com/malovicn/archive/2008/06/07/design-for-testability-transparent-and-opaque-dependencies-part-8.aspx">Nikola's post</a> for an interesting variation on this approach):</p>
+
+<pre>
+public class InvoiceReminderService {
+  private IEmailService emailService;
+  private IInvoiceRepository invoiceRepository;
+
+  <b>public InvoiceReminderService() {
+    this.invoiceRepository = new InvoiceRepository();
+    this.emailService = new EmailService();
+  }</b>
+
+  public InvoiceReminderService(<b>IInvoiceRepository invoiceRepository, IEmailService emailService</b>) {
+    this.invoiceRepository = invoiceRepository;
+    this.emailService = emailService;
+  }  
+  //...
+}
+</pre>
+
+<p>And how much of all this is just working around limitations of statically typed languages? To me these are all quite reasonable questions (some of these raised by Kevin Berridge in some nice posts <a href="http://kevin-berridge.blogspot.com/2007/12/dependency-injection.html">here</a> and <a href="http://kevin-berridge.blogspot.com/2008/03/ioc-and-di.html">here</a>, as well as a couple of posts from Jacob Proffitt starting <a href="http://scruffylookingcatherder.com/archive/2007/08/07/dependency-injection.aspx">here</a>).</p>
+
+<p>As always the key seems to lie in achieving a balance. The benefits of a loosely coupled design always need to be traded off with any additional complexity of that design. After watching the <a href="http://blog.wekeroad.com/mvc-storefront/mvcstore-part-13/">MVC Storefont DI screencast</a> and having a play around with StructureMap I can see a lot of very obvious benefits to DI containers, but at the same time it's not something to dive into without having an vague idea of the theory and problems it aims to solve (which is why I've spent so much time reading about DI containers, but generally sticking to poor man's DI until I had a pressing reason to move to a container). After all, we don't go around blindly applying the GOF patterns to every situation under the sun... right? :-)</p>
+
+<h2>Some interesting DI reads</h2>
+<p>As opposed to this post, here are a few interesting takes on DI.</p>
+<ul>
+<li>Frederik's <a href="http://frederikm.blogspot.com/2008/06/case-for-dependency-injection.html">Case for Dependency Injection</a>, which looks at DI as evolved from interface-based design.</li>
+<li>Nikola Malovic on <a href="http://blog.vuscode.com/malovicn/archive/2008/06/07/design-for-testability-transparent-and-opaque-dependencies-part-8.aspx">transparent dependencies</a> and <a href="http://blog.vuscode.com/malovicn/archive/2008/02/13/design-for-testability-dependency-injection-frameworks-part-4.aspx">DI frameworks</a>.</li>
+<li>Kevin Berridge on the DI-slippery slope: <a href="http://kevin-berridge.blogspot.com/2007/12/dependency-injection.html">here</a> and <a href="http://kevin-berridge.blogspot.com/2008/03/ioc-and-di.html">here</a></li>
+<li>Jacob Proffitt's <a href="http://scruffylookingcatherder.com/archive/2007/08/07/dependency-injection.aspx">war on dependency injection</a></li>
+<li>Nate Kohari's <a href="http://kohari.org/2007/08/15/defending-dependency-injection/">response to Jacob</a></li>
+<li>Ayende's views DI in response to Jacob and Nate: <a href="http://www.ayende.com/Blog/archive/2007/08/18/Dependency-Injection-IAmDonQuixote.aspx">here</a> and <a href="http://www.ayende.com/Blog/archive/2007/08/18/Dependency-Injection-More-than-a-testing-seam.aspx">here</a>.</li>
+<li>Jeremy Miller on the <a href="http://codebetter.com/blogs/jeremy.miller/archive/2005/10/06/132825.aspx">Dependency Injection Pattern</a>, and the <a href="http://codebetter.com/blogs/jeremy.miller/archive/2007/09/07/dependency-injection-still-has-some-good-years-left.aspx">pros and cons of DI</a>.</li>
+</ul>

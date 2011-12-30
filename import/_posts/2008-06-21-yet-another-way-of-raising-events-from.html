@@ -1,0 +1,148 @@
+---
+layout: "post"
+title: "Yet another way of raising events from mocks"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-889052059271844705"
+categories: ["imho", "featured", ".net", "dev practices"]
+date: "2008-06-21T23:16:00.0+10:00"
+updated: "2008-07-29T13:33:46.233+10:00"
+---
+
+<p><i><b>Update 2008-06-26</b>: This is <a href="http://groups.google.com/group/RhinoMocks/browse_frm/thread/b7c865a8827594a0/6a70d267c4c33884?tvc=1#6a70d267c4c33884">now in the Rhino Mocks trunk</a>, so it should be available as part of the 3.5 release.</i></p>
+
+<p>I've been playing around with raising events from mocks for the last couple of nights, and think I've finally come up with an approach that works for me. Finding a nice way of raising these events is particularly tricky for mock object frameworks, as the C# compiler is really picky about how you can use event references. For example, let's look at a very useful interface:</p>
+
+<pre>
+public interface IDoSomething {    
+    event EventHandler SomethingDone;
+}
+</pre>
+
+<p>Outside of a class that implements <code>IDoSomething</code>, the only time we can reference <code>SomethingDone</code> is when we are adding or removing listeners (<code>x.SomethingDone += someEventHandler;</code> or <code>x.SomethingDone -= someEventHandler;</code>). (<a href="http://codebetter.com/blogs/matthew.podwysocki/archive/2008/06/06/functional-c-revisited-into-the-great-void.aspx">C#'s lack of real support for System.Void</a> is partly to blame here, as both these operations are void.)</p>
+
+<p>To raise an event on a mock object, it would be lovely to be able to code something like this:</p>
+
+<pre>
+var mock = mocks.DynamicMock<IDoSomething>();
+mock.Raise(<b>mock.SomethingDone</b>, mock, EventArgs.Empty);
+</pre>
+
+<p>Unfortunately due to the aforementioned constraint, the emphasised part of the code will give a compiler error stating <i>&quot;The event 'IDoSomething.SomethingDone' can only appear on the left hand side of += or -=&quot;</i>.</p>
+
+<p>There are a few workarounds for this. Let's start with the <a href="http://www.ayende.com/Wiki/Rhino+Mocks+IEventRaiser.ashx">standard Rhino Mocks approach</a>. (I'm using <a href="http://www.ayende.com/Blog/archive/2008/05/16/Rhino-Mocks--Arrange-Act-Assert-Syntax.aspx">Rhino Mocks 3.5 beta</a> and <a href="http://www.codeplex.com/xunit">xUnit.net</a> here -- feel free to translate from [Fact] to [Test] if you use NUnit, MBUnit et al.)</p>
+
+<pre>
+[Fact]
+public void Raise_event_old_style() {
+    var mock = mocks.DynamicMock&lt;IDoSomething&gt;();
+    <b>mock.SomethingDone += null;
+    IEventRaiser eventRaiser = LastCall.IgnoreArguments().GetEventRaiser();</b>
+    mocks.ReplayAll();
+
+    var wasCalled = false;
+    mock.SomethingDone += (sender, e) =&gt; wasCalled = true;
+    <b>eventRaiser.Raise(mock, EventArgs.Empty);</b>
+
+    mocks.VerifyAll();  
+    Assert.True(wasCalled);
+}
+</pre>
+
+<p>Rhino Mocks records the expectation that an event handler is added, then uses <code>LastCall</code> to ignore the argument and gets an <code>IEventRaiser</code> for the last event referenced. That <code>IEventRaiser</code> can be used later on to raise our event. Phil Haack has <a href="http://haacked.com/archive/2006/06/23/UsingRhinoMocksToUnitTestEventsOnInterfaces.aspx">a helpful post which explains a bit more</a> about this approach.</p>
+
+<p>When I first saw this I must admit it seemed like a lot of noise that obscured what I was really trying to do. This got worse when I started playing around with the new <a href="http://www.ayende.com/Blog/archive/2008/05/16/Rhino-Mocks--Arrange-Act-Assert-Syntax.aspx">Arrange - Act - Assert</a> syntax and I didn't want to go through the whole replay / verify cycle. So I started looking at the Rhino Mocks implementation of <code>IEventRaiser</code>, the <code>EventRaiser</code> class. This class lets us do this:</p>
+
+<pre>
+[Fact]
+public void Raise_event_using_string_for_event_name() {
+    var mock = mocks.DynamicMock&lt;IDoSomething&gt;();
+    var wasCalled = false;
+    mock.SomethingDone += (sender, e) =&gt; wasCalled = true;
+
+    <b>var eventRaiser = EventRaiser.Create(mock, &quot;SomethingDone&quot;);
+    eventRaiser.Raise(mock, EventArgs.Empty);</b>
+    
+    Assert.True(wasCalled);
+}
+</pre>
+
+<p>Here we can specify the relevant event using a string. This works nicely and is easy to read, but causes problems when refactoring and means we don't get intellisense or compiler assistance. <a href="http://www.ayende.com/Blog/archive/2007/06/08/Rhino-Mocks-Events-Purity-vs.-Practicality.aspx">Ayende has written about this approach</a>, comparing it with the <code>LastCall.GetEventRaiser()</code> approach we used last time.</p>
+
+<p>I wasn't overjoyed about either of these, and while searching around for other options I found another of Ayende's posts (I think his blog is about 30% of the web... great stuff :)), asking for feedback on a <a href="http://www.ayende.com/Blog/archive/2007/06/23/Natural-Event-Syntax-for-Rhino-Mocks.aspx">more natural syntax for raising events from mocks</a>. This looked a bit like this:</p>
+
+<pre>
+mock.MyEvent += EventRaiser.Raise(this, EventArgs.Empty);
+</pre>
+
+<p>I quite liked this, but there were a few complaints in the comments about subscribing to and raising the event at the same time. The post was from about 12 months prior to me writing this and, as I'm using a recent Rhino Mocks build and couldn't find it, it looks like nothing came of this. Let's look for a compromise that also fits in nicely with our Arrange - Act - Assert approach. First we'll see what we can get working based on the first, <code>LastCall.GetEventRaiser()</code> approach used:</p>
+
+<pre>
+[Fact]
+public void Raise_event_with_new_arrange_act_assert_syntax() {
+    //Arrange
+    var mock = MockRepository.GenerateMock&lt;IDoSomething&gt;();
+    var wasCalled = false;
+    mock.SomethingDone += (sender, e) =&gt; wasCalled = true;
+    
+    <b>var eventRaiser = 
+        mock
+        .Stub(x =&gt; x.SomethingDone += null)
+        .IgnoreArguments()
+        .GetEventRaiser();</b>
+    
+    //Act
+    <b>eventRaiser.Raise(mock, EventArgs.Empty);</b>
+
+    //Assert
+    Assert.True(wasCalled);
+}
+</pre>
+
+<p>Here we are specifying a fairly useless stub so we can get an <code>IEventRaiser</code>. We are still using ye olde  <code>x.SomethingDone += null</code> trick (albeit with a lambda to neaten it up), but we are pretty much stuck with that if we want strong typing on this as discussed at the beginning of this post.</p>
+
+<p>I think this looks a bit more cohesive now we are using the lambda. We have one statement that is fairly obviously getting an <code>IEventRaiser</code>, rather than a null event handler floating around on its own confusing poor people like me :). Beyond aesthetics, this cohesion can let us pull out this functionality and start getting closer to a neater syntax. For now we'll just whack this in a .NET 3.5 extension method, but we could probably find a better home for it (it can go in a standalone class but the final syntax doesn't read quite as well to me).</p>
+
+<pre>
+public static class EventRaiserExtensions {
+    private static IEventRaiser GetEventRaiserFromSubscription&lt;TEventSource&gt;(
+        this TEventSource mock, Action&lt;TEventSource&gt; eventSubscription) {
+        <b>return mock
+            .Stub(eventSubscription)
+            .IgnoreArguments()
+            .GetEventRaiser();</b>
+    }
+    
+    public static void Raise&lt;TEventSource&gt;(this TEventSource mock, Action&lt;TEventSource&gt; eventSubscription, object sender, EventArgs args) {
+        var eventRaiser = GetEventRaiserFromSubscription(mock, eventSubscription);
+        eventRaiser.Raise(sender, args);
+    }
+
+    public static void Raise&lt;TEventSource&gt;(this TEventSource mock, Action&lt;TEventSource&gt; eventSubscription, params object[] args) {
+        var eventRaiser = GetEventRaiserFromSubscription(mock, eventSubscription);
+        eventRaiser.Raise(args);
+    }        
+
+    public static void Raise&lt;TEventSource&gt;(this TEventSource mock, Action&lt;TEventSource&gt; eventSubscription) {
+        var eventRaiser = GetEventRaiserFromSubscription(mock, eventSubscription);
+        eventRaiser.Raise(mock, EventArgs.Empty);
+    }    
+}
+</pre>
+
+<p>The emphasised bit of code is the stub call we did last time, but this time pulled out into one method. The main bits are the <code>Raise&lt;TEventSource&gt;</code> extension methods, which combine all the steps and give us an easy syntax for calling an event on a mock based on an event subscription delegate. So our example now looks like this:</p>
+
+<pre>
+[Fact]
+public void Suggestion_for_raising_events() {
+    var mock = MockRepository.GenerateMock&lt;IDoSomething&gt;();
+    var wasCalled = false;
+    mock.SomethingDone += (sender, e) =&gt; wasCalled = true;
+
+    <b>mock.Raise(x =&gt; x.SomethingDone += null, mock, EventArgs.Empty);</b>
+
+    Assert.True(wasCalled);
+}
+</pre>
+
+<p>The implementation itself might need work, but I reckon that syntax is pretty neat considering the limitations of C#. Of course, you're welcome to think otherwise, so please leave a comment expressing your outrage and/or contempt :).</p>
+
+<p>Disclaimer: I am fairly new to Rhino Mocks (have tended to stick to manual test doubles) and especially to Arrange - Act - Assert (it's only in beta at present), so this might fail pretty hard in other circumstances. Still, I thought I'd post the syntax in case it gave more knowledgable people some good ideas :)</p>

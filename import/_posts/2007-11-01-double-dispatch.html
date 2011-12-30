@@ -1,0 +1,111 @@
+---
+layout: "post"
+title: "Double dispatch"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8643683937606077703"
+categories: ["imho", "patterns", ".net"]
+date: "2007-11-01T14:03:00.0+11:00"
+updated: "2008-05-01T08:53:22.279+10:00"
+---
+
+<p><a href="http://codebetter.com/blogs/jeremy.miller/archive/2007/10/31/be-not-afraid-of-the-visitor-the-big-bad-composite-or-their-little-friend-double-dispatch.aspx">Jeremy Miller recently had a post</a> that mentioned "<a href="http://en.wikipedia.org/wiki/Double_dispatch">double dispatch</a>", and I had to delve down into the dusty recesses of my at-best-mediocre brain to come up with a definition. Chances are everyone has come across double dispatch in one form or another, and understands it implicitly.&nbsp;However&nbsp;I find it harder to <a href="http://c2.com/cgi/wiki?DoubleDispatchExample">articulate the definition explicitly</a>.</p> <p>My (admittedly limited) understanding&nbsp;of double dispatch is that it chooses a method to evaluate based on the runtime types of two objects. Also, C# does not support double dispatch, but you can emulate it a number of ways by doing <a href="http://www.codeproject.com/cs/design/DynamicActionDispatcher.asp">reflection tricks</a> or by using a <a href="http://en.wikipedia.org/wiki/Visitor_pattern">Visitor-pattern style approach</a>. To illustrate the limitations in C#, I'll borrow the example from <a href="http://en.wikipedia.org/wiki/Double_dispatch">Wikipedia</a> and collide some asteroids with spaceships.</p><pre>[TestFixture]
+public class DispatchBehaviour {
+  public class SpaceShip { }
+  public class GiantSpaceShip : SpaceShip { }
+  public class Asteroid {
+    public virtual String CollideWith(SpaceShip ship) {
+      return "Asteroid hit a SpaceShip";
+    }
+    public virtual String CollideWith(GiantSpaceShip ship) {
+      return "Asteroid hit a GiantSpaceShip";
+    }
+  }
+  public class ExplodingAsteroid : Asteroid {
+    public override string CollideWith(SpaceShip ship) {
+      return "ExplodingAsteroid hit a SpaceShip";
+    }
+    public override string CollideWith(GiantSpaceShip ship) {
+      return "ExplodingAsteroid hit a GiantSpaceShip";
+    }
+  }
+  [Test]
+  public void TestFailsWhenTryingDoubleDispatch() {
+    SpaceShip ship = new SpaceShip();
+    SpaceShip giantShip = new GiantSpaceShip();
+    Asteroid asteroid = new Asteroid();
+    Asteroid explodingAsteroid = new ExplodingAsteroid();
+    Assert.That(asteroid.CollideWith(ship), Is.EqualTo("Asteroid hit a SpaceShip"));
+    Assert.That(explodingAsteroid.CollideWith(ship), Is.EqualTo("ExplodingAsteroid hit a SpaceShip"));
+<strong>    //This assertion fails:
+    Assert.That(explodingAsteroid.CollideWith(giantShip), Is.EqualTo("ExplodingAsteroid hit a GiantSpaceShip"));
+</strong> 
+  }
+}
+</pre>
+<p>The <code>explodingAsteroid</code> reference looks up the correct virtual function in the <code>ExplodingAsteroid</code> class despite it being referenced via the <code>Asteroid</code> type, thanks to polymorphism and virtual functions. But because C# uses single dispatch, the above test fails because based on the compile-time lookup of the <code>giantShip</code> reference (which is a <code>SpaceShip</code> reference at compile-time). If it where doing that lookup at run-time we'd have a different story.</p>
+<p>One way of dealing with this is to switch on the type within the <code>CollideWith</code> methods.</p><pre>public class ExplodingAsteroid : Asteroid {
+  public override string CollideWith(SpaceShip ship) {
+    if (ship is GiantSpaceShip) {
+      return "ExplodingAsteroid hit a GiantSpaceShip";
+    } else {
+      return "ExplodingAsteroid hit a SpaceShip";
+    }
+  }
+}
+//...similar implementation for Asteroid.CollideWith(...)
+</pre>
+<p>This works, but if you end up with lots of different SpaceShip types then you are in for a hard time. If your group of asteroids is fairly static, you can use a Visitor-approach to accommodate lots of different spaceships. First we'll define an <code>IAsteroid</code> interface to represent the fairly stable group of asteroids, and an <code>IAsteroidTarget</code> as a Visitor, to represent anything that can collide with our stable group of asteroids:</p><pre>//Element that accepts a visit, in Visitor pattern parlance
+public interface IAsteroid {
+  string CollideWith(IAsteroidTarget target);
+}
+//Visitor, in Visitor pattern parlance
+public interface IAsteroidTarget {
+  String CollideWith(Asteroid asteroid);
+  String CollideWith(ExplodingAsteroid asteroid);
+}
+</pre>
+<p>As our spaceships can "visit" the asteroid types, let's implement those next:</p><pre>public class SpaceShip : IAsteroidTarget {
+  public string CollideWith(Asteroid asteroid) {
+    return "Asteroid hit a SpaceShip";
+  }
+  public string CollideWith(ExplodingAsteroid asteroid) {
+    return "ExplodingAsteroid hit a SpaceShip";
+  }
+}
+public class GiantSpaceShip : IAsteroidTarget {
+  public string CollideWith(Asteroid asteroid) {
+    return "Asteroid hit a GiantSpaceShip";
+  }
+  public string CollideWith(ExplodingAsteroid asteroid) {
+    return "ExplodingAsteroid hit a GiantSpaceShip";
+  }
+}
+</pre>
+<p>Now comes the double-dispatchy emulation part. Let's make our asteroids accept visits from our <code>IAsteroidTarget</code> objects.</p><pre>public class Asteroid : IAsteroid {
+  public string CollideWith(IAsteroidTarget target) {
+<strong>    return target.CollideWith(this); // &lt;-- The double dispatchy part</strong>
+  }
+}
+//Same implementation for ExplodingAsteroid : IAsteroid ...
+</pre>
+<p>The emphasised part of the code above delegates the way each target will be hit to the target itself. A slightly modified version of our original test will now pass:</p><pre>[Test]
+public void TestDoubleDispatchWorkAround2() {
+  IAsteroidTarget ship = new SpaceShip();
+  IAsteroidTarget giantShip = new GiantSpaceShip();
+  IAsteroid asteroid = new Asteroid();
+  IAsteroid explodingAsteroid = new ExplodingAsteroid();
+  Assert.That(asteroid.CollideWith(ship), Is.EqualTo("Asteroid hit a SpaceShip"));
+  Assert.That(explodingAsteroid.CollideWith(ship), Is.EqualTo("ExplodingAsteroid hit a SpaceShip"));
+  Assert.That(explodingAsteroid.CollideWith(giantShip), Is.EqualTo("ExplodingAsteroid hit a GiantSpaceShip"));
+}
+</pre>
+<p>Obviously there are disadvantages to this pattern. If you need to add more asteroid types things are going to be painful. (There are also much better ways of implementing this particular example of returning strings, but that is just due to its contrived nature. For a realistic example see <a href="http://codebetter.com/blogs/jeremy.miller/archive/2007/10/31/be-not-afraid-of-the-visitor-the-big-bad-composite-or-their-little-friend-double-dispatch.aspx">Jeremy's post</a>.)&nbsp;On the other hand, the process of adding targets is now trivial, even non-spaceship ones:</p><pre>public class Earth : IAsteroidTarget {
+  public string CollideWith(Asteroid asteroid) {
+    return "Asteroid hit Earth";
+  }
+  public string CollideWith(ExplodingAsteroid asteroid) {
+    return "ExplodingAsteroid hit Earth, causing the extinction of the dinosaurs";
+  }
+}
+</pre>
+<p>As an aside, this single dispatching behaviour of C# explains the cause of the <a href="http://davesquared.blogspot.com/2007/10/generics-and-overriding.html">generic overloading behaviour I mentioned before</a>. </p>
+<p>Finally, <a href="http://blogs.msdn.com/devdev/archive/2005/08/29/457798.aspx">Derrick Coetzee has a good explanation</a> of technical aspects of dispatching in C# with regards to the Visitor pattern.</p>

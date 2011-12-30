@@ -1,0 +1,45 @@
+---
+layout: "post"
+title: "Getting results from Oracle procedures for TSQL people"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-144047951314503143"
+categories: ["database"]
+date: "2008-07-18T09:34:00.0+10:00"
+updated: "2008-07-18T13:26:22.26+10:00"
+---
+
+<p>I haven't used Oracle since Uni, and the small amount of PL/SQL I've had to do over the last year hasn't been enough to get me passed the awkward SQL Server developer-trapped-in-a-PL/SQL world phase yet. (Although I am enjoying it much more now I've got a real IDE in Toad, compared with the ancient, clunky piece of rubbish I was using before.)</p>
+
+<p>In SQL Server, anything you SELECT inside a procedure will be returned to the caller, which makes it really easy to call an SP in Query Analyzer or similar and see what's happening. Oracle is, well, different. You need to explicitly return cursors over results, and unless you call it the right way all you'll get is a handy &quot;PL/SQL procedure successfully completed&quot; message.</p>
+
+<p>Here's a quick example of how TSQL people can get results out of Oracle with a minimum of fuss. First, say we have a simple procedure that takes a postcode (aka ZIP code) and returns matching results:</p>
+
+<pre>
+CREATE OR REPLACE PROCEDURE GetSamplesByPostcode 
+(
+    pi_postCode IN NUMBER,
+    samples OUT SYS_REFCURSOR
+) 
+IS
+BEGIN
+    OPEN samples FOR
+    SELECT *
+    FROM SAMPLE s
+    WHERE s.PostCode = pi_postCode;
+END GetSamplesByPostcode;
+</pre>
+
+<p>We can then call this within SQL*Plus or Toad, by turning on autoprint, and by using a bind variable to get the results out:</p>
+
+<pre>
+SET AUTOPRINT ON
+VAR sample_cur REFCURSOR;
+BEGIN
+    GetSamplesByPostcode(2000, :sample_cur);
+END;
+</pre>
+
+<p>This will print the relevant results returned by the bound <code>sample_cur</code> variable, and give Toad users a nice grid view of the results too.</p>
+
+<p>Check the Oracle docs for more on <a href="http://download.oracle.com/docs/cd/B19306_01/server.102/b14357/ch5.htm#sthref1118">bind variables</a>.</p>
+
+<div class="note">If you want to get at the data using .NET, check out the <a href="http://download.oracle.com/docs/cd/B19306_01/win.102/b14307/toc.htm">Oracle .NET Data Provider documentation</a>, or MSDN for an overview on using the <a href="http://msdn.microsoft.com/en-us/library/ms971506.aspx">Microsoft .NET Oracle Provider</a>.</div>

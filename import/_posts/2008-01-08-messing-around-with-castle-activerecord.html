@@ -1,0 +1,156 @@
+---
+layout: "post"
+title: "Messing around with Castle ActiveRecord"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-573846801448759651"
+categories: ["orm", ".net"]
+date: "2008-01-08T16:40:00+11:00"
+updated: "2008-05-01T09:04:07.723+10:00"
+---
+
+<p><em>This post is part of a small series on .NET ORM tools. You
+can find the rest of them <a href=
+"http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html">
+here</a>.</em></p>
+<p>After getting a surprise <a href="http://www.dotnetkicks.com/">kick</a>, I got a <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html#c112272158096300077">suggestion from Josh</a> to take a look at the <a href="http://www.castleproject.org/activerecord/index.html">Castle ActiveRecord project</a>. So here goes, using Castle 1.0 RC3.</p>
+<h2>Scene refresher</h2>
+<p>I have a table of suppliers, and a table of states (or
+provinces, territories, prefectures etc.). Both suppliers and
+states have names, which are stored as strings/varchars, and IDs,
+which are stored as Guids/uniqueidentifiers. Each supplier can
+service many states. So we have a simple many-to-many relationship
+between the two main entities. It looks a bit like this:</p>
+<p><a href=
+"http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png">
+<img id="BLOGGER_PHOTO_ID_5145922358406504498" style=
+"cursor: pointer" alt="" src=
+"http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png"
+border="0" name="BLOGGER_PHOTO_ID_5145922358406504498" /></a></p>
+<p>I am using Aussie states for my tests, so I have populated the
+State table with the following names: NSW, VIC, QLD, TAS, SA, WA,
+ACT, NT.</p>
+<h2>Setting up Castle ActiveRecord</h2>
+<p>I created a new C# class library project, then added references to:
+<ul>
+<li>Castle.ActiveRecord.dll</li>
+<li>Castle.Core.dll</li>
+<li>Castle.Components.Validator.dll</li>
+<li>Castle.DynamicProxy.dll</li>
+<li>NHibernate.dll</li>
+</ul>
+</p>
+<p>I also decided to store the ActiveRecord configuration information in App.Config (there are <a href="http://www.castleproject.org/activerecord/documentation/trunk/manual/xmlconfigref.html">several configuration methods</a> mentioned in the documentation). My App.config looked like this:</p>
+<pre>
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+&lt;configuration&gt;
+  &lt;configSections&gt;
+    &lt;section name=&quot;activerecord&quot; type=&quot;Castle.ActiveRecord.Framework.Config.ActiveRecordSectionHandler, Castle.ActiveRecord&quot; /&gt;
+  &lt;/configSections&gt;
+  &lt;activerecord&gt;
+    &lt;config&gt;
+      &lt;add key=&quot;hibernate.connection.provider&quot; value=&quot;NHibernate.Connection.DriverConnectionProvider&quot; /&gt;
+      &lt;add key=&quot;hibernate.dialect&quot; value=&quot;NHibernate.Dialect.MsSql2005Dialect&quot; /&gt;
+      &lt;add key=&quot;hibernate.connection.driver_class&quot; value=&quot;NHibernate.Driver.SqlClientDriver&quot; /&gt;
+      &lt;add key=&quot;hibernate.connection.connection_string&quot; value=&quot;Data Source=127.0.0.1\SQLEXPRESS;Initial Catalog=SubSonicWorkshop;Integrated Security=True&quot; /&gt;
+    &lt;/config&gt;
+  &lt;/activerecord&gt;
+&lt;/configuration&gt;
+</pre>
+
+<p>The next step was to create my entities, State and Subject:</p>
+
+<pre>
+[ActiveRecord]
+public class State : ActiveRecordBase&lt;State&gt; {
+  [PrimaryKey(PrimaryKeyType.GuidComb)]
+  public Guid StateId { get; set; }
+  
+  [Property]
+  public String Name { get; set; }
+}
+
+[ActiveRecord]
+public class Supplier : ActiveRecordBase&lt;Supplier&gt; {
+  [PrimaryKey(PrimaryKeyType.GuidComb)]
+  public Guid SupplierId { get; set; }
+  
+  [Property]
+  public String Name { get; set; }
+
+  [HasAndBelongsToMany(
+    typeof(State), RelationType.Bag,
+    Table=&quot;Supplier_StatesServiced&quot;, ColumnKey=&quot;SupplierId&quot;, ColumnRef=&quot;StateId&quot;,
+    Lazy=true)
+  ]
+  public IList&lt;State&gt; StatesServiced { get; set; }
+}
+</pre>
+
+<p>ActiveRecord uses attributes to specify the mapping between entities and the database. This saves some of the work I went through producing mapping files for the <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">NHibernate example</a>, although as ActiveRecord is built on NHibernate, I am really just specifying the same information in a different form and letting ActiveRecord fill in the blanks.</p>
+<p>I just needed to specify a <code>[PrimaryKey]</code> for each entity, add an <code>[ActiveRecord]</code> attribute on the class and a <code>[Property]</code> attribute on persistent properties, and then map the <code>Supplier.StatesServiced</code>collection to the many-to-many relationship in the database using <code>[HasAndBelongsToMany]</code>. Besides the attributes, the entities need to inherit from <code>ActiveRecordBase&lt;T&gt;</code>, which gives the entity all the ActiveRecord-smarts, but also ties it to this persistence mechanism.</p>
+<h2>Populating the database</h2>
+<p>As per my previous posts, I'll use a test fixture to run the
+remainder of the code. Before we start ActiveRecording, we need to initialise ActiveRecord so it can load up our entity mappings. I did this via a static constructor in the fixture. By calling <code>ActiveRecordStarter.Initialize()</code> without arguments, ActiveRecord will examine the current configuration (we used App.config for this earlier) and assembly to load the appropriate mappings. I assume this is synonomous with the NHibernate <code>SessionFactory</code> initialisation.</p>
+<pre>
+[TestFixture]
+public class CastleFixture {
+  static CastleFixture() {
+    ActiveRecordStarter.Initialize();
+  }
+  ...
+</pre>
+<p>We are now ready to populate the database. The method to create a single Supplier is really nice using ActiveRecord:</p>
+<pre>
+private static void createSupplier(String name, String[] statesServiced) {
+  Supplier supplier = new Supplier();
+  supplier.Name = name;
+  supplier.StatesServiced = State.FindAll(Expression.In(&quot;Name&quot;, statesServiced));
+  supplier.Create();
+}</pre>
+<p>As usual, we'll run the code below to populate the database with our test data:</p>
+
+<pre>createSupplier(&quot;Dave^2 Quality Tea&quot;, new string[] { &quot;NSW&quot;, &quot;VIC&quot; });
+createSupplier(&quot;ORMs'R'Us&quot;, new string[] { &quot;NSW&quot; });
+createSupplier(&quot;Lousy Example&quot;, new string[] { &quot;TAS&quot;, &quot;VIC&quot; });
+createSupplier(&quot;Bridge Sellers&quot;, new string[] { &quot;QLD&quot; });</pre>
+
+<h2>Querying the data</h2>
+<p>As ActiveRecord is built on NHibernate, you can use most (all?) of the standard NHibernate features for querying your entities, such as HQL (Hibernate Query Language). In addition to that power, ActiveRecord provides a simpler query layer on top of NHibernate via the <code>ActiveRecordBase&lt;State&gt;</code> base class your entities use.</p>
+
+<p>Here's the two simple queries I've been using in the previous posts, first getting all suppliers and then suppliers that have an &quot;s&quot; in their name:</p>
+
+<pre>
+[Test]
+public void Should_be_able_to_get_all_suppliers() {
+  IList&lt;Supplier&gt; suppliers = Supplier.FindAll();
+  Assert.That(suppliers.Count, Is.EqualTo(4));
+}
+
+[Test]
+public void Should_be_able_to_get_all_suppliers_with_s_in_their_name() {
+  IList&lt;Supplier&gt; suppliers = 
+    Supplier.FindAll(Expression.Like(&quot;Name&quot;, &quot;%s%&quot;));
+  Assert.That(suppliers.Count, Is.EqualTo(3));
+}
+</pre>
+
+<p>And here's the code to get data over the supplier-state relationship, retrieving all suppliers that service NSW:</p>
+<pre>
+[Test]
+public void Should_be_able_get_all_suppliers_that_service_NSW() {
+  IList&lt;Supplier&gt; suppliers = Supplier.FindAll(
+    DetachedCriteria.For&lt;Supplier&gt;()
+      .CreateCriteria(&quot;StatesServiced&quot;)
+        .Add(Expression.Eq(&quot;Name&quot;, &quot;NSW&quot;))
+    );
+  Assert.That(suppliers.Count, Is.EqualTo(2));
+}</pre>
+
+<p>To be honest I had trouble finding good examples on querying using ActiveRecord in the documentation. I ended up reproducing the NHibernate query. I'm not sure if there is a neater way of doing this -- it wouldn't surprise me if I've missed something obvious here. Still the query works, and I think that, for the first two queries in particular, you aren't going to find a simpler, more concise or easier to understand syntax.</p>
+
+<h2>Vague semblance of a conclusion</h2>
+
+<p>There is some great information around about <a href="http://www.castleproject.org/activerecord/gettingstarted/index.html">configuring ActiveRecord</a>, and it was trivially easy to setup. The only real downside I found during this simple exercise was finding <a href="http://www.castleproject.org/activerecord/documentation/trunk/index.html">ActiveRecord-specific documentation</a> on querying. I guess the required approach is to use the basic Find/FindAll methods where possible and drop back into NHibernate queries whenever you need more power.</p>
+
+<p>Another consideration when using Castle ActiveRecord is the underlying design pattern itself. If you can't or won't use the ActiveRecord design pattern (for example, want to keep entities and persistence logic seperate), then it isn't going to help you much.</p> 
+
+<p>And finally, Castle ActiveRecord also <a href="http://www.castleproject.org/monorail/documentation/trunk/integration/ar.html">integrates with Monorail</a>, which may be a plus for you if you are developing MVC web applications.</p>

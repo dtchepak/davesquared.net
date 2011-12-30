@@ -1,0 +1,17 @@
+---
+layout: "post"
+title: "Learning from newbie TDD mistakes"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6010138172210175428"
+categories: ["imho", "tdd"]
+date: "2007-01-19T14:06:00+11:00"
+updated: "2007-10-16T21:24:29.712+10:00"
+---
+
+<p>I have been looking into <a href="http://en.wikipedia.org/wiki/Test_driven_development">Test Driven Development (TDD)</a> for ages now. I have read a number of the books (like <i>Test-Driven Development: By Example</i> by Kent Beck), followed numerous  <a href="http://www.xp123.com/xplor/xp0201/index.shtml">examples</a>, read blogs and newsgroup posts, and started trying it on a couple of personal and small work projects. I can see how powerful it is, and have seen first hand how it can produce a beautiful design, reduce bugs and actually speed development.</p>
+
+<p>Despite this, I am still a completely clueless <a href="http://en.wikipedia.org/wiki/Newbie">newbie</a> at TDD. Today I tried writing a small section of a project in TDD, and it ended up fairly useless, so I am writing down my mistakes here so I am hopefully not doomed to repeat them.</p>
+<ol><li>Making the tests too coarse-grained</li><li>Not refactoring early or drastically enough
+</li></ol>
+<p>One of the benefits of TDD is breaking functionality down into small, testable, understandable units. Once you start needing a lot of code to get one test to pass, your test is too coarse. The functionality should be broken up into smaller steps so each step can be tested. "Duh!" you say, and you are absolutely right.</p>
+
+<p>I think both mistakes, made early, conspired against me. Because the tests were too coarse, I had trouble factoring out logical blocks into separate classes without making the tests irrelevant. Because I could not refactor into small blocks, I was unable to make the tests finer grained to test sub-sections of functionality. The TDD process in this case was screaming at me that my design was wrong. Note to self: if this happens again, chuck it out and start again!</p>

@@ -1,0 +1,107 @@
+---
+layout: "post"
+title: "Dynamic disappointment"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7640912826339682525"
+categories: [".net", "c#4"]
+date: "2009-06-03T00:35:00.0+10:00"
+updated: "2009-06-03T01:12:44.256+10:00"
+---
+
+<p>I've been eagerly awaiting .NET 4 and the new <code>dynamic</code> feature in C#, but after taking the beta for a spin I've run in to a major disappointment. Let's take <code>dynamic</code> for a quick spin and see what's got me so devastated.</p>
+
+<pre class="brush:csharp">
+public class Dynamic : DynamicObject {
+    Dictionary&lt;String, object&gt; members = new Dictionary&lt;string, object&gt;();
+    public override bool TrySetMember(SetMemberBinder binder, object value) {            
+        members[binder.Name] = value;
+        return true;
+    }
+    public override bool TryGetMember(GetMemberBinder binder, out object result) {
+        return members.TryGetValue(binder.Name, out result);
+    }
+}
+
+[TestFixture]
+public class Disappointment {
+    [Test]
+    public void CanCreateAndCallAMethod() {
+        dynamic anObject = new Dynamic();
+        anObject.AMethod = new Func&lt;int&gt;(() =&gt; 1);
+        Assert.That(anObject.AMethod(), Is.EqualTo(1));
+    }
+}
+</pre>
+
+<p>Here we've created a sub-class of <code>DynamicObject</code>, which lets us play in the world of dynamic lookups from C#. We override <code>TrySetMember(...)</code> and <code>TryGetMember(...)</code> to use a dictionary as a backing store for members. Our test assigns a method called <code>AMethod</code> to a dynamic object at run time, then executes it. It passes! Awesome!</p>
+
+<h2>If it walks and quacks like a duck, too bad!</h2>
+<p>Let's declare an <code>ICanAdd</code> interface, as well as a class that uses objects that support the <code>ICanAdd</code> interface to, well, add stuff.</p>
+<pre class="brush:csharp">
+public interface ICanAdd {
+    int Add(int a, int b);
+}
+
+public class SomethingThatAdds {
+    private ICanAdd adder;
+    public SomethingThatAdds(ICanAdd adder) {
+        this.adder = adder;
+    }
+    public int FirstNumber { get; set; }
+    public int SecondNumber { get; set; }
+    public int AddNumbers() {
+        return adder.Add(FirstNumber, SecondNumber);
+    }
+}
+</pre>
+
+<p>We can add this method to our dynamic object so that it supports the same operations as the <code>ICanAdd</code> interface:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void CanCreateADynamicAdder() {
+    dynamic adder = new Dynamic();
+    adder.Add = new Func&lt;int, int, int&gt;((first, second) =&gt; first + second);
+    Assert.That(adder.Add(1, 3), Is.EqualTo(4));
+}
+</pre>
+
+<p>This works fine, but when we try to combine static and dynamic worlds we run into problems:</p>
+
+<pre class="brush:csharp">
+[Test]
+public void CannotUseDynamicAdderForAnythingUseful() {
+    dynamic adder = new Dynamic();
+    adder.Add = new Func&lt;int, int, int&gt;((first, second) =&gt; first + second);
+    var somethingThatCanAdd = new SomethingThatAdds(adder); /* Fails here at runtime */
+    somethingThatCanAdd.FirstNumber = 10;
+    somethingThatCanAdd.SecondNumber = 20;
+    Assert.That(somethingThatCanAdd.AddNumbers(), Is.EqualTo(30));
+}
+</pre>
+
+<p>This compiles, but at runtime we get the test failing with the following <code>RuntimeBinderException</code>:</p>
+
+<pre>
+DaveSquared.DynamicDisappointment.Disappointment.CannotUseDynamicAdderForAnythingUseful:
+Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 
+The best overloaded method match for 'DaveSquared.DynamicDisappointment.SomethingThatAdds.SomethingThatAdds(DaveSquared.DynamicDisappointment.ICanAdd)' has some invalid arguments
+  at CallSite.Target(Closure , CallSite , Type , Object )
+  at System.Dynamic.UpdateDelegates.UpdateAndExecute2[T0,T1,TRet](CallSite site, T0 arg0, T1 arg1)
+  at DaveSquared.DynamicDisappointment.Disappointment.CannotUseDynamicAdderForAnythingUseful() ...
+</pre>
+
+<p>The exception is fairly clear -- the C# <code>RuntimeBinder</code> is trying to call the <code>SomethingThatAdds(ICanAdd)</code> constructor, but we've given it a <code>dynamic</code> instance instead. Based on my fairly primitive understanding of this stuff, in order to integrate dynamic lookups into the statically typed CLR, <code>dynamic</code> is actually implemented as a static type. So even though we're using dynamic member lookups at runtime, we still need to abide by the type system and pass methods the static types they expect.</p>
+
+<p>If we modify our original <code>SomethingThatAdds</code> class to explicitly accept the <code>dynamic</code> type then our last test passes:</p>
+
+<pre class="brush:csharp">
+public class SomethingThatAdds {
+    private dynamic adder;
+    public SomethingThatAdds(dynamic adder) {
+        this.adder = adder;
+    }
+    /* ... snip ... */
+}
+</pre>
+
+<p>I'm aware I'm probably expecting too much, but having to explicitly modify our code in order to make this kind of use of the dynamic feature for <a href="http://en.wikipedia.org/wiki/Duck_typing">duck typing</a> is, well, disappointing. It would be great to see something like <a href="http://msmvps.com/blogs/jon_skeet/archive/2008/10/30/c-4-0-dynamic-lt-t-gt.aspx">Jon Skeet's <code>dynamic&lt;T&gt;</code> idea</a> get into the final release so we can get the best of both worlds. :)</p>

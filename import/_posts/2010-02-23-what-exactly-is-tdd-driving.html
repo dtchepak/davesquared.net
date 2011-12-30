@@ -1,0 +1,86 @@
+---
+layout: "post"
+title: "What exactly is TDD driving?"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4738090660889734946"
+categories: ["imho", "tdd", "dev practices"]
+date: "2010-02-23T22:13:00.0+11:00"
+updated: "2010-12-24T23:25:59.181+11:00"
+---
+
+<p>Over the last few months I've been toying around with some fairly wacky ideas about Test Driven Development. Ever since first discovering TDD a few years back (early 2006 I think) I've been hooked. It is such an awesome idea, with the seductive promise of helping to write cleaner, more elegant code with less bugs, less bloat, and more malleable designs.</p>
+
+<p>The problem for me has been that it is tremendously difficult to get any sort of proficiency with the technique, especially when taking it out of the realms of practice exercises and into the workplace. Now, admittedly, a key contributor to these difficulties are my own limitations, including only fairly rudimentary OO design skills and difficulty refactoring, but at the same time I'd always hoped that TDD would provide the design feedback and guidance I needed to help counteract my shortcomings.</p>
+
+<p>And so, in a valiant effort to avoid blaming my own lack of competence, I've started to challenge one of the fundamental tenants of classical<b>*</b> TDD: what if TDD does not really drive design?</p>
+
+<div class="note"><b>*</b> By <a href="http://www.martinfowler.com/articles/mocksArentStubs.html#ClassicalAndMockistTesting">classical TDD</a>, I am referring to the case-by-case build up of the unit under test, potentially building the system bottom up, and in constrast to mockist TDD, BDD, and to a lesser extent <a href="http://www.davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based</a> TDD. This was how I got my introduction to TDD, and is the style I normally see for introductory training, articles and posts.</div>
+
+<p><b>Warning:</b> this post is taking a fairly whacky idea and running with it far beyond what is reasonable. The purpose of this is to challenge myself to argue against a long-held belief of mine. It is a rant, so please take it with a grain of salt. :)</p>
+
+<h2>Driving what?</h2>
+
+<p>Most examples of classical TDD I've seen use what I refer to as <a href="http://www.davesquared.net/2009/11/favour-test-driving-logic-over-data.html">testing data</a>. That is, each test case provides one data point. The code written to pass the first test deals exclusively with that data point. Subsequent tests are passed by dealing with the next data point, in addition to the previous data points. After each test the code is refactored to reduce duplication.</p>
+
+<p>An example of this could be test-driving a stack implementation using cases like "new stack should have zero items", "pushing one item should give count of one", "pushing two items should give count of two", "pushing one then popping one should give count of zero" etc. The reason I refer to this as "testing data" is because the tests are feeding the code different instances of data, rather than dealing with the general logic that differentiates the data. For example, we could check the logic that whenever an item is pushed onto the stack, the count is incremented (not the best example, but it shows the difference in approaches).</p>
+
+<p>This approach of testing data seems to be the common way of practicing traditional TDD, at least from the material I've read (like the description in the classic <a href="http://objectmentor.com/resources/articles/xpepisode.htm">Bowling Game example</a> by Robert C. Martin (a.k.a. Uncle Bob) and Robert S. Koss -- it also happens to be a really great article).</p>
+
+<p>So what is this approach to TDD driving? Well the first obvious thing to me (YMMV) is it is driving a fairly minimalist implementation. By only writing enough code to pass each test case and refactoring away duplication it helps us write just enough implementation to get it to work. The second thing I notice is the refactoring step is going to help keep the code clean, removing duplication, extracting well-named pieces of of functionality etc. Finally, by writing the tests from the perspective of a caller into your class under test, you are driving a usable API design.</p>
+
+<p>There seems to be lots of driving being done, but how much are our tests really helping to drive the design? Well, in my view they seem to drive the implementation more than the design. By building up an implementation one data-point at a time my tests are giving me feedback as to what my code should do, not what the design should be. That is being left purely up to my design skills and nose for code smells.</p>
+
+<p>The refactoring step can help me get a better design, but again, how much are the tests helping me with this? The tests can give me pain when trying to test all the data permutations, but they're not giving me much information on how to fix it. I've also found it is easy for this style of TDD to result in tests that provide resistance to refactoring attempts when we do try to fix it, as they are so tied to the results of the implementation that it can become difficult to push out logic to other classes without potentially coupling an entire object tree. (Yes, I realise I'm probably doing it wrong, but my point is the feedback from the tests haven't helped me to overcome this incompetence.) I most commonly notice this when I extract a class and then wonder how much of the tests I should push down into a dedicated fixture for that class, and whether I should change the initial fixture(s) to keep the tests focused and unit-sized.</p>
+
+<p>Now the driving of the API design I'll pay -- it is hard to argue that any form of TDD does not pay off here. However most of the feedback here is with the API of the class under test. The API of any collaborators introduced while refactoring is purely up to our design knowledge.</p>
+
+<p>I'm not completely sold on the idea, but I can't quite shake the feeling that my tests aren't really helping drive my design as much as I'd initially thought. By concentrating on implementing the code for each case of data, pehaps the main thing I am building up and getting feedback on is my implementation?</p>
+
+<h2>So what's wrong with driving implementation?</h2>
+
+<p>Well, nothing really. If it works for you then great! In some cases it's remarkably valuable. However it is not without downsides (what isn't?). As I mentioned above, I feel driving implementation with classical TDD tests can result in fragile tests that make refactoring harder. But my complaint goes a bit deeper than that.</p>
+
+<p>By building up implementation case by case, I find it very easy to fall into a procedural-style implementation. For small exercises this is actually a feature -- the process eliminates unnecessary cruft. But for larger systems, where abstraction becomes more useful (or even essential), the emphasis shifts to collaborations and the behaviour of components. For these cases the tests don't give much feedback on what my design should be, what my abstraction should be, or who the collaborators should be. They only really give me feedback when it all goes wrong, by which time I may be lumped with a procedural design and a suite of fragile, data-dependent tests.</p>
+
+<p>Another issue I've hit before is test-driving the implementation of algorithms, the most infamous example of which is probably <a href="http://ravimohan.blogspot.com/2007/04/learning-from-sudoku-solvers.html">sudoku solving</a>. Now I definitely don't agree with criticism of Ron about his series -- he intentionally went into the problem "blind" to see what would happen. His experience leads to some interesting ideas. One thing I take from it is that while driving implementation can provide nice implementations of very simple algorithms, you really have to understand the fundamental algorithm before test driving the implementation. As Peter Norvig (the other sudoku solver-solver) beautifully put it:</p>
+
+<blockquote>
+"I think test-driven design is great... But you can test all you want and if you don’t know how to approach the problem, you’re not going to get a solution." -- Peter Norvig, as quoted in <a href="http://www.gigamonkeys.com/blog/2009/10/05/coders-unit-testing.html">'Unit testing in Coders at Work' by Peter Seibel</a>
+</blockquote>
+
+<p>Why is this relevant? Well, if you need to understand the algorithm, or more generally, the problem you are tackling, to produce the implementation, then the tests are potentially not driving that much at all. Instead they're helping you check the correctness of each step of the algorithm you are solving -- a handy safety net for catching programming errors, and a useful technique for focusing on small pieces at a time, but not a tool for driving the design or the abstractions we're using to break down the problem.</p>
+
+<p>When broken down to this level, building up your implementation in terms of the steps of an algorithm you understand, it raises another question: how hard is implementation really? If we know all the steps then we just need to translate that into code. Admittedly us programmers stuff this up much of the time, but we could also catch these problems with standard unit tests. And TDD is meant to be about much more than unit testing. To me, while difficult, implementation is not <i>that</i> hard -- the real trouble is in getting a good design, particularly when it comes to OO and abstractions.</p>
+
+<div class="note"><b>TDD Adoption:</b> As an aside, I attribute most of the complaints I've read about TDD to this blurring of the ideas of driving implementation vs. driving design. An interesting article, <a href="http://www.dalkescientific.com/writings/diary/archive/2009/12/29/problems_with_tdd.html">Problems with TDD</a>, outlines the problems Andrew Dalke experienced when looking at TDD. Most of the examples show data-driven tests used for the implementation of algorithms. I think the people that find TDD particularly grating may have a better experience focusing on driving the design via their tests.</div>
+
+<h2>How to drive design?</h2>
+
+<p>So what options do we have for test driving design? Well, for our tests to give us feedback on our design we'll need them to focus on that aspect rather than the implementation and data. That means isolating the class under test from dependencies and defining the results of collaborating with them, be it in terms of state or behaviour.</p>
+
+<p>One way I've found to do this is using the steps I picked up from <a href="http://www.davesquared.net/2009/08/nothin-but-net-sydney-2009-day-4.html">JP's Nothin' but .NET course</a>. This approach focuses on writing tests that assert the result of exercising the class under test's single responsibility in a particular context, where the context is just the configuration of class' collaborators. The context becomes the test fixture setup.</p>
+
+<p>Here much of the design of the collaborators (and the abstractions required to solve the problem at hand) is driven through the context. The implementation of the class under test is tested with regard for this context, and eliminates generating a whole raft of data-based tests in favour or specifying and testing the step in the algorithm this class plays.</p>
+
+<p>Here the context/setup is providing valuable feedback on your design. Is it hard to setup? Are there too many dependencies? Are there too many / too complicated interactions? Is this abstraction right for this step of the problem? The test cases also provide design feedback -- is your class under test doing too much? Violating the Single Responsibility Principle (SRP)? And we also get verification of the correctness of our implementation via our assertions.</p>
+
+<p>Having the collaborations defined in the context/setup also helps ease refactoring. We can introduce new or change existing abstractions and collaborators by tweaking the context, leaving the actual test, responsibility and assertion unchanced (alleviating some of the problems faced extracting classes that I mentioned earlier).</p>
+
+<p>I've tried to write up an example of this approach by <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">tackling the StringCalculator kata</a>. Of course, the problem with writing up bloggable examples like this is they end up hopelessly over-engineered for their size and complexity, but hopefully with some imagination you can see how scaling this to more complex problems provides a way of driving a neatly abstracted design (in some cases insanely abstracted ;)).</p>
+
+<p>Another approach that is a bit less extreme and compromises between testing design and implementation is what I refer to as <a href="http://www.davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based testing</a>. This puts more emphasis on context than classical TDD, but also tends to favour more test cases per scenario than my interpretation of "BooDhoo-D". :)</p>
+
+<h2>When driving implementation is appropriate</h2>
+
+<p>All this ranting has been fun and all, but I'm not going to pretend for even a nanosecond that there is a silver bullet lurking around here somewhere. You need to pick the right tool for the job. It's important to remember that it is not the tests themselves driving anything, it is the developer writing the tests necessary to drive their code to a solution. The developer will still have to rely on their own design and coding skills, and it is a matter for them to decide how their tests can best provide feedback to make the most of these skills.</p>
+
+<p>I've found using my tests to drive implementation is more than appropriate for the bottom, most concrete parts of my apps -- at these layers we get all the classical TDD advantages we noticed with our small practice exercises and I find it a prerequisite for me to write good code. For the majority of classes, I'm currently finding it easiest to use my tests to drive my designs by taking a different approach to that described in classical TDD literature, focusing on collaborators and contexts.</p>
+
+<p>I am also convinced that anyone with a good head for OO design and refactoring will find classical TDD much easier than I do. They'll be able to take any pain they experience with the tests, and safely refactor both test and production code to introduce the necessary abstractions to get a good design.</p>
+
+<p>However you prefer to work, the more tools you have at your disposal, and the more your understand the mechanism by which they work, the more luck you're going to have with your code. Hopefully this has given you some ideas as to how to focus TDD to best suit the way you work.</p>
+
+<h2>Conclusion</h2>
+
+<p>This has been a wild rant. I definitely don't believe all the points above as strongly as I have written them, but I can't quite shake the idea that somewhere in this rambling is a grain of truth that might help someone out.</p>
+
+<p>Bottom line is that TDD is awesome -- my pursuit of learning it has taught me so much and rekindled a once-waning love for programming, but it's tough. If you have problems with it don't be afraid to try completely whacky ideas and approaches in an effort to get different forms of feedback on different aspects of your code. If this post encourages you to do that, then my mission has been accomplished for today. :)</p>

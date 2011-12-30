@@ -1,0 +1,25 @@
+---
+layout: "post"
+title: "Keeping a change out of our master repository with Git"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6923967402616801659"
+categories: ["git"]
+date: "2009-10-30T17:23:00.0+11:00"
+updated: "2009-10-30T17:31:36.457+11:00"
+---
+
+<p>I love Git. I can't believe I ever loved another version control system. Recently I've started using Git branches to keep one particular lot of changes out of my master repository. I wanted to upgrade my current VS solution and projects to VS 2010 Beta 2, use VS 2010 to add features to the code base, then only check in the non-VS 2010 related changes. That way my fellow developers don't have to worry about the slightly different <code>.csproj</code> files and we can all work together happily. :)</p>
+
+<p>Now the changes made by the VS2010 upgrade wizard are very minor -- basically just updating the <code>ToolsVersion</code> attribute to 4.0 and providing a fallback <code>OldToolsVersion</code> element set to 3.5.</p>
+
+<p>So here's what I did. The first step was to create a branch off my master using <code>git checkout -b vs_upgrade</code>. I then ran the VS 2010 upgrade wizard which changed the relevant files, then commited those to my <code>vs_upgrade</code> branch. Second step was to create a branch off my <code>vs_upgrade</code> branch to add my feature (not strictly necessary, but keeps things nicely separated). I can now happily make changes to the code and commit the new feature to my feature branch.  The structure now looks something like this:</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://4.bp.blogspot.com/_wEsHWMWy090/SuqCRdsGgpI/AAAAAAAABUI/g3AMAflJln4/s1600-h/git_vs2010_upgrade.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://4.bp.blogspot.com/_wEsHWMWy090/SuqCRdsGgpI/AAAAAAAABUI/g3AMAflJln4/s320/git_vs2010_upgrade.png" /></a>
+</div>
+
+<p>Now I need to get my feature back into my <code>master</code> branch, minus the VS 2010 upgrade. We can just cherry pick the change we want (I use <code>gitk --all</code> rather than the command line) and apply it to the <code>master</code> branch. Now we can push <code>master</code> to our remote server and everyone has the change, minus the VS 2010 bits. Very cool!</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://1.bp.blogspot.com/_wEsHWMWy090/SuqCTvteIUI/AAAAAAAABUQ/fjKIlqykwb8/s1600-h/git_merge_without_vs2010.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://1.bp.blogspot.com/_wEsHWMWy090/SuqCTvteIUI/AAAAAAAABUQ/fjKIlqykwb8/s320/git_merge_without_vs2010.png" /></a><br /></div>
+
+<p>We can rebase our <code>vs_upgrade</code> branch whenever some new changes are applied by other developers to <code>master</code>, and we get back to our first picture. We always have just a single commit containing our VS-related changes (so we don't have to repeat the upgrade), and we can always just cherry pick the changes we want made on top of the upgrade and apply them to our master. I get to play with VS 2010 and the nightly builds of ReSharper 5.0, without having any effect whatsoever on my team mates using VS 2008. The ease with which Git handles this branching and any merging is just awesome! :)</p>

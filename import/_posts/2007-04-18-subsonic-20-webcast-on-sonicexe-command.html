@@ -1,0 +1,14 @@
+---
+layout: "post"
+title: "SubSonic 2.0 webcast on sonic.exe command line tool"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4939735872807265613"
+categories: ["imho", "tools", "orm", ".net"]
+date: "2007-04-18T12:42:00.0+10:00"
+updated: "2007-12-21T08:50:33.119+11:00"
+---
+
+<p>Rob has a <a href='http://blog.wekeroad.com/archive/2007/04/17/SubSonic-2.0-Webcast-1-Using-the-Command-Line.aspx'>webcast on using the new sonic.exe tool from the command line</a>. This is very nice stuff, and addresses the only hesistations I had about the pre-2.0 release, which was the requirement to use build providers with ASP.NET. I was going to write my own to use SubSonic from within a class library project, but procrastination (well, lack of free time) has paid off :-)</p>
+
+<p>The webcast shows how to setup sonic.exe as an external tool within VS.NET that lets you generate your DAL at single button click. Rob also demonstrates using sonic.exe to version your database schema and data (although it uses SMO, which seems to use a fairly arbitrary ordering for scripting objects and therefore minimises the effectiveness of diff tools. I have not played around with it too much so hopefully I am wrong or the SubSonic team have implemented it in a diff-able way).</p>
+
+<p>Finally, and the news I was hoping for, is the demonstration of running the tool as a pre-build or pre-run action. Combined with using partial  classes for any relevant extensions, it now looks like we can have instantly generated, compiler checked database access logic inserted into your domain logic layer or as a new DLL. The last thing I want to look at with SubSonic is potentially generating interfaces, stubs and/or mocks for unit testing without the database itself. I have some time set aside to play with SubSonic this week, and am really looking forward to it.</p>

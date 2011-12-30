@@ -1,0 +1,10 @@
+---
+layout: "post"
+title: "Currying (not vindaloo)"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4619901841636930281"
+categories: [".net"]
+date: "2007-08-16T09:05:00.0+10:00"
+updated: "2007-08-16T09:05:02.795+10:00"
+---
+
+<p>Dustin Campbell has just posted an article title&nbsp;"<a href="http://diditwith.net/2007/08/15/TheArtOfCurrying.aspx">The Art of Currying</a>"&nbsp;that has taken me right back to my <a href="http://en.wikipedia.org/wiki/Haskell_%28programming_language%29">Haskell</a>/functioning programming days in first year University. <a href="http://en.wikipedia.org/wiki/Currying">Currying</a> is&nbsp;when you take a function with multiple arguments and transform it into a function that takes a single argument and returns another function for any additional arguments.</p> <p>To steal Dustin's example, <code>add(5, 10)</code> becomes <code>add(5)(10)</code>. The benefit of this is that you can define functions in terms of other functions (using a related technique called "partial application" -- I start to get <a href="http://lambda-the-ultimate.org/node/2266">lost here</a> as my memory starts to fail me).</p> <p>Dustin's article gives a great overview with code examples to explain the concept.</p>

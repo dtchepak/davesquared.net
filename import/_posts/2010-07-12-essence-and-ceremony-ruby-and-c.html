@@ -1,0 +1,211 @@
+---
+layout: "post"
+title: "Essence and ceremony, Ruby and C#"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1645407079454001072"
+categories: ["ruby", "imho", ".net"]
+date: "2010-07-12T23:33:00+10:00"
+updated: "2010-07-12T23:33:28.645+10:00"
+---
+
+<p>In a <a href="http://blog.wekeroad.com/2010/06/21/i-smell-smoke">recent post by Rob Conery</a> there was an interesting comment exchange between <a href="http://twitter.com/lazycoder">Scott Koon</a> and <a href="http://twitter.com/elylucas">Ely Lucas</a>. Scott suggested writing some little command line apps in Ruby or Python to do things like move files around and compare it to C#, and <a href="http://blog.wekeroad.com/2010/06/21/i-smell-smoke#comment-57948680">Ely replied</a>:</p>
+
+<pre>
+Ruby:
+FileUtils.copy('myfile.txt', 'myfile2.txt')
+
+c#
+File.Copy("myfile.txt", "myfile2.txt")
+
+Now I can see it. The Ruby way is so much better!
+</pre>
+
+<p>This raises a few interesting points. First, a usable API is possible in most languages and platforms, which is encouraging for those of us that work primarily in C# and .NET. Just because we work in a static language doesn't mean we should settle for verbose, unintuitive APIs.</p>
+
+<p>The second point, and the topic of this post, is the idea of essence versus ceremony. Both lines of code above clearly show the essence of what we are trying to achieve: create a copy of <code>myfile.txt</code> in a file called <code>myfile2.txt</code>. Of course these two lines of code do not quite tell the entire story; there is a certain amount of ceremony we need to go through to get them to run. Let's see how many incantations we need to mutter to get these things to work.</p>
+
+<h2>C# is for ceremony?</h2>
+
+<p>Until C# 5.0 and compiler-as-a-service (or <a href="http://tirania.org/blog/archive/2010/Apr-27.html">a few weeks ago for Mono users</a> ;)), we need to do some work to get our C# line of code to satisfy the compiler. This means wrapping the line in a class with a static Main entry point that will be called when we compile it into an EXE.</p>
+
+<pre class="brush:csharp">
+using System.IO;
+public class FileCopy {
+  public static void Main() {
+    File.Copy(&quot;sample\\src\\1.txt&quot;, &quot;sample\\dest\\1.txt&quot;);
+  }
+}
+</pre>
+
+<p>Then from a shell (or bat/PS script) we call the compiler, and run the resulting EXE:</p>
+
+<pre>
+&gt; C:\Windows\Microsoft.NET\Framework\v3.5\csc.exe FileCopy.cs
+&gt; FileCopy.exe
+</pre>
+
+<p>So our single line of code takes around 6 ceremonial lines/operations (plus some brace noise) to make work. We need to reference the IO library to access the API we need; we need a class declaration that for this code is completely useless, and we need to utter ye olde &quot;public static void Main(...)&quot; incantation before we get to the essence of our program. We've got access modifiers and a plethora of punctuation. We then need to compile and run the resulting EXE. Of these, only the required library and executing the program bears any relation to the problem at hand.</p>
+
+<div class="note"><b>Note: </b> Yes, I could ditch the <code>using</code> statement, but I want to keep the original lines of code intact, and I want to show referencing the library as a separate logical operation. I'll give Ruby the same treatment.</div>
+
+<h2>Expressing essence with Ruby</h2>
+
+<p>As Ruby is interpretted it has a pretty unfair advantage here. We just need to tell Ruby where to find the library we need for our single line of code, then execute it using the Ruby interpretter.</p>
+
+<pre class="brush:ruby">
+require 'FileUtils'
+FileUtils.copy 'sample/src/1.txt', 'sample/dest/'
+</pre>
+
+<pre>
+&gt; ruby file_copy.rb
+</pre>
+
+<p>Here pretty much everything relates to the essence of our code. True, this is a silly little example, but it does show that the two single lines of code posted in the original comment don't tell the whole story, and that the single line of Ruby code takes less work to get going than the equivalent C#.</p>
+
+<h2>But wait! There's more...</h2>
+
+<p>How many times do you actually compile .NET code in anything other than an IDE? I used Vim to write both the C# and Ruby, but let's pretend for a moment I'm normal rather than the insane, rambling lunatic I actually am and code this in Visual Studio. :)</p>
+
+<pre style="font-size: xx-small; height: 200px; overflow: auto;">
+//FileCopy.sln
+
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileCopy", "FileCopy.csproj", "{4277DB77-71AF-4BFE-AC57-E44A899DE9A4}"
+EndProject
+Global
+ GlobalSection(SolutionConfigurationPlatforms) = preSolution
+  Debug|x86 = Debug|x86
+  Release|x86 = Release|x86
+ EndGlobalSection
+ GlobalSection(ProjectConfigurationPlatforms) = postSolution
+  {4277DB77-71AF-4BFE-AC57-E44A899DE9A4}.Debug|x86.ActiveCfg = Debug|x86
+  {4277DB77-71AF-4BFE-AC57-E44A899DE9A4}.Debug|x86.Build.0 = Debug|x86
+  {4277DB77-71AF-4BFE-AC57-E44A899DE9A4}.Release|x86.ActiveCfg = Release|x86
+  {4277DB77-71AF-4BFE-AC57-E44A899DE9A4}.Release|x86.Build.0 = Release|x86
+ EndGlobalSection
+ GlobalSection(SolutionProperties) = preSolution
+  HideSolutionNode = FALSE
+ EndGlobalSection
+EndGlobal
+
+//FileCopy.csproj
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;Project ToolsVersion=&quot;4.0&quot; DefaultTargets=&quot;Build&quot; xmlns=&quot;http://schemas.microsoft.com/developer/msbuild/2003&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;Configuration Condition=&quot; '$(Configuration)' == '' &quot;&gt;Debug&lt;/Configuration&gt;
+    &lt;Platform Condition=&quot; '$(Platform)' == '' &quot;&gt;x86&lt;/Platform&gt;
+    &lt;ProductVersion&gt;8.0.30703&lt;/ProductVersion&gt;
+    &lt;SchemaVersion&gt;2.0&lt;/SchemaVersion&gt;
+    &lt;ProjectGuid&gt;{4277DB77-71AF-4BFE-AC57-E44A899DE9A4}&lt;/ProjectGuid&gt;
+    &lt;OutputType&gt;Exe&lt;/OutputType&gt;
+    &lt;AppDesignerFolder&gt;Properties&lt;/AppDesignerFolder&gt;
+    &lt;RootNamespace&gt;FileCopy&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;FileCopy&lt;/AssemblyName&gt;
+    &lt;TargetFrameworkVersion&gt;v4.0&lt;/TargetFrameworkVersion&gt;
+    &lt;TargetFrameworkProfile&gt;Client&lt;/TargetFrameworkProfile&gt;
+    &lt;FileAlignment&gt;512&lt;/FileAlignment&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;PropertyGroup Condition=&quot; '$(Configuration)|$(Platform)' == 'Debug|x86' &quot;&gt;
+    &lt;PlatformTarget&gt;x86&lt;/PlatformTarget&gt;
+    &lt;DebugSymbols&gt;true&lt;/DebugSymbols&gt;
+    &lt;DebugType&gt;full&lt;/DebugType&gt;
+    &lt;Optimize&gt;false&lt;/Optimize&gt;
+    &lt;OutputPath&gt;bin\Debug\&lt;/OutputPath&gt;
+    &lt;DefineConstants&gt;DEBUG;TRACE&lt;/DefineConstants&gt;
+    &lt;ErrorReport&gt;prompt&lt;/ErrorReport&gt;
+    &lt;WarningLevel&gt;4&lt;/WarningLevel&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;PropertyGroup Condition=&quot; '$(Configuration)|$(Platform)' == 'Release|x86' &quot;&gt;
+    &lt;PlatformTarget&gt;x86&lt;/PlatformTarget&gt;
+    &lt;DebugType&gt;pdbonly&lt;/DebugType&gt;
+    &lt;Optimize&gt;true&lt;/Optimize&gt;
+    &lt;OutputPath&gt;bin\Release\&lt;/OutputPath&gt;
+    &lt;DefineConstants&gt;TRACE&lt;/DefineConstants&gt;
+    &lt;ErrorReport&gt;prompt&lt;/ErrorReport&gt;
+    &lt;WarningLevel&gt;4&lt;/WarningLevel&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Reference Include=&quot;System&quot; /&gt;
+    &lt;Reference Include=&quot;System.Core&quot; /&gt;
+    &lt;Reference Include=&quot;System.Xml.Linq&quot; /&gt;
+    &lt;Reference Include=&quot;System.Data.DataSetExtensions&quot; /&gt;
+    &lt;Reference Include=&quot;Microsoft.CSharp&quot; /&gt;
+    &lt;Reference Include=&quot;System.Data&quot; /&gt;
+    &lt;Reference Include=&quot;System.Xml&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Include=&quot;Program.cs&quot; /&gt;
+    &lt;Compile Include=&quot;Properties\AssemblyInfo.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;Import Project=&quot;$(MSBuildToolsPath)\Microsoft.CSharp.targets&quot; /&gt;
+  &lt;!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  &lt;Target Name=&quot;BeforeBuild&quot;&gt;
+  &lt;/Target&gt;
+  &lt;Target Name=&quot;AfterBuild&quot;&gt;
+  &lt;/Target&gt;
+  --&gt;
+&lt;/Project&gt
+
+//Program.cs
+using System.IO;
+
+namespace FileCopy {
+    class Program {
+        static void Main(string[] args) {
+            File.Copy("Sample\\src\\1.txt", "Sample\\dest\\1.txt");
+        }
+    }
+}
+
+//Properties/AssemblyInfo.cs
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+// General Information about an assembly is controlled through the following 
+// set of attributes. Change these attribute values to modify the information
+// associated with an assembly.
+[assembly: AssemblyTitle(&quot;FileCopy&quot;)]
+[assembly: AssemblyDescription(&quot;&quot;)]
+[assembly: AssemblyConfiguration(&quot;&quot;)]
+[assembly: AssemblyCompany(&quot;&quot;)]
+[assembly: AssemblyProduct(&quot;FileCopy&quot;)]
+[assembly: AssemblyCopyright(&quot;Copyright -®  2010&quot;)]
+[assembly: AssemblyTrademark(&quot;&quot;)]
+[assembly: AssemblyCulture(&quot;&quot;)]
+
+// Setting ComVisible to false makes the types in this assembly not visible 
+// to COM components.  If you need to access a type in this assembly from 
+// COM, set the ComVisible attribute to true on that type.
+[assembly: ComVisible(false)]
+
+// The following GUID is for the ID of the typelib if this project is exposed to COM
+[assembly: Guid(&quot;4c8aeb8f-6700-4ba5-96cc-30cdcc61e44a&quot;)]
+
+// Version information for an assembly consists of the following four values:
+//
+//      Major Version
+//      Minor Version 
+//      Build Number
+//      Revision
+//
+// You can specify all the values or you can default the Build and Revision Numbers 
+// by using the '*' as shown below:
+// [assembly: AssemblyVersion(&quot;1.0.*&quot;)]
+[assembly: AssemblyVersion(&quot;1.0.0.0&quot;)]
+[assembly: AssemblyFileVersion(&quot;1.0.0.0&quot;)]
+</pre>
+
+<p>That's over 120 lines across 4 files and a couple of directories. True, there are many great advantages to using VS, but lack of ceremony isn't one of them. ;)</p>
+
+<h2>But this is a ridiculous example!</h2>
+
+<p>Yes, I agree! So why bother pointing out obvious differences between compiled and interpreted languages? Because it's important to understand the difference between essence and ceremony so we can emphasise the essence of our code as much as possible, and it's hard to find a simpler, more obvious example than this. Once looking for it, it becomes very obvious that satisfying the compiler isn't the only form of ceremony C#/VB.NET devs (et al.) go through.</p>
+
+<p>Consider this: with Ruby (and many other languages), you <a href="http://weblog.jamisbuck.org/2008/11/9/legos-play-doh-and-programming">don't really need an IoC container</a>. You <a href="http://stackoverflow.com/questions/746207/ruby-design-pattern-how-to-make-an-extensible-factory-class">don't really need factories</a>. Explicit interface files for extensibility? Don't need them for a dynamic language; you're programming to an implicit interface. And say goodbye to code noise like <code>public / static / virtual / abstract / override</code> etc. Ruby doesn't want any of that mumbo-jumbo thanks very much! Then there's Ruby's meta-programming which lends itself to coding via conventions, and the loose syntax which makes some very expressive, internal DSLs possible. (Have a look at <a href="http://designpatternsinruby.com">Design Patterns in Ruby</a> for some great examples of how common design patterns can become much simpler with Ruby.)</p>
+
+<p>Take away some of the ceremony that is absolutely vital to effective C# development, and you start to appreciate why so many devs get <a href="http://blog.wekeroad.com/2010/06/21/i-smell-smoke">excited by things like Ruby and Rails</a>.</p>
+
+<p>None of this means C# is bad. It's not. It's an awesome language. Static typing provides a number of advantages, as does compilation. But it is very important to consider the ceremony you need to go through to get your job done. It is definitely worth looking at other languages and platforms like Ruby, Python, Rails and Django to help find ways of reducing the amount of ceremony you need for your C# code, but also to help you pick the right tool for the right job.</p>

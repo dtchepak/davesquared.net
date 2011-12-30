@@ -1,0 +1,262 @@
+---
+layout: "post"
+title: "NHibernate mappings using xml, attributes, and Fluent NHibernate"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7663679128509581313"
+categories: ["tools", "orm", ".net", "nhibernate"]
+date: "2008-09-04T23:25:00.0+10:00"
+updated: "2008-09-04T23:42:33.296+10:00"
+---
+
+<p>A few of us at work have been looking at NHibernate 2.0 as a potential ORM tool for our next project. The initial reactions have included (but weren't limited to) shudders of horror at seeing the mass of angle brackets present in the <code>.hbm.xml</code> mapping files. I don't think this reaction is atypical -- I thought the same thing when I first tried NHibernate. However once I started using it (not for anything serious mind you, just for personal projects. I'm at pre-newbie stage still :)), I found the XML relatively painless. In fact once I'd set them up initially it was great to be able to deal with ordinary POCO (Plain Old C# Object) classes and only think about the persistence mappings when tweaking the DB.</p>
+
+<p>That said, there are alternatives hand coding the <code>.hbm.xml</code> mapping files. I thought I'd cover a few of the options here: NHibernate Mapping Attributes, and Fluent NHibernate.</p>
+
+<h2>Getting started</h2> 
+<p>I decided to reuse the extra-simple scenario from my <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">ORM roundup</a> posts. I have a table of suppliers, and a table of states (or provinces, territories, prefectures etc.). Both suppliers and states have names, which are stored as strings/varchars, and IDs, which are stored as Guids/uniqueidentifiers. Each supplier can service many states. So we have a simple many-to-many relationship between the two main entities. It looks a bit like this:</p> 
+
+<p><a href="http://bp0.blogger.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png"><img id="BLOGGER_PHOTO_ID_5145922358406504498" style="cursor: pointer" alt="" src="http://bp0.blogger.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png" border="0"></a></p> 
+
+<p>Now let's create some POCOs for to model our suppliers and states. I've added these to an Entities folder in an otherwise blank C# Class Library project.</p>
+
+<pre>
+//State.cs
+using System;
+namespace Workshop.Entities {    
+    public class State {
+        public virtual Guid StateId { get; set; }        
+        public virtual String Name { get; set; }
+    }
+}
+//Supplier.cs
+using System;
+using System.Collections.Generic;
+namespace Workshop.Entities {
+    public class Supplier {
+        private IList&lt;State&gt; statesServiced = new List&lt;State&gt;();
+        
+        public virtual Guid SupplierId { get; set; }
+        public virtual String Name { get; set; }
+        public virtual IList&lt;State&gt; StatesServiced { get { return statesServiced; } set { statesServiced = value; } }
+    }
+}
+</pre>
+
+<p>These are nice ordinary classes, with no consideration given as to how they will be persisted. The only concession we have made is making everything <code>virtual</code> by default, so that it is easy for NHibernate to create proxies from these classes.</p>
+
+<p>I'll also throw in an App.config so NHibernate knows which database to talk to. This time around I'm using NHibernate 2.0, which has a <a href="http://davesquared.blogspot.com/2008/08/configuration-changes-in-nhibernate-20.html">new configuration format</a> from the last time I looked at this example.</p>
+
+<h2>Hand coding Hibernate Mapping Files</h2>
+
+<p>Time to map our entity classes to our database. Let's start off with the standard, hand coded <code>.hbm.xml</code> approach. We'll create a <code>State.hbm.xml</code> file and a <code>Supplier.hbm.xml</code> file to hold our mappings. We'll also set these files to be compiled in as embedded resources so we can get NHibernate to load the mappings from our DLL (in VS, right click the files in the Solution Explorer and edit the Build Action property).</p>
+
+<pre>
+&lt;!-- State.hbm.xml --&gt;
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+&lt;hibernate-mapping xmlns=&quot;urn:nhibernate-mapping-2.2&quot; assembly=&quot;Workshop&quot; namespace=&quot;Workshop.Entities&quot;&gt;
+  &lt;class name=&quot;State&quot; table=&quot;State&quot;&gt;
+    &lt;id name=&quot;StateId&quot; type=&quot;guid&quot;&gt;
+      &lt;generator class=&quot;guid&quot; /&gt;
+    &lt;/id&gt;
+    &lt;property name=&quot;Name&quot; type=&quot;String&quot; /&gt;
+  &lt;/class&gt;
+&lt;/hibernate-mapping&gt;
+
+&lt;!-- Supplier.hbm.xml --&gt;
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+&lt;hibernate-mapping xmlns=&quot;urn:nhibernate-mapping-2.2&quot; assembly=&quot;Workshop&quot; namespace=&quot;Workshop.Entities&quot;&gt;
+  &lt;class name=&quot;Supplier&quot; table=&quot;Supplier&quot;&gt;
+    &lt;id name=&quot;SupplierId&quot; type=&quot;guid&quot;&gt;
+      &lt;generator class=&quot;guid&quot; /&gt;
+    &lt;/id&gt;
+    &lt;property name=&quot;Name&quot; type=&quot;String&quot; /&gt;
+    &lt;bag name=&quot;StatesServiced&quot; table=&quot;Supplier_StatesServiced&quot;&gt;
+      &lt;key column=&quot;SupplierId&quot; /&gt;
+      &lt;many-to-many column=&quot;StateId&quot; class=&quot;State&quot; /&gt;
+    &lt;/bag&gt;
+  &lt;/class&gt;
+&lt;/hibernate-mapping&gt;
+</pre>
+
+<p>Here we are just telling NHibernate how to map each bit of entity data to the database schema. The HBM files include which main table is used to persist each entity, describes each entity's primary key and standard properties, as well as how the entities relate to each other (in this case we have a many-to-many mapping, using a <code>bag</code> collection). These files are explained in more detail in my <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">Messing around with NHibernate</a> post.
+</p>
+
+<h2>Testing our mappings</h2>
+<p>I've populated my database with some sample data (I actually did it using NHibernate -- I find it easier to fill in the relationships that way than with hand written SQL). Let's create an NHibernateTests.cs file and add a test to make sure the entities are mapped correctly.</p>
+
+<pre>
+public class NHibernateTests {
+ protected static readonly ISessionFactory SessionFactory = getSessionFactory();
+ 
+ <b>private static ISessionFactory getSessionFactory() {
+  Configuration config = new Configuration();
+  config.AddAssembly(Assembly.GetExecutingAssembly());
+  return config.BuildSessionFactory();
+ }</b>
+ 
+ [Fact]
+ public void Get_suppliers_servicing_NSW() {
+  using (ISession session = SessionFactory.OpenSession()) {
+   var suppliers = session
+    .CreateCriteria(typeof(Supplier))
+    .CreateCriteria(&quot;StatesServiced&quot;)
+    .Add( Restrictions.Eq(&quot;Name&quot;, &quot;NSW&quot;) )
+    .SetProjection( Projections.Property(&quot;Name&quot;) )
+    .List&lt;String&gt;();
+   session.Close();
+   Assert.NotEmpty(suppliers);
+   Assert.Equal(4, suppliers.Count);
+   Assert.Contains(&quot;Tea Ah Maria&quot;, suppliers);
+   Assert.Contains(&quot;Teas'r'us&quot;, suppliers);   
+  }
+ } 
+}
+</pre>
+
+<p>This code intialises a new <code>ISessionFactory</code> using the configuration settings in the <code>App.config</code>, and the <code>config.AddAssembly(Assembly.GetExecutingAssembly());</code> line adds the <code>.hbm.xml</code> mappings embedded in our DLL.</p>
+
+<p>I've also used the <code>Get_suppliers_servicing_NSW()</code> test to run a query against all the mapped entities. I'll run this test for each configuration change I make to ensure I haven't broken anything. The details of the test itself aren't really important, but if you are interested it just asks NHibernate to get suppliers that service the state of NSW, and then uses a projection to only bring back the name of the supplier. The assertions check that the expected number of supplier names are returned, and makes sure the list of names includes a couple of the expected values.</p>
+
+<h2>NHibernate Mapping Attributes</h2>
+
+<p><a href="http://nhforge.org/media/p/8.aspx">NHibernate Mapping Attributes</a> (also know as NHMA) is a part of the NHibernate Contrib project, and can be used to declare mappings via attributes directly on your entities classes. This sort of spoils the whole POCO idea, but has the advantage of allowing you to make changes to the entity and it's mapping in the one spot. Let's see how this changes our <code>Supplier</code> and <code>State</code> classes.</p>
+
+<pre>
+//State.cs
+[Class]
+public class State {
+ [Id(0, Name=&quot;StateId&quot;, TypeType=typeof(Guid), Column=&quot;StateId&quot;)]
+ [Generator(1, Class=&quot;guid&quot;) ]
+ public virtual Guid StateId { get; set; }        
+
+ [Property]
+ public virtual String Name { get; set; }
+}
+
+//Supplier.cs
+[Class]
+public class Supplier {
+ private IList&lt;State&gt; statesServiced = new List&lt;State&gt;();
+ 
+ [Id(0, Name=&quot;SupplierId&quot;, TypeType=typeof(Guid))]
+ [Generator(1, Class = &quot;guid&quot;)]        
+ public virtual Guid SupplierId { get; set; }
+ 
+ [Property]
+ public virtual String Name { get; set; }
+ 
+ [Bag(0, Table=&quot;Supplier_StatesServiced&quot;)]
+ [Key(1, Column=&quot;SupplierId&quot;)]
+ [ManyToMany(2, Column=&quot;StateId&quot;, ClassType = typeof(State))]
+ public virtual IList&lt;State&gt; StatesServiced { get { return statesServiced; } set { statesServiced = value; } }
+} 
+</pre>
+
+<p>We no longer need our <code>.hbm.xml</code> files, and have instead translated the relevant mapping information to attributes on the classes themselves. By using attributes NHMA can infer some of the mapping information we previously had to enter explicitly (for example, <code>&lt;property name=&quot;Name&quot; type=&quot;String&quot; /&gt;</code> just becomes <code>[Property] public virtual String Name {...}</code>), and we have traded our angle brackets for square ones :). There are also a few strange things going on here. Look at this extract from Supplier.cs:</p>
+
+<pre>
+ [Id(<b>0</b>, Name=&quot;SupplierId&quot;, TypeType=typeof(Guid))]
+ [Generator(<b>1</b>, Class = &quot;guid&quot;)]        
+ public virtual Guid SupplierId { get; set; }
+</pre>
+
+<p>Notice the element indexes on the attributes (<code>ID</code> is 0, <code>Generator</code> is 1)? This is because NHMA is actually generating your <code>.hbm.xml</code> on the fly from the attributes, and it needs to know the order in which to write out the XML elements (attribute order isn't maintained using reflection). To further illustrate this attribute to XML translation, let's look at how this affects our <code>ISessionFactory</code> initialisation for our tests:</p>
+
+<pre>
+//In NHibernateTests.cs
+private static ISessionFactory getSessionFactory() {
+ var config = new Configuration();            
+ HbmSerializer.Default.Validate = true;                        
+ HbmSerializer.Default.Serialize(System.Environment.CurrentDirectory, Assembly.GetExecutingAssembly());
+ config.AddDirectory(new DirectoryInfo(System.Environment.CurrentDirectory));            
+ return config.BuildSessionFactory();
+}
+</pre>
+
+<p>This is using the NHMA default <code>HbmSerializer</code> class to generate <code>.hbm.xml</code> files in the current working directory. We then load in these mapping files just like before (except we are using the file system and not embedded assembly resources).</p>
+
+<p>So to my way of thinking all we have really achieved is simply rewritten all our original <code>.hbm.xml</code> logic as attributes rather than XML, and made our previously nice clean POCO entities cluttered with persistence information and subsequently less readable. I really loved the idea of NHMA at first, but after trying it out I can't really see it providing much benefit over ye olde hand coded XML. As an added deterrent I couldn't really find much documentation on NHMA, so I ended up having to translate from the fairly well documented <code>.hbm.xml</code> format anyway.</p>
+
+<h2>Fluent NHibernate</h2>
+
+<p><a href="http://code.google.com/p/fluent-nhibernate/">Fluent NHibernate</a>, like NHMA, offers a non-XML way to configure your mappings. Instead of using attributes though, we are using standard .NET code via a fluent interface. This provides lots of neat advantages like automated refactoring and some compile time support, as well as being able to eliminate duplicated information between <code>.hbm.xml</code> and the POCO entities themselves by using customisable conventions and inferring the relevant property types and names. Before we dive into this it's worth noting that Fluent NHibernate hasn't been released yet and so still has some rough edges. I'm using revision 80 from the <a href="http://code.google.com/p/fluent-nhibernate/">project's SVN repository</a>, so much of this will probably change before it hits version 1.0.</p>
+
+<p>I've reverted our <code>Supplier</code> and <code>State</code> classes back to Plain Old CLR Objects (removed all the NHMA attributes) and also taken out the <code>.hbm.xml</code> files. The first thing we need to do is create some Fluent Nhibernate <code>ClassMap</code> classes.</p>
+
+<pre>
+public class StateMap : ClassMap&lt;State&gt; {
+ public StateMap() {                
+  Id(x =&gt; x.StateId);
+  Map(x =&gt; x.Name);
+ }
+}
+
+public class SupplierMap : ClassMap&lt;Supplier&gt; {
+ public SupplierMap() {                
+  Id(x =&gt; x.SupplierId);
+  Map(x =&gt; x.Name);
+  HasManyToMany&lt;State&gt;(x =&gt; x.StatesServiced)
+   .AsBag()
+   .WithTableName(&quot;Supplier_StatesServiced&quot;)
+   .WithParentKeyColumn(&quot;SupplierId&quot;)
+   .WithChildKeyColumn(&quot;StateId&quot;);  
+ }
+}
+</pre>
+
+<p>Each mapping class configures the mapping for an entity within the constructor (um, ignore the evil calls to virtual methods in the constructors :-\). This looks much, much neater than the previously approaches, as Fluent NHibernate does most of the work for us. Let's check the configuration for our test:</p>
+
+<pre>
+private static ISessionFactory getSessionFactory() {
+ var config = new Configuration();
+ config.AddMappingsFromAssembly(Assembly.GetExecutingAssembly());
+ return config.BuildSessionFactory();
+}
+</pre>
+
+<p>Looks pretty good to me. :) But it gets better -- say I always name my identifiers in the form <code><i>EntityName</i>Id</code>. If Fluent NHibernate knew that, then I could reduce my supplier class map to this:</p>
+
+<pre>
+public class SupplierMap : ClassMap&lt;Supplier&gt; {
+ public SupplierMap() {                
+  Id(x =&gt; x.SupplierId);
+  Map(x =&gt; x.Name);
+  <b>HasManyToMany&lt;State&gt;(x =&gt; x.StatesServiced)
+   .AsBag()
+   .WithTableName(&quot;Supplier_StatesServiced&quot;);</b>
+ }
+}
+</pre>
+
+<p>After all, we know the keys used to map suppliers and states are going to be <code>SupplierId</code> and <code>StateId</code>, so the many-to-many mapping becomes trivial.  Fluent NHibernate currently assumes the names will in the form <code>supplier_id</code>, but that's no big deal, because it also let's me change the conventions used:</p>
+<pre>
+private static ISessionFactory getSessionFactory() {
+ var config = new Configuration();
+ var model = <b>getFluentNhibernatePersistenceModel()</b>;
+ model.Configure(config);            
+ return config.BuildSessionFactory();
+}
+
+private static PersistenceModel getFluentNhibernatePersistenceModel() {
+ var model = new PersistenceModel();
+ <b>model.Conventions.GetForeignKeyName = prop => prop.Name + "Id";</b> //By default assumes prop.Name + "_id"
+ <b>model.Conventions.GetForeignKeyNameOfParent = type => type.Name + "Id";</b>
+ model.addMappingsFromAssembly(Assembly.GetExecutingAssembly());
+ return model;
+}
+</pre>
+
+<p>Pretty neat, huh? You can imagine how trivial you could get the mappings if you set your conventions correctly.</p>
+
+<p>There is work under way to make this even easier using <a href="http://groups.google.com/group/fluent-nhibernate/browse_thread/thread/5d7a524fb6ffcae/769430df684265da">AutoMap</a> functionality, which will be used to auto-magically infer mappings for your entities. You can then customise any special cases (like the many-to-many relationship we have in this case -- it will probably assume the more common one-to-many case by default).</p>
+
+<h2>Tools not covered here</h2>
+
+<p>I also had a quick look at <a href="http://using.castleproject.org/display/Contrib/ActiveWriter">ActiveWriter</a>, but couldn't get it working (failed when trying to save the model and generate the correct files. Possibly because I was using NH 2.0, more likely that I had no idea what I was doing with it :)). It provides a designer within Visual Studio that you can use to generate your mapping files and .NET entity classes. It has the usual drag-and-drop designer goodness -- dragging database tables onto the surface or using toolbox items to create classes and adjust the properties to map to tables etc. It is meant to work with both Castle ActiveRecord and NHibernate.</p>
+
+<p>The reason I didn't persevere with trying to get it to work is that I am well and truly over designers. I hate mousing all over a design surface and repeatedly hunting for the property you want and then repeatedly setting it over multiple boxes. No matter how nice the designer, I always seem to end up cursing it once the demo has finished and I start using it for real work. Of course this may just be a reflection on my advanced age and grumpy demeanor - YMMV. :) Oh yeah, and get off my lawn! :P</p>
+
+<p>There are a number of <a href="http://www.hibernate.org/hib_docs/nhibernate/1.2/reference/en/html/toolsetguide.html">other tools mentioned in the NHibernate 1.2 docs</a>, including <code>hbm2net</code> (generate classes from HBM), as well as generation tools like CodeSmith and MyGeneration, but most of these seem to focus on generating the C# classes or SQL scripts for creating the database schema from the <code>.hbm.xml</code>. I think I'd prefer to control my entity and database creation, and instead try and make the mapping itself easier.</p>
+
+<h2>Conclusion</h2>
+
+<p>Fluent NHibernate looks absolutely fantastic, but is still in very early stages of development. If you don't like living on the bleeding edge, then the standard <code>.hbm.xml</code> files really aren't that bad once you've set up a couple of them. The good thing is you can switch between all these mapping methods without changing anything but the <code>ISessionFactory</code> initialisation code, which only occurs in one place within your application. All these changes were made with a continuously green test light. :)</p>

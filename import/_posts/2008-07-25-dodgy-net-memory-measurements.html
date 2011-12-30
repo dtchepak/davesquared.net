@@ -1,0 +1,23 @@
+---
+layout: "post"
+title: "Dodgy .NET memory measurements using counters"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2737861461231277696"
+categories: [".net"]
+date: "2008-07-25T10:56:00.0+10:00"
+updated: "2008-07-25T14:29:15.05+10:00"
+---
+
+<p>There are a few profilers around that can measure CLR memory usage: Microsoft's free <a href="http://www.microsoft.com/downloads/details.aspx?familyid=a362781c-3870-43be-8926-862b40aa0cd0">CLR Profiler 2.0</a>, <a href="http://www.jetbrains.com/profiler/">JetBrains' dotTrace</a>, <a href="http://www.red-gate.com/Products/ants_profiler/index.htm">Redgate's ANTS Profiler</a> etc. However these don't seem to help me much when I'm trying to get some data about specific allocations (say, plotting the size of a list with varying numbers of objects). This could just be my inexperience with the tools, but I think it is more to do with the complexities of memory management for managed code.</p>
+
+<p>I've also been playing around with taking measurements by programatically accessing the relevant counters, like the Private Bytes counter in the Process category, in the effort to take a number of snapshots before and after some simple allocations and plug them into a spreadsheet.</p>
+
+<pre>
+  privateBytesCounter = new PerformanceCounter(&quot;Process&quot;, &quot;Private Bytes&quot;, name, true);
+  var currentMemoryInKB = privateBytesCounter.NextValue()/1024.0;
+</pre>
+
+<p>The name is the relevant instance that appears within perfmon. You need to watch out for invalid characters, but with some care you can derive this value from <code>AppDomain.CurrentDomain.FriendlyName</code> (you might need to strip off the &quot;.exe&quot; extension in addition to getting rid of any funny characters).</p>
+
+<p>My aim was to work out the size of some specific objects, but I haven't had too much success with this approach as it's giving me some funny values. A couple of gotchas: You have to watch the timing of the calls getting counter data (don't sample too fast), and if you are measuring a single allocation you can also change the results by forcing a garbage collection prior to measuring (<code>GC.Collect()</code>).</p>
+
+<p>I think it's time for me to invest in a good CLR book and get better acquainted with .NET's memory model. :)</p>

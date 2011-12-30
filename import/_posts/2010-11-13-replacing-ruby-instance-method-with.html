@@ -1,0 +1,106 @@
+---
+layout: "post"
+title: "Replacing a Ruby instance method with a closure"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1918338219626676027"
+categories: ["ruby"]
+date: "2010-11-13T23:53:00.0+11:00"
+updated: "2010-11-14T13:12:55.811+11:00"
+---
+
+<p>I was recently playing around with replacing methods on specific Ruby instances. Everything is open for change in Ruby so I thought it would be a piece of cake. And in a way it was. The catch was that I wanted the method definition to close over some local variables I had declared (the same way <code>() =&gt; localVar;</code> will close over <code>localVar</code> for .NET lambdas), and this proved to be a little trickier than I expected.</p>
+
+<h2>Basic instance method replacement</h2>
+
+<p>Say we have an incredibly exciting <code>Greeter</code> class that says hello:</p>
+
+<pre class="brush: ruby">
+class Greeter
+    def say_hello
+        puts "Hello World!"
+    end
+end
+
+greeter = Greeter.new
+greeter.say_hello
+
+#=&gt; Hello World!
+</pre>
+
+<p>We can easily re-define this method on a specific instance like this:</p>
+
+<pre class="brush: ruby">
+def greeter.say_hello
+    puts "Howdy World!"
+end
+greeter.say_hello
+#=&gt; Howdy World!
+</pre>
+
+<div class="note"><b>Note: </b> It is just as easy to redefine this method on all instances of <code>Greeter</code> by opening up the class as <a href="http://www.davesquared.net/2010/11/replacing-ruby-instance-method-with.html?showComment=1289659978198#c4877835427233880947">Derick points out in the comments</a>. In this case I just want to replace the method on the specific <code>greeter</code> instance, not on all instances of the <code>Greeter</code> class.</div>
+
+<p>Now say that rather than hard-coding a greeting in our re-defined method, we want to reference a local variable instead (useful for replacing methods for unit tests).</p>
+
+<pre class="brush: ruby">
+name = "Anonymous Dave"
+def greeter.say_hello
+    puts "Hello #{name}"
+end
+
+#This won't work:
+#  greeter.say_hello
+#It gives this exception:
+# in `say_hello': undefined local variable or method `name' for #&lt;Greeter:0x337e1e0&gt; (NameError)
+</pre>
+
+<p>This doesn't work because when we get to <code>def greeter.say_hello</code> we've changed the current scope to the <code>greeter</code> instance, and <code>greeter</code> knows nothing about <code>name</code>; it does not exist in the scope <code>say_hello</code> is running in. What we really want is to capture the <code>name</code> variable via a closure when we define the method, and in Ruby, we can do this with blocks and Procs.</p>
+
+<h2>A detour into Ruby internals and other stuff I don't understand</h2>
+<p>I'm completely out of my depth here, but here is my Ruby n00bie interpretation of some Ruby mumbo jumbo. First, everything in Ruby is an object, and every object has a class (as near as I can tell). Even <code>nil</code> (Ruby's <code>null</code>):</p>
+
+<pre class="brush: ruby">
+puts nil.class
+#=&gt; NilClass
+puts nil.methods.count
+#=&gt; 71
+</pre>
+
+<p>If you're from a .NET background, we've just called <code>null.GetType().GetMethods().Length</code> and lived to tell the tale (and been told 71 apparently :)).</p>
+
+<p>Anyway, the point is that everything is an object and they all have classes. Our <code>greeter</code> object is an instance of the <code>Greeter</code> class we defined earlier. Ruby has all kinds of interesting ways of interacting with instances and classes, including <code>instance_eval</code> and <code>class_eval</code> which let us run code within the context, or scope, of both instances and classes. Unfortunately none of these seem to work the scope in a way that will let us add an instance method to a specific instance using a closure (please let me know if I'm wrong).</p>
+
+<p>There is another option: Ruby <i>metaclasses</i> (a.k.a. <i>eigenclasses</i>). It turns out that when I said that <code>greeter</code>'s class is <code>Greeter</code>, I sort of lied. In fact, Ruby itself will dissemble slightly when you run <code>greeter.class</code> and it says <code>Greeter</code>. Every object has a class, but also a <i>metaclass</i>. And a <i>metaclass'</i> class has <i>Class</i>, as well as it's own <i>metaclass</i>, which I guess is a <i>meta-metaclass</i>. And so on into madness.</p>
+
+<p>In a valiant attempt to get back on topic, the idea is that you can add a method to a <i>metaclass</i> that will only be available on the instance. If you modify a method on the <i>class</i> then it will appear on all instances.</p>
+
+<p>The next thing we need to know is that everything that inherits from <code>Class</code> has a very useful method called <code>define_method</code> which defines a method from a block. Unfortunately this method is private. But luckily you can invoke private methods in Ruby using the <code>send</code> method. The send method is also cursed and contains potassium benzoate... kidding.</p>
+
+<p>Believe it or not, we can now solve the original problem.</p>
+
+<h2>Instance method replacement with closures</h2>
+
+<p>So what we need to do is get access to the <code>greeter</code> instance metaclass, and <code>send</code> a <code>define_method</code> call with a block that closes over our local variable. We can access an instance's metaclass by using the <i>class &lt;&lt; instance</i> syntax, which will change the current scope to <code>instance</code>'s metaclass (so <code>self</code> will refer to the metaclass. This is confusing; see <a href="http://yehudakatz.com/2009/11/15/metaprogramming-in-ruby-its-all-about-the-self/">Yehuda's article</a> for a great explanation). And the rest is fairly straight forward:</p>
+
+<pre class="brush: ruby">
+greeters_metaclass = class &lt;&lt; greeter; self; end
+greeters_metaclass.send(:define_method, :say_hello) do
+    puts "G'day #{name}"
+end
+greeter.say_hello
+#=&gt; G'day Anonymous Dave
+
+name = "closure"
+greeter.say_hello
+#=&gt; G'day closure
+</pre>
+
+<p>We now have all the pieces put together. We've got our paws on a reference to the instance's metaclass, and we've defined a class using a block (<code>do..end</code>) which will close over our local variable using the metaclass' private <code>define_method</code> via <code>send</code>. Piece of cake, right? :)</p>
+
+<h2>Parting thoughts</h2>
+<p>This tripped me up for a while, and this post is my attempt to try and decipher what is happening. It's not quite as bad as I make it sound, it just requires some understanding about Ruby's class system and closures. Along the way I found these absolutely essential references that will hopefully clear things up a bit for you:</p>
+
+<ul>
+    <li>Yehuda Katz has an <a href="http://yehudakatz.com/2009/11/15/metaprogramming-in-ruby-its-all-about-the-self/">absolutely fantastic post on scope changing during metaprogramming</a>, including explaining metaclasses and what <code>self</code> means.</li>
+    <li>Dhananjay Nene's <a href="http://codeblog.dhananjaynene.com/2010/01/dynamically-adding-methods-with-metaprogramming-ruby-and-python/">examples of metaprogramming for both Ruby and Python</a></li>
+</ul>
+
+<p><a href="http://www.davesquared.net/2010/11/continuing-adventures-in-adding-methods.html">Next post</a> we'll look at a hack to make this a bit easier.</p>

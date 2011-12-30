@@ -1,0 +1,17 @@
+---
+layout: "post"
+title: "LINQ To SQL crippled prior to RTM"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8123386564663563686"
+categories: [".net", "linq"]
+date: "2008-05-20T06:58:00.0+10:00"
+updated: "2008-05-20T07:17:08.05+10:00"
+---
+
+<p>I was reading Frans' post on the <a href="http://weblogs.asp.net/fbouma/archive/2008/05/19/why-use-the-entity-framework-yeah-why-exactly.aspx">marketing hype around Entity Framework</a> this morning. He left an <a href="http://weblogs.asp.net/fbouma/archive/2008/05/19/why-use-the-entity-framework-yeah-why-exactly.aspx#6201298">interesting comment</a> there, quoting Matt Warren's post on writing an <a href="http://blogs.msdn.com/mattwar/archive/2008/05/04/mocks-nix-an-extensible-linq-to-sql-datacontext.aspx">extensible LINQ to SQL DataContext</a>. Here's a snippet from Matt's original post (emphasis mine):</p>
+
+<blockquote>"If only LINQ to SQL had a public provider model, I could simply plug a new one in and use it to intercept all interaction with the database. Oh, double irony, as there is no such provider model, at least not a public one.  Grin.
+<br/><br/>
+LINQ to SQL was actually designed to be host to more types of back-ends than just SQL server. <b>It had a provider model targeted for RTM, but was disabled before the release.  Don’t ask me why.  Be satisfied to know that is was not a technical reason.</b> Internally, it still behaves that way."
+</blockquote>
+
+<p>Cue conspiracy theories! :)</p>

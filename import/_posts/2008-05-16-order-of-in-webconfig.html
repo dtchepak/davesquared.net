@@ -1,0 +1,29 @@
+---
+layout: "post"
+title: "Authorisation rule precedence in web.config"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7188477077473471016"
+categories: [".net"]
+date: "2008-05-16T14:16:00.01+10:00"
+updated: "2008-05-16T17:34:42.404+10:00"
+---
+
+<p>What will happen if the <code>&lt;authorization /&gt;</code> elements in a <code>web.config</code> conflict?</p>
+
+<pre>&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;configuration&gt;
+ &lt;system.web&gt;
+  &lt;authentication mode=&quot;Windows&quot;/&gt;
+  &lt;authorization&gt;
+      <b>&lt;allow users=&quot;*&quot; /&gt;
+      &lt;deny users=&quot;*&quot; /&gt;</b>
+    &lt;/authorization&gt;
+ &lt;/system.web&gt;
+&lt;/configuration&gt;</pre>
+
+<p>Most people that know anything about ASP.NET will realise that the authorisation rules are evaluated in order (from <a href="http://msdn.microsoft.com/en-us/library/8d82143t.aspx">MSDN</a>: &quot;<i>the authorization module finds the first access rule that fits a particular user account</i>&quot;), so in this case the <code>&lt;allow /&gt;</code> will be evaluated first and all users will get access. Unfortunately, I am not one of these gifted people, and have been blissfully ignorant of this fact despite working with ASP.NET since its release in 2002*.</p>
+
+<p>Feel free to express your ridicule in the comments :)</p>
+
+<p>In other news related to both web.config and my ignorance, I discovered when reading up on this at MSDN that you can use <code>&lt;allow users=&quot;./SomeLocalAccount&quot; /&gt;</code> to reference the current computer if you are using local machine accounts, which has come in handy for the stuff I am working on today.</p>
+
+<p style="font-size: xx-small">* By way of excuse for the inexcusable, a lot of my ASP.NET work has relied on old-style NTFS permissions (long story), or very basic rules like deny ? and allow *, so I've never ended up thinking much about this. When pressed on the topic I thought the strongest condition might take precedence :-\</p>

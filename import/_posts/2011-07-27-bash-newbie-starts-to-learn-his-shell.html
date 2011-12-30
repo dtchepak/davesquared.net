@@ -1,0 +1,61 @@
+---
+layout: "post"
+title: "Bash newbie starts to learn his shell for git and profit"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8090222173402796776"
+categories: []
+date: "2011-07-27T22:23:00.0+10:00"
+updated: "2011-07-27T22:31:28.681+10:00"
+---
+
+<p>Since I've started using git I do a lot more work in the bash console for Windows it installs with, and recently I've been trying to lean a bit more on bash to make my life easier. Here's a couple of basic commands to help use git (et al.) from the command line. It will all be old news for people that have used bash in anger before, but it might help those who, like me, have not yet found the time to really start trying to learn it.</p>
+
+<h2>Find</h2>
+
+<p>One problem I've had is specifying files to pass to git commands when they're defined somewhere deep within my solution's folder structure. One option is to use the <code>find</code> command for this:</p>
+
+<pre>git gui blame `find . -name MyFile.cs`
+</pre>
+
+<p>This will evaluate <code>find . -name MyFile.cs</code>, which will recursively search from the current path for a file with that name (use <code>-iname</code> for case-insensitive matching). Assuming there is only one match, this works great. If we want to keep operating on that file we can store it in a variable:</p>
+
+<pre>f=`find . -name MyFile.cs`
+echo $f #check which files we matched. Good idea before destructive cmds ;)
+git annotate $f
+git gui blame $f
+</pre>
+
+<h2>Loops and filtering</h2>
+
+<p>If we want to match multiple files, we can iterate over the output of <code>find</code>:</p>
+
+<pre>for match in `find . -name *File.cs`; do git gui blame $match; done
+
+# Same thing, but in multiple steps and expanding the loop over multiple lines
+# to show what's happening:
+$matches=`find . -name *File.cs`
+for match in $matches
+do 
+    git gui blame $match
+done
+</pre>
+
+<p>We can also do filtering within this loop. The following example deletes all WIP branches: (<em>use with caution!</em>):</p>
+
+<pre>for b in `git branch`; do if [[ $b == WIP* ]]; then git branch -D $b; fi; done
+</pre>
+
+<h2>xargs</h2>
+
+<p>I always struggle to remember the loop syntax, and it's not exactly aesthetically pleasing. There is another option: <a href="http://en.wikipedia.org/wiki/Xargs">xargs</a>. <code>Xargs</code> is used to build-up lists of argument and execute commands using those arguments. Say we want to delete all our WIP branches again (again: <em>this deletes stuff! Use with caution!</em>):</p>
+
+<pre>git branch | grep 'WIP' | xargs -n1 git branch -D
+</pre>
+
+<p>Here we pipe the output of <code>git branch</code> through grep and just pick the branches that contain 'WIP'. We then pipe this into <code>xargs</code>. The <code>-n1</code> option tells <code>xargs</code> to execute our <code>git branch -D</code> command once for each argument received (we could pass 3 args into the command using <code>-n3</code>, so the command would execute once for every 3 args). This is a more functional approach, and starts to show the strength of the Unix philosophy of composing many small utilities that all do their jobs well.</p>
+
+<p>I'm only just beginning to get to grips with <code>xargs</code>, but if you read through <a href="http://www.cyberciti.biz/faq/linux-unix-bsd-xargs-construct-argument-lists-utility/">Things you (probably) didn't know about xargs</a> and <a href="http://www.cyberciti.biz/faq/linux-unix-bsd-xargs-construct-argument-lists-utility/">xargs: How to control and use command line arguments</a> you should get more of an idea of what it can do.</p>
+
+<h2>Get to know your shell</h2>
+
+<p>I recall <a href="http://pragprog.com/the-pragmatic-programmer">The Pragmatic Programmer</a> advising to learn a shell really well to help you get more productive. While I've only just started looking at this, the more I look the more doors seem to open for automation and getting trivial little operations done more quickly (and importantly, without causing much of a mental context switch from what you are currently working on). Whether you use bash, zsh, PowerShell or even lowly old cmd, I'd really recommend getting better acquainted with what your shell has to offer.</p>
+

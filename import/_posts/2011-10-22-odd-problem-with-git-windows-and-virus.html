@@ -1,0 +1,23 @@
+---
+layout: "post"
+title: "Odd problem with Git, Windows and virus-checkers"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2114542769664478536"
+categories: ["git"]
+date: "2011-10-22T22:19:00+11:00"
+updated: "2011-10-22T22:19:54.802+11:00"
+---
+
+<p>Had a really odd git problem this week, with an even odder solution, so am posting in the hope of helping the next poor dev who has to try and track this down via Google.</p>
+
+<p>We had a branch checked out with 2 new commits on it, and we wanted to squash it into a single commit using <code>git rebase -i (basecommit)</code>. This would start the normal interactive rebase, then get into a loop of printing the following error to console:</p>
+
+<pre><code>mv: cannot move '.git/rebase-merge/git-rebase-todo.new' to '.git/rebase-merge/git-rebase.todo'
+</code></pre>
+
+<p>Looking at the <code>.git/rebase-merge</code> folder, I could see the <code>git-rebase-todo.new</code> file getting repeatedly created, then deleted. This was happening on two different machines.</p>
+
+<p>Some googling lead me to <a href="http://osdir.com/ml/msysgit/2010-01/msg00007.html">this post</a> which suggested a virus checker may be locking the file.</p>
+
+<p>Sure enough, turning off Microsoft Security Essentials' Real-time protection, doing the rebase, then turning it back on again, resolved the problem. I've never had this problem before so must have just gotten "lucky" with this particular file matching some property the virus checker was looking for.</p>
+
+<p>I guess this is probably worth trying whenever getting strange file IO errors from any software ported to Windows.</p>

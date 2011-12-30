@@ -1,0 +1,28 @@
+---
+layout: "post"
+title: "System.BadImageFormatException on 64-bit OS"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2360363044446555694"
+categories: [".net"]
+date: "2008-12-02T12:03:00.0+11:00"
+updated: "2008-12-09T21:56:22.671+11:00"
+---
+
+<p>I got the following exception when running the unit tests as part of a local build of our .NET project today:</p>
+
+<pre>System.BadImageFormatException : Could not load file or assembly '<i>(assembly name)</i>' or one of its dependencies. 
+An attempt was made to load a program with an incorrect format.</pre>
+
+<p>This seemed a bit odd, because the build was working on every other machine. Even odder, the build and tests ran fine within Visual Studio.</p>
+
+<p>Turns out this occurs when the CLR tries to load an assembly that contains unmanaged code built targeting a different platform. In my case, I was running it on my new machine which has 64-bit Vista, but one of the referenced assemblies contained native code compiled targeting x86. It was running fine in Visual Studio because VS is a 32-bit app, and so was calling everything in 32-bit mode via <a href="http://en.wikipedia.org/wiki/WOW64">WoW64</a>.</p>
+
+<p>The solution? Build both 32-bit and 64-bit versions of the assembly causing the problem, or force our project to always run in 32-bit mode (within WoW64 on x64 machines) by specifically setting the platform target to x86 in the Visual Studio project build options (by default this is set to &quot;Any CPU&quot;).</p>
+
+<p>Hope this saves someone some hair-tearing. :)</p>
+
+<p><b>Update:</b> I have found the <a href="http://msdn.microsoft.com/en-us/library/ms164699(VS.80).aspx">Corflags</a> tool invaluable for flagging a DLL as needing to run under the 32 bit CLR. This is useful when you don't have the source to recompile the app, and has been put to good use getting the old, free version of <a href="http://rabdullin.com/journal/2008/6/6/how-to-run-free-ncover-on-a-64-bit-machine.html">NCover to run on a 64-bit bit OS</a>. A good write up on Corflags is <a href="http://blogs.msdn.com/joshwil/archive/2005/05/06/415191.aspx">here</a>.</p>
+
+<p><b>References:</b>
+<ul>
+<li><a href="http://forums.microsoft.com/msdn/showpost.aspx?postid=665884&siteid=1">MSDN thread on this error with an EF pre-release</a></li>
+</ul>

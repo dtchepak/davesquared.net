@@ -1,0 +1,78 @@
+---
+layout: "post"
+title: "Revisting replacing a Ruby instance method with a closure"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4619753107159768803"
+categories: ["ruby"]
+date: "2010-12-18T01:29:00.0+11:00"
+updated: "2010-12-18T13:34:40.133+11:00"
+---
+
+<p>Last month I looked at <a href="http://www.davesquared.net/2010/11/replacing-ruby-instance-method-with.html">how to replace a Ruby method of a single object instance with a closure</a>, before <a href="http://www.davesquared.net/2010/11/continuing-adventures-in-adding-methods.html">defining a module that could make this easier</a>. Since then I've learnt another option which I thought I'd share as it helped me get a greater appreciation for Ruby modules.</p>
+
+<div class="note"><b>Note:</b> I am a Ruby n00bie, so take all this with a suitable amount of salt. If this (or the previous posts) violate Ruby conventions, or there is an idiomatic way of solving this, please let me know.</div>
+
+<h2>Quick recap</h2>
+<p>The problem is fully described in the <a href="http://www.davesquared.net/2010/11/replacing-ruby-instance-method-with.html">original post</a>, but it basically starts with this class:</p>
+
+<pre class="brush:ruby">
+class Greeter
+    def say_hello
+        puts "Hello World!"
+    end
+end
+greeter = Greeter.new
+greeter.say_hello
+#=&gt; Hello World!
+</pre>
+
+<p>I then wanted to replace <code>say_hello</code> on that single <code>greeter</code> instance with a method that would close over a local variable, like this:</p>
+
+<pre class="brush:ruby">
+name = "Anonymous Dave"
+# replace say_hello on greeter so it puts "G'day #{name}"
+
+greeter.say_hello
+#=&gt; G'day Anonymous Dave
+
+name = "Clarence"
+greeter.say_hello
+#=&gt; G'day Clarence
+</pre>
+
+<p>Standard reopening of the instance (or even the <code>Greeter</code> class) and redefining the method won't work here, all because we have the pesky requirement of closing over our local <code>name</code> variable, which means we need to use a block (basically a lambda function for C# people). We can use <code>Class.send</code> to call the private <code>define_method</code> which takes a block, but that will add it to every instance of <code>Greeter</code>, not a single instance.</p>
+
+<h2>Modules to the rescue</h2>
+
+<p>We solved this in the original post by referencing the instance's <i>metaclass</i> (aka <i>eigenclass</i>), but there is another way:</p>
+
+<pre class="brush:ruby">
+name = "Anonymous Dave"
+new_say_hello = Module.new do
+    self.send(:define_method, :say_hello) do
+       puts "G'day #{name}"
+    end
+end
+</pre>
+
+<p>Here we've created a new anonymous module that sends <code>define_method</code> to create a <code>say_hello</code> method using a block, in the same way as we could have reopened the <code>Greeter</code> class and added it to every instance. The difference here is that this module has not been mixed in anywhere yet; we can choose exactly where we want to apply it. In this case, to our single instance:</p>
+
+<pre class="brush:ruby">
+# Mixin module to greeter instance to add our new say_hello method
+greeter.extend new_say_hello
+
+greeter.say_hello
+#=&gt; G'day Anonymous Dave
+
+name = "Clarence"
+greeter.say_hello
+#=&gt; G'day Clarence
+
+# Other instances are unaffected by this:
+another_greeter = Greeter.new
+another_greeter.say_hello
+#=&gt; Hello World!
+</pre>
+
+<p>I think I still prefer the <a href="http://www.davesquared.net/2010/11/continuing-adventures-in-adding-methods.html"><code>Meta</code> module approach</a>, but this way has the advantage of sticking closely to standard Ruby constructs and manages to avoid metaclasses.</p>
+
+<p>What was most helpful to me out of this as a Ruby n00bie is the understanding that we can work using class scope within a module (avoiding metaclass shenanigans), then apply that scope selectively by including the module in a class, or by extending an instance with the module.</p>

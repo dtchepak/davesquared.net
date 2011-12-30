@@ -1,0 +1,39 @@
+---
+layout: "post"
+title: "BDD test naming with AutoHotKey"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8797728095296190032"
+categories: ["tools", "featured", "downloads"]
+date: "2008-05-28T09:14:00.01+10:00"
+updated: "2008-11-18T13:25:33.147+11:00"
+---
+
+<p><i><b>Updates:</b> See change log at the bottom of this post for the most recent updates.</i></p>
+<p><i><b>Update 2008-05-29:</b> <a href="http://www.jpboodhoo.com/blog">JP</a> has posted a <a href="http://www.jpboodhoo.com/blog/BDDAutoHotKeyScriptUpdateTake2.aspx">much better version of this script</a> (with suggestions from a few of his readers). I've updated the script on this post to work more like JP's version, but you're probably best off grabbing it from <a href="http://www.jpboodhoo.com/blog/BDDAutoHotKeyScriptUpdateTake2.aspx">his post</a>, or searching <a href="http://www.jpboodhoo.com/blog">his site</a> for his latest version.</i></p>
+
+<p>Was having a chat earlier with my good mate <a href="http://www.jpboodhoo.com/blog">JP Boodhoo</a>... er, well, more accurately, I left a comment on his blog and he was nice enough to email me back. Anyway, JP has <a href="http://www.jpboodhoo.com/blog/SoLongBDDMacroHelloAutohotkey.aspx">started trying AutoHotKey rather than his previous macro</a> for BDD-style test naming.</p>
+
+<p>I thought I'd post an extremely over-engineering version of this <a href="http://www.autohotkey.com/">AutoHotKey</a> script, which has a toggle-approach similar to the <a href="http://davesquared.blogspot.com/2008/02/emacs-key-bindings-everywhere.html">Emacs Everywhere script</a> I posted earlier.</p>
+
+<p>Once you have <a href="http://www.autohotkey.com/">AHK</a> installed, you can just extract the ZIP below and double click the .AHK file to load the script. The script will let you toggle &quot;test-naming mode&quot; (i.e. replacing spaces with underscores) using Ctrl + Shift + U. You can cancel out of test naming mode by pressing ENTER, ESCAPE, TAB, starting the method signature by typing a '(', or typing a '{' or ':' for when you are naming a class. Pressing Ctrl + Alt + U will insert a new test template before switching on test naming mode (although you might be better off using R# templates for this). All this is simply to make it easier to type out tests like this:</p>
+
+<pre>[Test]
+public void Test_naming_mode_turns_spaces_to_underscores() {}
+</pre>
+
+
+<p>Version 2.2 of the script can be downloaded here: 
+<ul><li><a href="http://davesquared.googlecode.com/files/TestNamingMode-v2.2.zip">TestNamingMode-v2.2.zip</a></li></ul></p>
+
+<p>Feel free to change the hotkeys and the dodgy icons :). I haven't had a good test of it yet so use at your own risk.</p>
+
+<p>If you're happy with how it works you can add it to your Startup programs and have BDD-style test naming goodness whenever you like. Hope_this_helps! :-)</p>
+
+<p style="font-size: x-small"><b>Change log</b>
+<ul style="font-size: x-small">
+<li>2008-11-18: Uploaded v2.2, making TAB exit test naming mode. This is helpful when using Resharper live templates for tests.</li>
+<li>2008-08-13: Uploaded v2.1, making '{' and ':' exit test naming mode, based on <a href="http://scottcreynolds.com/archive/2008/08/11/tweak-of-bdd-naming-autohotkey-macro.aspx">Scott C Reynold's script modification</a>. I should probably make it exit on any punctuation, but calling YAGNI on it for now.</li>
+<li>2008-05-29: Uploaded v2, synching with <a href="http://www.jpboodhoo.com/blog/BDDAutoHotKeyScriptUpdateTake2.aspx">JP's version 2</a>, adding test templates, and made test mode exit after typing '(' for test method signature</li>
+<li>2008-05-28: Updated hotkeys to match JP's version</li>
+<li>2008-05-28: Original post</li>
+</ul>
+</p>

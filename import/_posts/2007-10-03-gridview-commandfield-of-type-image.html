@@ -1,0 +1,13 @@
+---
+layout: "post"
+title: "A GridView CommandField of type Image causes a double submit"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-349961973237325544"
+categories: [".net"]
+date: "2007-10-03T15:56:00.0+10:00"
+updated: "2008-05-01T09:04:07.734+10:00"
+---
+
+<p>I can't believe <a title="this issue" href="http://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=105123">this issue</a> is marked as Closed (fixed).&nbsp;The bug causes <a title="two requests to be made from when clicking an ImageButton in a CommandField" href="http://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=105123">two requests to be made from when clicking an ImageButton in a CommandField</a>, which can do nasty things if you are deleting rows. Apparently the "fix" is to not use&nbsp;ImageButtons&nbsp;in CommandFields.&nbsp;Brilliant. Granted it is fairly straight forward to do with a TemplateField, but that is hardly fixing the original problem.</p> <p>If you are really keen on sticking to CommandFields you can do something terribly hacky like this:</p><pre>&lt;asp:CommandField CausesValidation="false" 
+  DeleteText="&amp;lt;img border='0' src='Images/icon-delete-12x12.png' /&amp;gt;"
+  ShowDeleteButton="true" ButtonType="Link" /&gt;
+</pre>

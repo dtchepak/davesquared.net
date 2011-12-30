@@ -1,0 +1,27 @@
+---
+layout: "post"
+title: "Continually running a script with Ruby and Watchr"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3752471820783123287"
+categories: ["ruby"]
+date: "2010-08-23T19:22:00.0+10:00"
+updated: "2010-08-23T19:26:32.466+10:00"
+---
+
+<p>I'm currently working through <a href="http://www.rubykoans.com/">Ruby Koans</a>, which involves editing some <code>.rb</code> files, running a build and watching the output for hints on what change to make next. It's quite a fun mix of TDD and puzzle solving. I did start to find constantly rebuilding after each change a bit laborious though, so I thought I'd look at automating it (<a href="http://ph7spot.com/musings/getting-started-with-autotest">Autotest</a> style).</p>
+
+<p>After floundering around Google for a while I asked Twitter and <a href="http://twitter.com/joshnesbitt/statuses/21895968920">@joshnesbitt helped me out</a>, suggesting I try <a href="http://github.com/mynyml/watchr">Watchr</a>. After installing the gem, I ending up putting the following <code>auto_enlighten.rb</code> script in the koans directory:</p> 
+
+<pre class="brush:ruby">
+require 'rubygems'
+require 'watchr'
+
+all_rb = Dir['*.rb'].join('|')
+script = Watchr::Script.new
+script.watch( all_rb ) { |file| system("rake") }
+controller = Watchr::Controller.new(script, Watchr.handler.new)
+controller.run
+</pre>
+
+<p>This script selects all <code>.rb</code> files in the current directory and tells the Watchr script to run <code>rake</code> (to build the koans and get the next hint) whenever one of those files changes. I then can run <code>ruby auto_enlighten.rb</code> from my terminal and hack away happily in vim, and each time I save a file I get near-instant feedback on how my change affected my progress through the koans. I've found this a very nice way to work through the koans.</p>
+
+<p>Watchr also has some scripts for common tasks like running tests and specs, can be run from the command line, or can be used programmatically as we're doing here. Definitely worth <a href="http://github.com/mynyml/watchr">checking out</a>. :)</p>

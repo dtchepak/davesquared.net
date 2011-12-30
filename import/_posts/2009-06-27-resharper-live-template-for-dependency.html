@@ -1,0 +1,30 @@
+---
+layout: "post"
+title: "ReSharper Live Template for Dependency Properties (C#)"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3013805586070462248"
+categories: ["vs.net"]
+date: "2009-06-27T21:38:00.0+10:00"
+updated: "2009-06-27T21:45:58.9+10:00"
+---
+
+<p>The syntax for declaring WPF dependency properties can get a little tedious to type. I ended up creating a ReSharper Live Template which has been working nicely for me:</p>
+
+<pre class="brush:csharp">
+public static readonly DependencyProperty $PropertyName$Property = 
+    DependencyProperty.Register(&quot;$PropertyName$&quot;, typeof($PropertyType$), typeof($PropertyOwner$));
+
+public $PropertyType$ $PropertyName$ {
+    get { return ($PropertyType$) GetValue($PropertyName$Property); }
+    set { SetValue($PropertyName$Property, value); }
+}
+</pre>
+
+<p>Then configure the substitutable variables as follows:</p>
+
+<ul>
+<li>PropertyName, no macro, #3 editable</li>
+<li>PropertyType, Guess type expected at this point, #2 editable</li>
+<li>PropertyOwner, Containing type name, not editable</li>
+</ul>
+
+<p>This lets me type in <code>dp</code> and fill in the blanks. Hope this helps. :)</p>

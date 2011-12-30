@@ -1,0 +1,235 @@
+---
+layout: "post"
+title: "Coding tiger, hidden responsibility"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4447938895228212531"
+categories: [".net", "testing", "dev practices"]
+date: "2009-08-21T22:03:00.0+10:00"
+updated: "2009-08-21T22:05:29.04+10:00"
+---
+
+<p>During a recent pursuit of the Single Responsibility Principle, I stumbled upon an interesting place a responsibility can hide. Here's our task: we want to write a <code>PersistenceService</code> class that will let us save some <code>Results</code> to a file. These results will be stored as a serialised array of integers (<code>int[]</code>).</p>
+
+<p>I'm going to use a bit of an unusual approach for writing the array out to the file. Commonly we'd have a serialiser class that would open up a file (or ask a dependency to open up the file), write the serialised data, then close and dispose the file. Instead we'll invert control a little. We'll pass in an existing file stream, and the serialiser class will write to it. The type and lifetime of the stream will be managed as an entirely separate responsibility.</p>
+
+<h2>Coding tiger</h2>
+
+<pre class="brush:csharp">
+public class PersistenceService {
+    private IFileStreamer _fileStream;
+    private IIntegerArrayDataSerialiser _serialiser;
+
+    public PersistenceService(IFileStreamer fileStream, IIntegerArrayDataSerialiser serialiser) {
+        _fileStream = fileStream;
+        _serialiser = serialiser;
+    }
+
+    public void SaveResults(Results results, string filePath) {
+        _fileStream.Write(filePath, stream =&gt; _serialiser.Serialise(results.GetFoos(), stream));
+    }
+}
+</pre>
+
+<p>Here you'll see we are using an <code>IFileStreamer</code> to manage the lifetime of the stream, and using <code>IIntegerArrayDataSerialiser</code> to manage the serialisation. Our <code>PersistenceService</code> class itself just coordinates those dependencies, which should be its single responsibility. Let's run through the two collaborators before we move on, just so we have a working code sample.</p>
+
+<pre class="brush:csharp">
+public interface IIntegerArrayDataSerialiser {
+    void Serialise(int[] data, Stream stream);
+}
+
+public class IntegerArrayDataSerialiser : IIntegerArrayDataSerialiser {
+    private IFormatter formatter;
+
+    public IntegerArrayDataSerialiser(IFormatter formatter) {
+        this.formatter = formatter;
+    }
+
+    public void Serialise(int[] data, Stream stream) {
+        formatter.Serialize(stream, data);
+    }
+}
+</pre>
+
+<p>We'll create our <code>IntegerArrayDataDeserialiser</code> with a <code>BinaryFormatter</code> (an <code>IFormatter</code> from <code>System.Runtime.Serialization.Formatters.Binary</code> in the framework), and we are basically just wrapping this class. Finally, we have our <code>FileStreamer</code>:</p>
+
+<pre class="brush:csharp">
+public interface IFileStreamer {
+    void Write(string path, Action&lt;Stream&gt; streamProcessor);
+}
+
+public class FileStreamer : IFileStreamer {
+    public void Write(string path, Action&lt;Stream&gt; streamProcessor) {
+        using (var stream = File.OpenWrite(path)) {
+            streamProcessor(stream);
+        }
+    }
+}
+</pre>
+
+<p>The <code>FileStreamer</code> has the single responsibility of managing the lifetime of the stream used to write the file. It is basically a creational responsibility. And, believe it or not, this all works just fine.</p>
+
+<p>So, have you spotted the hidden responsibility? It's in the <code>PersistenceService</code>. If you have, then nice work! I didn't spot it at all, although <a href="http://twitter.com/guywithbeard">a colleague</a> was able to point it out to me later. What I did spot though was a sign of potential trouble, not from the code, but from the tests...</p>
+
+<h2>Testing times</h2>
+
+<p>How would you test the <code>PersistenceService</code> as implemented? Despite the simplicity of the implementation, it is quite messy. If you haven't noticed the responsibility have a go at writing a test and see what gives you trouble. Here was how I finally got the test to pass:</p>
+
+<pre class="brush:csharp">
+public class PersistenceServiceFixture {
+  [TestFixture]
+  public class When_saving_data {
+    private PersistenceService sut;
+    private FakeFileStreamer fileStreamer;
+    private FakeSerialiser serialiser;
+    private int[] data;
+    private Stream stream;
+    private string path;
+
+    [Test]
+    public void Should_write_serialised_results_to_file_stream_from_given_file_path() {
+        Assert.That(fileStreamer.PathUsed, Is.EqualTo(path));
+        Assert.That(serialiser.DataSerialised, Is.SameAs(data));
+        Assert.That(serialiser.StreamUsedToSerialise, Is.SameAs(stream));
+    }
+
+    [SetUp]
+    public void Context() {
+        stream = new MemoryStream();
+        fileStreamer = new FakeFileStreamer(stream);
+        serialiser = new FakeSerialiser();
+        data = new[] {1, 2, 3, 4, 5};
+        path = &quot;some path&quot;;
+
+        sut = new PersistenceService(fileStreamer, serialiser);
+        sut.SaveResults(new Results(data), path);
+    }
+
+    class FakeFileStreamer : IFileStreamer {
+        private Stream stream;
+        public string PathUsed;
+
+        public FakeFileStreamer(Stream stream) {
+            this.stream = stream;
+        }
+
+        public void Write(string path, Action&lt;Stream&gt; streamProcessor) {
+            PathUsed = path;
+            streamProcessor(stream);
+        }
+    }
+
+    class FakeSerialiser : IIntegerArrayDataSerialiser {
+        public Stream StreamUsedToSerialise;
+        public int[] DataSerialised;
+        public void Serialise(int[] data, Stream stream) {
+            DataSerialised = data;
+            StreamUsedToSerialise = stream;
+        }
+    }
+  }
+}
+</pre>
+
+<p>I had to manually fake out both dependencies. I needed to put some behaviour in my <code>FakeFileStreamer</code> so that it would call our <code>Action&lt;Stream&gt;</code> function that the <code>PersistenceService</code> passes to it from the <code>IIntegerDataSerialiser</code>. By exposing the arguments used to call our <code>FakeFileStreamer</code> and <code>FakeSerialiser</code> we could then assert on them within our test. Not exactly pretty, is it?</p>
+
+<p>What we'd like to do is to use our trusty mocking framework to generate an <code>IFileStreamer</code> and <code>IIntegerArrayDataSerialiser</code>, stub out a value and assert that the stream was written to.</p>
+
+<p>Unfortunately we can't do that, because of a lurking menace...</p>
+
+<h2>Hidden responsibility</h2>
+
+<p>Let's take a closer look at the <code>PersistenceService.SaveResults()</code> method:</p>
+
+<pre class="brush:csharp">
+    public void SaveResults(Results results, string filePath) {
+        _fileStream.Write(filePath, stream =&gt; _serialiser.Serialise(results.GetFoos(), stream));
+    }
+</pre>
+
+<p>This is simply coordinating the class' two dependencies, right? It calls the <code>Write()</code> method of our <code>IFileStreamer</code>, and passes in the <code>Serialise()</code> method of our <code>IIntegerArrayDataSerialiser</code>. That coordination is one responsibility. So what is making this so annoying to test? My <a href="http://twitter.com/guywithbeard">bearded colleague</a> was able to walk me through the following steps to reveal (and subsequently fix) the problem. (This post is my translation of his explanation. His explanation was great, any mistakes made in this account are mine. :))</p>
+
+<p>Well, firstly, we'd really like to be able to assert something like this in our test:</p>
+
+<pre class="brush:csharp">
+fileStreamer.AssertWasCalled(x => x.Write(path, stream =&gt; serialiser.Serialise(results.GetFoos(), stream));
+</pre>
+
+<p>That way we could be sure that our <code>PersistenceService</code> was producing the expected call to our <code>fileStreamer</code>, passing in the correct pointer to our <code>serialiser.Serialise()</code> method. So what's stopping us? Well the <code>AssertWasCalled()</code> method on Rhino Mocks will check the arguments for the call. It will get the path right, but we are creating a new <code>Action&lt;Stream&gt;</code> delegate to pass in our serialisation function, so we can't compare it to the one used by the <code>PersistenceService</code>.</p>
+
+<p>Did you notice that? I didn't, despite hours of looking :). We are <b>creating</b> a new delegate. If we had that delegate instance we could compare the arguments in our test. But we don't, because of this line in <code>PersistenceService</code>:</p>
+
+<pre class="brush:csharp">
+    public void SaveResults(Results results, string filePath) {
+        _fileStream.Write(filePath, stream =&gt; _serialiser.Serialise(results.GetFoos(), stream));
+    }
+</pre>
+
+<p>That simple <code>stream =&gt; _serialiser.Serialise(...)</code>  lambda declaration is creating a delegate instance. So now <code>PersistenceService</code> isn't just <i>coordinating</i> dependencies, but it is <i>creating</i> a new object! That's two responsibilities! We are violating SRP, and that's what our test is telling us.</p>
+
+<h2>Resassigning responsibilities</h2>
+
+<p>My <a href="http://twitter.com/guywithbeard">bearded colleague</a> suggested we move the responsibility for creating this serialisation delegate. Instead of the <code>PersistenceService</code> creating it from our <code>IIntegerArrayDataSerialiser</code>, he reasoned, why not just get the <code>IIntegerArrayDataSerialiser</code> to create it for us? After all, serialisation is its job, and for serialisation our current design needs an <code>Action&lt;Stream&gt;</code>. (Although it is not really an <code>IIntegerArrayDataSerialiser</code> any more, we should probably rename it to a <code>IIntegerArraySerialisationFactory</code> or something. We'll keep it as is just to keep things simple -- its hard enough to follow code samples on a blog without following renames too.)</p> 
+
+
+<pre class="brush:csharp">
+public interface IIntegerArrayDataSerialiser {
+    Action&lt;Stream&gt; GetStreamSerialiser(int[] data);
+}
+
+public class IntegerArrayDataSerialiser : IIntegerArrayDataSerialiser {
+    private IFormatter formatter;
+    public IntegerArrayDataSerialiser(IFormatter formatter) {
+        this.formatter = formatter;
+    }
+
+    public Action&lt;Stream&gt; GetStreamSerialiser(int[] data) {
+        return stream =&gt; formatter.Serialize(stream, data);
+    }
+}
+</pre>
+
+<p>Notice this class' responsibility is clearer now. Before it was pretty much just a wrapper around <code>IFormatter</code>. Now its responsibility is creational: it is creating a delegate for serialisation from its <code>IFormatter</code>. Let's see how this affects the rest of the code. Our <code>FileStreamer</code> can remain unchanged, so now we just need to update our <code>PersistenceService</code> to call the new factory method on our <code>IIntegerDataArraySerialiser</code>.</p>
+
+<pre class="brush:csharp">
+public class PersistenceService {
+    /* ... snip ... */
+    public void SaveResults(Results results, string filePath) {
+        _fileStream.Write(filePath, _serialiser.GetStreamSerialiser(results.GetFoos()));
+    }
+}
+</pre>
+
+<p>Now let's see if this makes everything easier to test.</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class When_saving_data {
+    private PersistenceService sut;
+    private IFileStreamer fileStreamer;
+    private IIntegerArrayDataSerialiser serialiser;
+    private int[] data;
+    private string path;
+    private Action&lt;Stream&gt; streamProcessor;
+
+    [Test]
+    public void Should_write_serialised_results_to_file_stream_from_given_file_path() {
+        fileStreamer.AssertWasCalled(x =&gt; x.Write(path, streamProcessor));
+    }
+
+    [SetUp]
+    public void Context() {
+        streamProcessor = stream =&gt; { };
+        data = new[] { 1, 2, 3, 4, 5 };
+        path = &quot;some path&quot;; 
+        fileStreamer = MockRepository.GenerateStub&lt;IFileStreamer&gt;();
+        serialiser = MockRepository.GenerateStub&lt;IIntegerArrayDataSerialiser&gt;();
+        serialiser.Stub(x =&gt; x.GetStreamSerialiser(data)).Return(streamProcessor);
+
+        sut = new PersistenceService(fileStreamer, serialiser);
+        sut.SaveResults(new Results(data), path);
+    }
+}
+</pre>
+
+<p>A bit simpler, no? We can now get rid of our hand-coded test doubles and the logic they contained. And now we have access to the <code>Action&lt;Stream&gt;</code> delegate instance that was giving us trouble before. As a result, our assertion (<code>fileStreamer.AssertWasCalled(...)</code>) is very straight forward and is checking that our <code>PersistenceService</code> did exactly what it was meant to. </p>
+
+<p>Now this was mainly done as a coding exercise, so I'm not advocating this design at all, but I do find the realisation that an anonymous delegate or lambda is actually a creational responsibility really useful. It's definitely going to help me divide up responsibilities better in future.</p>

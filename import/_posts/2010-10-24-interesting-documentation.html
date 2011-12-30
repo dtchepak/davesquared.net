@@ -1,0 +1,123 @@
+---
+layout: "post"
+title: "Interesting documentation"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3943056613707357965"
+categories: ["nsubstitute"]
+date: "2010-10-24T23:34:00.0+11:00"
+updated: "2010-10-24T23:47:52.872+11:00"
+---
+
+<p>Now those are two words you don't often hear put together, but I think what we came up with for <a href="http://nsubstitute.github.com">NSubstitute's documentation</a> is actually pretty interesting, and so I thought I'd share it. I'm not talking about the documentation itself, but about ways to write documentation that is maintainable and helps out your project as well as your users. In our case our docs ended up fairly easy to write, automatically tested for correctness and generated as HTML as part of the build. And this makes me happy, and so I blog. :)</p>
+
+<h2>Creating a monster of a website with Jekyll</h2>
+
+<p>We wanted to publish the NSubstitute docs to the website. We were pretty keen to be able to write the docs in <a href="http://daringfireball.net/projects/markdown/">Markdown</a> or similar, as writing large wads of HTML can be quite annoying; especially the hassle of escaping code samples. It turns out there are a number of <i>static website generators</i> that support this kind of approach (the site for one of these generators, <a href="http://nanoc.stoneship.org/docs/1-introduction/">nanoc</a>, has a good list of a number of these, mostly Ruby, but also some done in Python, Haskell and others).</p>
+
+<p>For NSubstitute we ended up choosing <a href="http://jekyllrb.com/">Jekyll</a>, a generator done in Ruby that is really optimised for blogs (and is also used for GitHub Pages). We tried a few other options that were very good too, but Jekyll seemed to fit in closest with what we wanted without too much effort.</p>
+
+<p>Jekyll works mainly from conventions with directory and file names. The root of the docs site includes a <code>_config.yml</code> file to include information like permalink format; layout templates go in <code>_layouts</code>; and posts typically go in <code>_posts</code> with the filename in the form <code>yyyy-mm-dd-title.markdown</code>. In NSubstitute we're not too worried about the date itself, but Jekyll insists on it (it is designed for blogs remember), and it does provide an easy way of ordering posts. You can also put posts/documents under different categories, and include normal HTML pages and content. </p>
+
+<p>After running the <code>jekyll</code> command on your docs directory, out pops a static site. For rapidly testing changes you can also run <code>jekyll --server --auto</code> to serve up and automatically-regenerate the site every change on <code>http://localhost:4000</code>. It is hard to capture how awesome this is in a post, but compared to other attempts I've had at getting quick sites up and running I found this amazing.</p>
+
+<p></p>
+
+<h2>Liquid templates</h2>
+
+<p>Jekyll uses <a href="http://www.liquidmarkup.org/">Liquid</a> (and <a href="http://github.com/mojombo/jekyll/wiki/liquid-extensions">Liquid Extensions</a>) for templates. In the Jekyll <code>_layouts</code> files you can put in markup like <code>{{ page.content }}</code> and <code>{% for post in site.categories.help reversed %}, {% endfor %}</code> and these will be expanded as required in the generated site.</p>
+
+<p>What's really neat is that, in addition to the <a href="http://github.com/tobi/liquid/wiki/liquid-for-designers">large range of built in tags and templates</a>, it is also frightfully easy to create your own in Ruby. You just put them into a <code>_plugins</code> directory and Jekyll will automatically pick them up and apply them when generating your site.</p>
+
+<p>For NSubstitute we wanted to easily include code samples formated using <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a>, so we created an <code>{% examplecode %}</code> tag:</p>
+
+
+<pre class="brush: ruby">
+module Jekyll
+ class ExampleCodeBlock &lt; Liquid::Block
+        include Liquid::StandardFilters
+  def render(context)
+            code = super.join
+            &lt;&lt;-HTML
+&lt;div class="highlight"&gt;
+    &lt;pre class="brush: csharp"&gt;#{h(code).strip}&lt;/pre&gt;
+&lt;/div&gt;
+            HTML
+  end
+ end
+end
+Liquid::Template.register_tag('examplecode', Jekyll::ExampleCodeBlock)
+</pre>
+
+<p>Any code samples wrapped in <code>{% examplecode %}, {% endexamplecode %}</code> tags will be automatically escaped (<code>h(code)</code> is built in to Liquid to do this) and will be wrapped in an element that includes the <code>class="brush: csharp"</code> that SyntaxHighlighter needs to do its job.</p>
+
+<div class="note"><b>Note:</b> Jekyll has built in support for syntax-highlighting using <a href="http://pygments.org/">Pygments</a>. Pygments is awesome too, but for a number of reasons (mainly ease of setup) we chose to use SyntaxHighlighter instead.</div>
+
+<h2>Docs with teeth</h2>
+
+<p>We wanted to make sure the NSubstitute code examples worked, and kept working even with future versions. It's pretty frustrating to plug in an example from somewhere and have it not work. To use <a href="http://twitter.com/guywithbeard">Anthony's</a> expression, we wanted "documents with teeth"; docs that would bite us if we did the wrong thing.</p>
+
+<h3>Writing runnable code samples</h3>
+
+<p>I've already mentioned we included code samples, written in Markdown, and designated with <code>{% examplecode %}</code> Liquid blocks. This would make it pretty easy to parse out these blocks and get them into a C# file so we could compile them, as we could just grab the text between the blocks without HTML decoding. The idea was we'd wrap each example in an NUnit test and make sure they both compile and any assertions passed.</p>
+
+<p>But what about supporting code that may be required, but that we didn't necessarily want the reader to be bothered with? We may not want to repeat setup code for every example on a page, that would just add a lot of noise to the examples. So just as for our <code>{% examplecode %}</code> tag, we created a <code>{% requiredcode %}</code> tag that wouldn't render its contents to the final page, but could still be parsed out into our C# files.</p>
+
+<p>The last hurdle was how to handle code-blocks that included class or interface definitions. These couldn't just go into an NUnit test method as the C# compiler isn't too fond of class definitions going into a method body. So we needed our parser to check if <code>{% examplecode %}</code> contained a class or interface definition, and it it did, then just dump it in the C# file without wrapping it in a <code>[Test]</code> method.</p>
+
+<h3>Code samples to code files to tested DLL</h3>
+
+<p>Now we had code samples in our documents, we needed to get them into C# files we could compile. This we ended up driving out in my own particular brand of n00bie Ruby, the <a href="http://github.com/nsubstitute/NSubstitute/tree/4852fb62a395b3a401bd2a4151d97b4a3371c81d/Build/rakelib/lib">results of which you can see on Github</a> (with tests in <code>../specs</code>). The <code>ExamplesToCode</code> class takes a documentation input path and an output path for our class files, extracts all the code blocks found in the input, then shoves each block into a template for a C# file either as a declaration or as a test and writes it to the output path.</p>
+
+<p>This is then called from our <a href="http://rake.rubyforge.org/">rake</a> script like this:</p>
+
+<pre class="brush: ruby">
+task :generate_code_examples do
+    examples_to_code = ExamplesToCode.create
+    examples_to_code.convert("../Source/Docs/", "#{OUTPUT_PATH}/CodeFromDocs")
+    examples_to_code.convert("../Source/Docs/help/_posts/", "#{OUTPUT_PATH}/CodeFromDocs")
+    examples_to_code.convert("../", "#{OUTPUT_PATH}/CodeFromDocs")
+end
+</pre>
+
+<p>We compile these using <code>csc.exe</code>, and run the tests in the resulting DLL using NUnit:</p>
+
+<pre class="brush: ruby">
+task :compile_code_examples =&gt; [:generate_code_examples] do
+    #Copy references to documentation directory
+    output_base_path = "#{OUTPUT_PATH}/#{CONFIG}"
+    output_doc_path = "#{OUTPUT_PATH}/CodeFromDocs"
+    references = %w(NSubstitute.dll nunit.framework.dll).map do |x|
+        "#{output_base_path}/NSubstitute.Specs/#{x}"
+    end
+    FileUtils.cp references, output_doc_path
+
+    #Compile
+    FileUtils.cd output_doc_path do
+        sh "#{DOT_NET_PATH}/csc.exe /target:library /out:\"NSubstitute.Samples.dll\" /reference:\"nunit.framework.dll\" /reference:\"NSubstitute.dll\" *.cs"
+    end
+end
+</pre>
+
+<p>Ok, so it's not pretty, but it works a treat.</p>
+
+<h2>Generating the site</h2>
+
+<p>The last step was to automate all of this: generating code samples, testing them, then generating the final site for publishing.</p>
+
+
+<pre class="brush: ruby">
+desc "Generates documentation for the website"
+task :generate_docs =&gt; [:all, :check_examples] do
+    output = File.expand_path("#{OUTPUT_PATH}/nsubstitute.github.com", File.dirname(__FILE__))
+    FileUtils.cd "../Source/Docs" do
+        sh "jekyll \"#{output}\""
+    end
+end
+</pre>
+
+<h2>Conclusion</h2>
+
+<p>This has been a whirlwind tour around NSubstitute's documentation systemy thang; mentioning things like Jekyll, Liquid, Markdown, some custom Ruby libraries and a couple of rake tasks.  What this gives us (and devs using NSubstitue) is fairly high confidence that any code samples on the site are going to work exactly as advertised.</p>
+
+<p>This has been an incredibly worthwhile experience, not only for making the documentation useful, but also in discovering great tools like Jekyll (which I am so tempted to migrate this blog to :)).</p>
+
+<p>As parting words for an excessively rambling post (even for me! :)), if you need to write some documentation for anything involving code, try and get some value out of it. Make it living documentation that will bite you when you make a mistake, and will help itself stay up-to-date by failing a build if it is neglected. Approached this way, documentation is even kind of fun. So go forth, all ye developers, and document! :)</p>

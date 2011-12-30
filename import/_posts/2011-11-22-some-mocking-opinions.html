@@ -1,0 +1,108 @@
+---
+layout: "post"
+title: "Some mocking opinions"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3981252492716307624"
+categories: ["imho", "testing", "dev practices"]
+date: "2011-11-22T22:25:00.0+11:00"
+updated: "2011-11-22T22:36:01.136+11:00"
+---
+
+<p>I've been thinking through how I use test doubles (mocks, stubs, test spies, etc) recently, and thought I'd write down a snapshot of my current opinions on the subject.</p>
+
+<h2>Don't mock types you don't own</h2>
+
+<p>I've <a href="http://www.davesquared.net/2011/04/dont-mock-types-you-dont-own.html">written about this before</a>, and I still think it is good advice. Test down to your lowest level of abstraction, then integration / contract / acceptance test over the boundary. By mocking a type you don't own that dependency starts bleeding in to your code and pushing your own abstractions in potentially unhelpful ways. You're also not really testing much; unless you also have good contract tests then checking you've called a specific external method is not going to tell you much about whether your code does what it needs to.</p>
+
+<p>Contrived example: say I was faking out <code>Math.Round()</code> (let's pretend it's an instance method or you are using a framework that can mock statics via the profiler API):</p>
+
+<pre><code>[Test]
+public void Calculate_with_rounding() {
+    math.Round(2.5).Returns(3); //Fake math.Round
+    var subject = new Calculation(math);
+
+    Assert.AreEqual(subject.AddAndRound(1, 1.5), 3);
+}
+</code></pre>
+
+<p>Perfectly reasonable? Well, except for the fact .NET uses banker's rounding and rounds <a href="http://stackoverflow.com/questions/977796/in-c-math-round2-5-result-is-2-instead-of-3-are-you-kidding-me">2.5 to 2</a> (and 1.5 to 2 for that matter). If you were using Python (which rounds away from 0), you would have been spot on. If you care about the rounding method, you've now got a bug.</p>
+
+<p>If something as simple as rounding can trip us up, imagine what we could do if we start mocking ORM or ADO.NET calls.</p>
+
+<h2>Try to avoid mocks in acceptance tests</h2>
+
+<p>In my experience this tends to result in too much behaviour being pushed into the mocks. My first preference is to use real pieces, second is to hand-code fakes that have enough logic to work as required, and convenience methods to help tests configure them appropriately. As per &quot;don't mock types you don't own&quot;, it is also a good idea to test your fakes match the real behaviour.</p>
+
+<h2>Learn mocking before a mocking framework</h2>
+
+<p>I've often heard developers new to automated testing say things like &quot;I really need to learn (Rhino Mocks | Moq | Mocking Framework X)&quot;. I think this is the wrong emphasis; before learning a framework for creating test doubles it's important to understand how test doubles work and how to use them.</p>
+
+<p>For me, a great way to learn was to hand-roll all my fake objects for my tests to act as required. Manually stubbing out values and/or recording calls gave me a good understanding of the different types of test doubles (mocks, spies, stubs etc.) and how they work. Once this got old (very quickly) it was fairly simple to take the behaviour I knew how to hand-code and translate that into the syntax required by a mocking framework. It just became a matter of automating what I was already doing. (It also helped me understand common difficulties like trying to mock non-virtual members.)</p>
+
+<h2>Don't explictly test intermediate steps or inconsequential details</h2>
+
+<p>If we assert on details of an implementation we tend to get tight coupling and brittle tests. An example I have seen fairly frequently is:</p>
+
+<pre><code>[Test]
+public void Should_get_the_widget_from_the_factory() {
+    var factory = MockRepository.GenerateMock&lt;IWidgetFactory&gt;();
+    var subject = new Foo(factory);
+    subject.DoStuff();
+    factory.AssertWasCalled(x =&gt; x.GetWidget());
+}
+
+[Test]
+public void Should_turn_the_widget() {
+    var widget = MockRepository.GenerateMock&lt;IWidget&gt;();
+    var factory = MockRepository.GenerateStub&lt;IWidgetFactory&gt;();
+    factory.Stub(x =&gt; x.GetWidget()).Return(widget);
+    var subject = new Foo(factory);
+    subject.DoStuff();
+    widget.AssertWasCalled(x =&gt; x.Turn());
+}
+</code></pre>
+
+<p>Here the first test is a completely redundant. The second test covers that entire code path (how else could the widget from the factory get turned, if the subject did not call the factory?). Now you could argue that you prefer the extra, explicit specification the first test provides, to which I'd respond that I don't think it's worth the pain from the additional friction it causes when you want to change this implementation detail. </p>
+
+<p>Besides, what do we really care about for our subject? That it uses a factory? Or that it turns the widget? Focus on how you want the object to behave, not how it implements that behaviour.</p>
+
+<p>This approach can help lead us to better abstractions, as we start identifying roles and responsibilities separately from implementation details. And it will definitely make your code easier to change without the friction of over-specified tests.</p>
+
+<h2>Mock interaction with the contract, not the specific implementation</h2>
+
+<p>On a highly related point, the aim of abstraction is decoupling from the implementation. If we are configuring our test doubles with lots of behaviour that our unit tests are relying on then our object is coupled to that particular implementation, not to a contract of behaviour or a role. For an abstraction to be effective we should be able to drop in a completely new implementation that fulfils the required role. This is not the case if we need to set up a test double's method to call another dependency and return some rearrangement of the result. If we're relying on that in our test then our abstraction has failed.</p>
+
+<p>Sometimes you just get stuck with having to perform a callback from a stub, but in general if you are pushing behaviour into your mock, re-think the design or consider using a hand-coded fake before you go contorting your mocking framework.</p>
+
+<h2>Beware over-abstraction</h2>
+
+<p>It is quite easy to churn out layers of useless abstractions when using mock frameworks. Abstractions have a cost. Feedback from tests is great, but pay close attention to SOLID and the rules of simple design and call out to meaningful abstractions, rather than putting in a dependency just for testing. I wrote some <a href="http://www.davesquared.net/2011/06/abstraction-and-oo.html">guidelines on abstractions</a> a while back that I don't entirely disagree with yet.</p>
+
+<h2>Some unanswered questions</h2>
+
+<h3>Mocks vs. stubs, tell vs. ask.</h3>
+
+<p>I've tended to prefer stubs over mocks (stubbing out the results of calls rather than checking they were received), as per the widget factory example above. This flies in the face of the &quot;Tell, don't ask&quot; principle, which recommends we don't ask a collaborator for some state and act on the result, but instead give the collaborator the state it needs from us and tell it what to do with it. This seems to suggest I should be using mocks (checking received calls) a whole lot more than I stub them out.</p>
+
+<h3>Avoiding &quot;Yet Another Factory&quot;</h3>
+
+<p>If an object news up something, our unit test will typically have almost no ability to affect that object. If we want to check our subject news up a view model and calls <code>Activate()</code> on it, we have no way of asserting this was done without exposing <code>IsActivated</code> and relying on that implementation detail. Leaky abstraction. Bad.</p>
+
+<p>One solution is injecting a factory into our object. We can stub out what this returns, make it return another test double, and then check it received the <code>Activate()</code> call. Just introduce a factory. Yet another factory. Searching through files matching <code>*Factory</code> becomes an exercise akin to reading War and Peace. And they're generally not even <a href="http://en.wikipedia.org/wiki/Factory_pattern">real factories</a>! They don't choose a particular implementation, they are just a glorified wrapper over a single constructor.</p>
+
+<p>Sure, I sometimes try to ease my conscience by injecting a factory method as a <code>Func&lt;T&gt;</code> which my IoC container helps me with. But deep down I know its still YAF, and a small part of me dies.</p>
+
+<p>I'm hoping choosing &quot;better&quot; abstractions will help me with this, but I've had limited success to date.</p>
+
+<h3>Interface explosion</h3>
+
+<p>C# seems to make it difficult to do testing without using interfaces. And so I end up pulling out yet another interface that will never see another implementation. I've heard <a href="https://twitter.com/shannoncornish">Shannon</a> refer to them as &quot;the new header files&quot;. Every class has its interface documented in its header/interface file. It's easy to say just choose better abstractions where the interface can be reused, but this is still something I struggle with.</p>
+
+<h3>Mocking in dynamic languages</h3>
+
+<p>This post has been written primarily from the perspective of static languages; I not sure how much (if any) applies to dynamic languages. From my limited experience testing and mocking seem to be done quite differently in languages like Ruby and Python. I'm keen to learn more about how mocking is done in these languages and see how much can help me improve how I test.</p>
+
+<h2>End of transmission</h2>
+
+<p>This has been a brain dump of my current opinions about mocking. If you agree, disagree, and/or can help me with some of my unanswered questions, please leave a comment.</p>
+
+<p>Now if you'll excuse me, I'm off to code up yet another factory...</p>

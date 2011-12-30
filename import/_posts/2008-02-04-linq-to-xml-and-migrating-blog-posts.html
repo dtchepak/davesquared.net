@@ -1,0 +1,131 @@
+---
+layout: "post"
+title: "Using LINQ to XML to migrate blog posts"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4742255305517904098"
+categories: [".net", "linq"]
+date: "2008-02-04T12:43:00+11:00"
+updated: "2008-05-01T09:04:07.72+10:00"
+---
+
+<p>During my <a href="http://davesquared.blogspot.com/2008/02/moving-up-moving-out-moving-back.html">recent dalliance</a> with other blog hosts, I ended up playing around with LINQ to XML and was quite impressed with how much nicer it was than the pre-LINQ .NET classes for XML parsing. Here's a quick overview of how I migrated all my Blogger posts to Community Server (before deciding to stick with Blogger :)), with a focus on the LINQ to XML bits.
+ </p>
+ <p>First my compulsory disclaimers: this was a rush job. This was the most disgusting, hacky code I have ever written. I have written C64 Basic programs with better separation of concerns. If you use any of this code for anything at all you'd have to be insane! 
+        I did write the code test-first, but definitely skipped the all-important &quot;design&quot; part of 
+        TDD. Ugly ugly ugly. With that said, let's try and get something useful out of the spaghetti.</p>
+    <h2>Getting Blogger posts in XML format</h2>
+    <p>First step was to retrieve all the posts in XML. You can get this directly from a Blogger url:</p>
+    <pre>http://(your_blog).blogspot.com/atom.xml?redirect=false&amp;start-index=1&amp;max-results=500</pre>
+    <p>If you have more than 500 posts, adjust the querystring or use a couple of batches to get the results. You can download this using .NET (<code>webClient.DownloadFile(url, feedFile);</code>, using System.Net.WebClient), or use the highly technical method of downloading from your browser :-) The resulting XML looks something like this:</p>
+    <pre>
+&lt;?xml version='1.0' encoding='UTF-8'?&gt;
+&lt;?xml-stylesheet href=&quot;http://www.blogger.com/styles/atom.css&quot; type=&quot;text/css&quot;?&gt;
+&lt;feed xmlns='http://www.w3.org/2005/Atom' xmlns:openSearch='http://a9.com/-/spec/opensearchrss/1.0/'&gt;
+  &lt;!-- Some nodes relating to your blog here. --&gt;
+  &lt;entry&gt;
+    &lt;id&gt;...&lt;/id&gt;
+    &lt;published&gt;...&lt;/published&gt;
+    &lt;updated&gt;...&lt;/updated&gt;
+    &lt;category scheme='http://www.blogger.com/atom/ns#' term='daves drivel'/&gt;
+    &lt;category scheme='http://www.blogger.com/atom/ns#' term='shameless self promotion'/&gt;    
+    &lt;title type='text'&gt;...&lt;/title&gt;
+    &lt;content type='html'&gt;(blog post content here)&lt;/content&gt;
+    &lt;link rel='alternate' type='text/html' href='http://davesquared.blogspot.com/2008/02/sample-post.html' title='Sample post'/&gt;
+    ...
+  &lt;/entry&gt;
+  &lt;!-- Lots more &lt;entry /&gt; nodes --&gt;
+&lt;/feed&gt;    
+    </pre>
+    
+     <h2>Basic XML parsing using LINQ to SQL</h2>   
+     <p>As you can see from the XML above, the posts are described by &lt;entry /&gt; nodes. 
+         Normally we&#39;d be breaking out the XmlDocument or XmlTextReader or similar 
+         and working some XPath magic. Or we could just use LINQ to XML. Here&#39;s a simple 
+         example:</p>
+ <pre>
+XDocument xml = XDocument.Load(new StringReader(feed));
+XNamespace xmlns = &quot;http://www.w3.org/2005/Atom&quot;;
+var entries = from feedElements in xml.Descendants(xmlns + &quot;entry&quot;)
+              select new {
+                Title = feedElements.Element(xmlns + &quot;title&quot;).Value,
+                Content = feedElements.Element(xmlns + &quot;content&quot;).Value
+              };                  
+ </pre>
+ <p>The first thing we do is load the XML into an <code>XDocument</code> (in <code>System.Xml.Linq</code>). 
+        Looking at the XML feed, the XML namespace used is &quot;<a 
+            href="http://www.w3.org/2005/Atom">http://www.w3.org/2005/Atom</a>&quot;. I 
+        haven&#39;t found an <code>XmlNamespaceManager</code>-style approach to handling 
+        namespaces in LINQ to XML, so I just put this in a <code>xmlns</code> variable 
+        and will append it as I go. If you know how to specify a default namespace for 
+        XDocuments, please let me know :) </p>
+        <p>The next step is selecting the <code>title</code> and <code>content</code> 
+            elements from the each <code>&lt;entry/&gt;</code>&nbsp;node. The <code>xml.Descendants(XName)</code> method returns an <code>IEnumerable&lt;XElement&gt;</code>, which we tell to filter out all elements other than "entry" nodes. &nbsp;The <code>entries</code> variable will now contain an IEnumerable&lt;&gt; of an anonymous type. 
+            Each item in the enumeration will have a Title and Content property representing 
+            the blog title and content parsed from the XML. We can iterate over this, use <code>entries.ToArray()</code> to perform our query, or use other LINQ goodness like <code>entries.Take(5)</code> (cue <a href="http://en.wikipedia.org/wiki/Take_Five">jazz</a>) to further filter our results.</p>
+    <p>Notice how we specify all the node names as strings? They are actually of type <code>XName</code> (or <code>XNamespace</code> in the case of the <code>xmlns</code> variable). There is no public constructor to create an <code>XName</code>, but instead an implicit conversion from String is defined. This gives us the ease of using strings to specify node names (which is quite natural when working with XML), with the benefits of having strong typing around the name to access properties like LocalName and Namespace. In our query we have to prefix the XName, like <code>entry</code>, with the namespace <code>xmlns</code>, to make sure our nodes resolve properly, hence all the <code>xmlns + "entry"</code> style code. </p>
+    <h2>Getting all the post data using LINQ to XML</h2>
+    <p>Now let's get strongly typed objects from our XML feed.</p>
+    <pre>public class BlogEntry {
+  public String Title;
+  public String Content;
+  public String[] Categories;
+  public String OriginalLink;
+  public String Published;
+  public String Updated;
+}</pre>
+  <p>I've been lazy here and am parsing the published and updated dates as simple strings (see, I told you this was hacky!). There are two field declarations of interest here (the rest have one-to-one relationships with XML elements). The first is the <code>Categories</code> array. These are specified in the XML as children of <code>&lt;entry/&gt;</code> nodes, with the <code>term</code> attribute holding the pertinent information:</p>
+ <pre>
+&lt;entry&gt;
+  ...
+  &lt;category scheme='http://www.blogger.com/atom/ns#' term='daves drivel'/&gt;
+  &lt;category scheme='http://www.blogger.com/atom/ns#' term='shameless self promotion'/&gt;    
+  ... 
+ </pre>
+ <p>The other is the <code>OriginalLink</code> field. I wanted to put a link back to the original post from the new blog to be clear about the source and so that people could see any comments they made (I would have taken the comments over as well, but only had the <a href="http://en.wikipedia.org/wiki/MetaWeblog">MetaWeblog API</a> to work with). So I needed the original post link, which I could parse out of one of the <code>&lt;link /&gt;</code> nodes 
+        that has a <code>rel</code> attribute value of "alternate":</p>
+ <pre>
+&lt;entry&gt;
+  ...
+  &lt;link <b>rel='alternate'</b> type='text/html' 
+      <b>href='http://davesquared.blogspot.com/2008/02/sample-post.html'</b> title='Sample post'/&gt;
+  ...
+ </pre>
+ <p>Armed with this knowledge, let's tackled the new LINQ to XML query:</p>
+ <pre>
+var entries = 
+  from feedElements in xml.Descendants(xmlns + &quot;entry&quot;)
+  select <b>new BlogEntry()</b> {
+    Title = feedElements.Element(xmlns + &quot;title&quot;).Value,
+    Content = feedElements.Element(xmlns + &quot;content&quot;).Value,
+    OriginalLink = <b>feedElements.Elements(xmlns + &quot;link&quot;)
+             .Where(link =&gt; link.Attribute(&quot;rel&quot;).Value == &quot;alternate&quot;)
+             .Select(link =&gt; link.Attribute(&quot;href&quot;).Value)
+             .First()</b>,
+    Published = feedElements.Element(xmlns + &quot;published&quot;).Value,
+    Updated = feedElements.Element(xmlns + &quot;updated&quot;).Value,
+    Categories = <b>feedElements.Elements(xmlns + &quot;category&quot;)
+                   .Select(category =&gt; category.Attribute(&quot;term&quot;).Value)
+                   .ToArray()</b>
+  };
+ </pre>
+ <p>The main changes from our original query are emphasised. First up, we are now working with strongly typed <code>BlogEntry</code> objects, rather than anonymous types. The <code>entries</code> variable is now an <code>IEnumberable&lt;BlogEntry&gt;</code>, which we can actually return from our parser method (<code>var</code>s only work locally).</p>
+    <p>We are also using nested queries to drag out the <code>Categories</code> and <code>OriginalLink</code> (you can do this using the sugary "from ... in ... select" style as well, but I found it easier to use the methods explicitly in this case). For categories we are simply selecting the <code>term</code> attributes from all the <code>&lt;category/&gt;</code> nodes in our entry. For the 
+        original link, we use <code>.Where()</code> to filter all the <code>&lt;link/&gt;</code> nodes to only include ones with a <code>rel</code> attribute equal to "alternate", take the <code>.First()</code> (there should only be one), and then select the value of the <code>href</code> element.</p>
+    <h2>Finishing up</h2>
+    <p>The final steps in the migration where doing some regex-ing of the content to get the post id (<a href="http://faq.wordpress.com/2006/10/23/post-options-post-slug/">slug</a> for Wordpressors), and translate links to my own articles to point to the new site (so clicking on internal links on the new blog kept readers in the new blog. The last bit in particular was a bit tricky, as it needed a first pass to parse into a dictionary to I could look up the new urls as required. Here's the horribly hacky code if you're interested:</p>
+    <pre>
+BloggerParser parser = new BloggerParser();
+IDictionary&lt;String, BlogEntry&gt; entries = parser.ParseFeed(feed).ToDictionary(entry =&gt; entry.GetSlug());
+foreach (BlogEntry entry in entries.Values) {
+  entry.Content =
+    Regex.Replace(entry.Content,
+    @&quot;http://davesquared.blogspot.com/\d{4}/\d{2}/(?&lt;slug&gt;.*?)\.html&quot;,
+    delegate(Match match) {
+      return entries[match.Groups[&quot;slug&quot;].Value].GetNewLink();
+    },
+    RegexOptions.IgnoreCase | RegexOptions.Singleline);
+}
+    </pre>
+    <p>After parsing into a dictionary (<code>parser.ParseFeed()</code> returns our <code>IEnumerable&lt;BlogEntry&gt;</code> from our earlier LINQ to XML adventures), we try and replace any internal links in each post's content with the link to the new post, using the <a href="http://faq.wordpress.com/2006/10/23/post-options-post-slug/">slug</a> as a unique index to lookup <code>BlogEntry</code>S. Ugly but effective.</p>
+    
+    <p>The final step in all of this was to post all the transformed posts to the new site, which you can <a href="http://blogs.microsoft.co.il/blogs/bursteg/archive/2006/06/15/720.aspx">do using the MetaWeblog API</a>,  which, as far as I can tell, all went remarkably well. :-)</p>
+    <p>So there you go. This was my first real experience working with LINQ to XML, and I found it a fair bit easier than XmlDocument tweaking and mumbling various XPath incantations. Hope this helps. :-)</p>

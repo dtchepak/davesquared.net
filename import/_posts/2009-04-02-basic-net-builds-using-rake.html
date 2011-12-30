@@ -1,0 +1,88 @@
+---
+layout: "post"
+title: "Basic .NET builds using Rake"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5212532788847946123"
+categories: ["ruby", ".net"]
+date: "2009-04-02T00:10:00.0+11:00"
+updated: "2009-04-02T00:18:33.238+11:00"
+---
+
+<p>I was starting up a new hobby project the other night and thought I'd try using <a href="http://rake.rubyforge.org/">Rake</a> to script my build (instead of pure MSBuild, Nant, or just plain VS). Now Ruby and I generally don't get on too well, so I was really surprised with how easy I found it to setup, and even more surprised with how much I enjoyed it. :)</p>
+
+<h2>Prerequisites</h2>
+
+<p>Um, <a href="http://www.ruby-lang.org/en/downloads/">Ruby</a>. The installer I used gave me Ruby with Rake included. We'll also need a simple .NET solution. I created one with a structure that looked a bit like this:</p>
+
+<ul>
+<li class="folder-icon">DaveSquared.SampleProject</li>
+  <ul>
+    <li class="folder-icon">build</li>
+      <ul><li class="file-icon"><b>rakefile.rb</b></li></ul>
+    <li class="folder-icon">src</li>
+   <ul>
+     <li class="folder-icon">DaveSquared.SampleProject.Tests</li>
+  <li class="folder-icon">DaveSquared.SampleProject.Web</li>
+  <li class="file-icon">DaveSquared.SampleProject.sln</li>
+   </ul>
+    <li class="folder-icon">tools</li>
+   <ul>
+  <li class="folder-icon">NUnit</li>
+   </ul>
+  </ul>
+</ul>
+ 
+<p>The SLN file contains two projects, <code>DaveSquared.SampleProject.Tests</code> and <code>.Web</code>. The <code>.Tests</code> project references the <code>.Web</code> project, as well as the NUnit framework buried somewhere in the <code>tools/NUnit</code> directory. Both projects where configured to build to the <code>build/output</code> directory (so <code>.Tests</code> will build to <code>build/output/DaveSquared.SampleProject.Tests</code>).</p>
+
+<p>We can now setup our <code>rakefile.rb</code>, which I've plonked into the <code>build</code> directory. We'll run the build from this directory, so we can specify all our paths relative to this build file.</p>
+
+<h2>Basic build and test run</h2>
+
+<p>After reading Dave Laribee's post on <a href="http://codebetter.com/blogs/david_laribee/archive/2008/08/25/omg-rake.aspx">OMG Rake!</a>, and Mark Guzman's excellent post on <a href="http://hasno.info/2008/1/6/building-net-projects-with-rake">Building .NET projects with rake</a>, I then proceeded to ruin all their good work by patching bits and pieces of their posts together and got this:</p>
+
+<pre>
+require 'rake/clean'
+
+DOT_NET_PATH = &quot;#{ENV[&quot;SystemRoot&quot;]}\\Microsoft.NET\\Framework\\v3.5&quot;
+NUNIT_EXE = &quot;../tools/Nunit/bin/nunit-console.exe&quot;
+SOURCE_PATH = &quot;../src&quot;
+OUTPUT_PATH = &quot;output&quot;
+CONFIG = &quot;Debug&quot;
+ 
+<b>CLEAN.include(OUTPUT_PATH)</b>
+
+<b>task :default =&gt; [&quot;clean&quot;, &quot;build:all&quot;]</b>
+ 
+namespace :build do
+  
+  <b>task :all =&gt; [:compile, :test]</b>
+      
+  desc &quot;Build solutions using MSBuild&quot;
+  <b>task :compile do</b>
+    solutions = FileList[&quot;#{SOURCE_PATH}/**/*.sln&quot;]
+    solutions.each do |solution|
+      sh &quot;#{DOT_NET_PATH}/msbuild.exe /p:Configuration=#{CONFIG} #{solution}&quot;
+    end
+  end
+   
+  desc &quot;Runs tests with NUnit&quot;
+  <b>task :test =&gt; [:compile] do</b>
+    tests = FileList[&quot;#{OUTPUT_PATH}/**/*.Tests.dll&quot;].exclude(/obj\//)
+    sh &quot;#{NUNIT_EXE} #{tests} /nologo /xml=#{OUTPUT_PATH}/TestResults.xml&quot;
+  end
+  
+end
+</pre>
+
+<p>Now the good thing about this is that I don't think you need to know much (any? I know virtually none) Ruby to understand what is going on here, or even to make basic modifications to the tasks (although it might be a struggle if you haven't used build tools like <code>make</code> or </code>nant</code> before). But you can bring the full power of the language to bear when you need it. Let's have a quick step through the main parts of the file.</p>
+
+<p>The first line imports <code>rake/clean</code>, which lets us use <code>CLEAN.include(OUTPUT_PATH)</code> to tidy up for us. We've then got loads of constants to specify various paths: the location of .NET tools like <code>msbuild</code>, and the relative paths to NUnit, our source, and our output. Our <code>:default</code> task is set to run <code>clean</code>, then <code>build:all</code> (the =&gt; syntax translates to <i>depends on</i> in <code>make</code> terms, so to run the default task rake will make sure its dependencies are run).</p>
+
+<p>If we drop into the <code>:build</code> namespace, we have <code>:all</code>, <code>:compile</code> and <code>:test</code> tasks defined. To <code>:compile</code>, we use the wonderful <code>FileList</code> class built into rake to get all <code>*.sln</code> files in our source directory, then shell out to <code>msbuild</code> to take care of the hardwork of compiling everything. The <code>:test</code> task relies on convention, by finding all <code>*.Tests.dll</code> files and running them through NUnit. We also make sure that <code>:test</code> won't run until <code>:compile</code> has run by setting <code>:compile</code> as a dependency.</p>
+
+<p>Finally, our <code>:all</code> task compiles and tests the build.</p>
+
+<h2>Running our rake build</h2>
+
+<p>By dropping into our build directory from the command line, just typing <code>rake</code> will pickup our <code>rakefile.rb</code> and execute our default task, which will clean, compile and test our build. We can also run a task at a time, say <code>rake clean</code>, or <code>rake build:test</code> (the <code>:test</code> task is prefixed by <code>build</code> because of its namespace).</p>
+
+<p>There's obviously tonnes we could do to make this nicer (like using <a href="http://hasno.info/2008/1/6/building-net-projects-with-rake">Mark's .NET tasks</a>, and/or removing the hard-coded Debug configuration), but hopefully this gives people a quick way to start getting into rake and ruby for building .NET projects.</p>

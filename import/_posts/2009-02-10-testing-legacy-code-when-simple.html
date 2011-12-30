@@ -1,0 +1,300 @@
+---
+layout: "post"
+title: "Testing legacy code when simple threading's involved"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3076859047279344619"
+categories: ["tdd", "testing", "dev practices"]
+date: "2009-02-10T00:29:00.02+11:00"
+updated: "2009-02-10T00:54:15.945+11:00"
+---
+
+<p>A good friend and &quot;former colleague in (an) archaic dev team&quot; (his words :)) recently sent me a problem he was having testing some code he inherited. The code seemed to work during manual testing, but threw exceptions when being tested using NUnit under certain conditions. Let's look at a drastically modified example of the code:</p>
+
+<pre>
+[TestFixture]
+public class BigImportantClassFixture {
+  [Test]
+  public void CanGetKnownEmployee() {
+    var existingEmployeeId = Guid.Empty
+    var importantClass = new BigImportantClass();
+    var employee = importantClass.GetEmployee(existingEmployeeId);
+    Assert.That(employee.Name, Is.EqualTo(&quot;Bilbo&quot;));
+  }
+}
+
+public class BigImportantClass {
+  <b>public Employee GetEmployee(Guid employeeID) {
+    Employee employee = EmployeeRepository.GetEmployeeByID(employeeID);
+    Logging.AsyncLog(&quot;Called GetEmployeeByID&quot;);
+    return employee;
+  }</b>
+}
+
+public static class Logging {
+  public static void AsyncLog(string message) {            
+    <b>var thread = new Thread(Log);
+    thread.Start(message);</b>
+  }
+
+  private static void Log(object message) {
+    //Write line to log. This op may take some time
+    Thread.Sleep(1000);
+    Console.WriteLine(message);
+  }
+}
+</pre>
+
+<p>Can you guess the exception that cropped up? The unit test runner tears down the app domain it uses to run the fixtures when it is finished. Because the code spawns a new thread, this means that if that thread is still running it gets aborted as the app domain exits, so we get a <code>ThreadAbortException</code>. So how can we get this under test?</p>
+
+<h2>Questioning the approach</h2>
+<p>I think it would be remiss of us not to spend some time considering why we are using this approach. Is <code>GetEmployee()</code> called a lot and so needs to be fast? Will the added burden of spinning up another thread per call help, or will it hinder overall performance due to the increased load on the system? Would we be better off with a synchronous call? Do we even need logging here? Have we looked at using <a href="http://davybrion.com/blog/2008/05/adding-behavior-with-postsharp/">AOP for logging</a>? Can libraries like <a href="http://logging.apache.org/log4net/index.html">log4net</a> handle asynchronous logging for us? Or should we implement our own queue and have that serviced by threads that can work on processing the logs in batches? Should we be using background threads from the <code>ThreadPool</code>? Should we look at message queuing? Are static methods and opaque dependencies like this a work of pure evil? And if you were a tree, what tree would you be?</p>
+
+<p>These are all good questions to ask and something my mate is looking into (I think he's leaning toward the larch). For the rest of this post however, I'd like to concentrate on how we could get this code under test. The code currently seems to work, but we don't have automated tests covering it, so we'll try and keep code changes small to give us confidence we aren't breaking anything during the process. This means we'll try and avoid changes ripping out the dependencies and using constructor injection. <a href="http://www.xerxesb.com/2009/retrofitting-tests-do-whatever-necessary/">Once it's under test, we can worry about making it purdy</a> and move on to more complex refactorings, and maybe even change the whole logging implementation once we decide which approach to use.</p>
+
+<h2>Isolating the logging behaviour in  <code>GetEmployee()</code></h2>
+
+<p>Our <code>GetEmployee</code> method does two things: looks up an <code>Employee</code> and does some logging. We already have the beginning of a test for the employee lookup part, but the coupling to the logging functionality is causing some problems. It is also untested. Let's write a test that isolates the behaviour.</p>
+
+<pre>
+[Test]
+public void GetEmployeeCallIsLogged() {
+  var mockLogger = MockRepository.GenerateMock&lt;ILogger&gt;();
+  Logging.SetLogger(mockLogger);
+
+  var importantClass = new BigImportantClass();
+  importantClass.GetEmployee(Guid.Empty);
+
+  mockLogger.AssertWasCalled(mock =&gt; mock.AsyncLog(Arg&lt;String&gt;.Is.Anything));
+}
+</pre>
+
+<p>Normally I'd look at constructor injection for this sort of thing, but we're aiming for minimal modifications to the original code. Logging is also a bit of a special case &mdash; you potentially need it everywhere and so you may not want to explicitly put <code>ILogger</code> objects into every single object you have.</p>
+
+<p>To pass this test, we'll need to extract an <code>ILogger</code> interface from our static <code>Logger</code> class, and change the implementation to use a Singleton approach (so we can override the behaviour by changing the instance).</p>
+
+<pre>
+public interface ILogger {
+  void AsyncLog(string message);
+}
+
+public class Logging : ILogger {
+  <b>private static ILogger instance = new Logging();
+  public static void SetLogger(ILogger logger) { instance = logger; }</b>
+
+  public static void AsyncLog(string message) {            
+    <b>instance.AsyncLog(message);</b>
+  }
+
+  private static void Log(object message) {
+    //Write line to log. This op may take some time
+    Thread.Sleep(1000);
+    Console.WriteLine(message);
+  }
+
+  void ILogger.AsyncLog(string message) {
+    var thread = new Thread(Log);
+    thread.Start(message);
+  }
+}
+</pre>
+
+<p>This passes our test. Notice we've made virtually no changes to the pre-existing code and only a few minor additions. We've added a singleton instance and a trivial <code>SetLogger()</code> method, and moved the code previously in the static <code>AsyncLog()</code> method into the <code>ILogger.AsyncLog()</code> instance method, with the static methods delegating to the instance one. We haven't had to change the <code>GetEmployee()</code> method at all. Hopefully this means we haven't broken anything. A quick manual test verifies that everything is working as before.</p>
+
+<p>I'm a bit worried that we might replace the singleton instance with something evil during one test and inadvertently cause another test to break, but I guess that's a price of using singletons. At this point we just want to get the code under test before we go trying to make it all purdy. On the positive side, we can now test the employee lookup functionality independently of the logging, including testing that <code>GetEmployee()</code> invokes the logging call as required.</p>
+
+<h2>An integration test for logging</h2>
+<p>We've isolated our logging behaviour and tested it is called correctly from <code>GetEmployee()</code>, which means we can now write a test to make sure our logging works when it is called.</p>
+
+<pre>
+[TestFixture]
+public class LoggingFixture {
+  [Test]
+  public void AsyncLogShouldDoFunkyLoggingStuff() {
+    ILogger logging = new Logging();
+    logging.AsyncLog(&quot;some message&quot;);
+    Thread.Sleep(2000);
+    //AssertDesiredSideEffectOccurred();
+  }
+}
+</pre>
+
+<p>Because of our previous efforts we can work directly with a <code>Logging</code> instance, rather than through the static methods. We still have a problem though. We want to check that whatever effect <code>AsyncLog()</code> has occurred properly, but because it is called asynchronously we have to put in a hacky <code>Thread.Sleep()</code> to make sure it is done. There are a few problems with this approach. Firstly, how do we know 2000 ms is enough? We might have our test intermittently breaking, which is a huge no-no. Secondly, it will make our tests run slow.</p>
+
+<h2>Isolating our threading problem</h2>
+<p>We'd really like the option of using <code>Thread.Join()</code> or similar so our test can wait on the asynchronous operation to finish. But we currently don't have any way to access the threading part of the operation.</p>
+<p>One way to solve this problem is to implement the <a href="http://msdn.microsoft.com/en-us/magazine/cc163467.aspx">Asynchronous Programming Model</a>. This lets the operation to be called asynchronously and waited on using polling/spin loop, call back or wait handle. Unfortunately it also looks like quite a lot of work, and a large amount of change to make without tests.</p>
+
+<p>Another possible solution is to isolate the threading behaviour from the logging operation, just as we did for separating the employee lookup from the logging. Let's try that &mdash; we'll write a class that specialises in running a function in a new thread.</p>
+
+<pre>
+[TestFixture]
+public class ThreadDispatcherFixture {
+  [Test]
+  public void CanRunFunctionCall() {
+    var dispatcher = new ThreadDispatcher();
+    bool wasRun = false;
+    dispatcher.Dispach(() =&gt; wasRun = true);
+    Assert.That(wasRun);
+  }
+}
+
+public class ThreadDispatcher {
+  public void Dispach(Action function) {
+    function();
+  }
+}
+</pre>
+
+<p>This passes. Let's expand our test fixture, and try a naive implementation:</p>
+
+<pre>
+[Test]
+public void RunsFunctionFromDifferentThread() {
+  var dispatcher = new ThreadDispatcher();
+  int callingThreadId = Thread.CurrentThread.ManagedThreadId;
+  int dispatchedThreadId = -1;
+  dispatcher.Dispach(() =&gt; dispatchedThreadId = Thread.CurrentThread.ManagedThreadId);
+  Assert.That(dispatchedThreadId, Is.Not.EqualTo(callingThreadId));
+}
+//...
+public class ThreadDispatcher {
+  public void Dispach(Action function) {
+    var thread = new Thread(() =&gt; function());
+    thread.Start();
+  }
+}
+</pre>
+
+<p>This passes the new <code>RunsFunctionFromDifferentThread()</code> test, but luckily fails the original <code>CanRunFuctionCall()</code> test when run on my machine. I say luckily because it is timing dependent &mdash; the thread has not completed by the time the <code>Assert.That(wasRun)</code> executes. If you slip in a <code>Thread.Sleep(...)</code> for a few milliseconds you'll see both tests pass as the async thread starts to win our race condition.</p>
+
+<p>This is a really good illustration that test coverage does not equal correctness, nor is it an excuse to avoid thinking :). Given we've thought about the problem though, TDD can help lead us to a solution. We need to make sure our async thread has run before we call our assert, so let's ammend our tests to show this:</p>
+
+<pre>
+[Test]
+public void CanRunFunctionCall() {
+  var dispatcher = new ThreadDispatcher();
+  bool wasRun = false;            
+  var dispatchedThread = dispatcher.Dispach(() =&gt; wasRun = true);
+  <b>dispatchedThread.Join();</b>
+  Assert.That(wasRun);
+}
+[Test]
+public void RunsFunctionFromDifferentThread() {
+  var dispatcher = new ThreadDispatcher();
+  int callingThreadId = Thread.CurrentThread.ManagedThreadId;
+  int dispatchedThreadId = callingThreadId;
+  var dispatchedThread = dispatcher.Dispach(() =&gt; dispatchedThreadId = Thread.CurrentThread.ManagedThreadId);
+  <b>dispatchedThread.Join();</b>
+  Assert.That(dispatchedThreadId, Is.Not.EqualTo(callingThreadId));
+}
+</pre>
+
+<p>And a reliably passing implementation (I hope):</p>
+
+<pre>
+public <b>Thread</b> Dispach(Action function) {
+  var thread = new Thread(() =&gt; function());
+  thread.Start();
+  <b>return thread;</b>
+}
+</pre>
+
+<p>It may not be a good idea to pass a reference to the <code>Thread</code> back, so it might be neater to wrap the <code>Join()</code> functionality in a new class (with tests updated accordingly).</p>
+
+<pre>
+public class ThreadDispatcher {
+  public AsyncCall Dispach(Action function) {
+    var thread = new Thread(() =&gt; function());
+    thread.Start();
+    return new AsyncCall(thread);
+  }
+}
+
+public class AsyncCall {
+  private readonly Thread _thread;
+  public AsyncCall(Thread thread) { _thread = thread; }
+  public void WaitUntilCallFinishes() { _thread.Join(); }
+}
+</pre>
+
+<p>This is all new code, so we shouldn't have broken anything that was working in our original implementation.</p>
+
+<h2>Bringing logging and threading back together</h2>
+
+<p>Now we've separated logging and threading, we need to bring them back together so this thing actually works as required. Let's jump into our <code>LoggingFixture</code>:</p>
+
+<pre>
+[TestFixture]
+public class LoggingFixture {
+  [Test]
+  public void AsyncLogShouldDoFunkyLoggingStuff() {
+    ILogger logging = new Logging(new ThreadDispatcher());
+    logging.AsyncLog(&quot;some message&quot;);
+    Thread.Sleep(2000);
+    //AssertDesiredSideEffectOccurred();
+  }
+
+  [Test]
+  public void AsyncLogShouldUseThreadDispatcher() {
+    var dispatcher = MockRepository.GenerateMock&lt;ThreadDispatcher&gt;();
+    ILogger logging = new Logging(dispatcher);
+    logging.AsyncLog(&quot;some message&quot;);
+    dispatcher.AssertWasCalled(x =&gt; x.Dispach(null), options =&gt; options.IgnoreArguments());
+  }
+}
+
+public class Logging : ILogger {
+  private readonly ThreadDispatcher dispatcher;
+  private static ILogger instance = new Logging(new ThreadDispatcher());
+
+  <b>public Logging(ThreadDispatcher dispatcher) { this.dispatcher = dispatcher; }</b>
+
+  public static void SetLogger(ILogger logger) { instance = logger; }
+
+  public static void AsyncLog(string message) {            
+    instance.AsyncLog(message);
+  }
+
+  private static void Log(object message) {
+    //Write line to log. This op may take some time
+    Thread.Sleep(1000);
+    Console.WriteLine(message);
+  }
+
+  void ILogger.AsyncLog(string message) {
+    <b>dispatcher.Dispach(() =&gt; Log(message));</b>
+  }
+}
+</pre>
+
+<p>This has probably been the most radical change to our code. We've changed the implementation of <code>AsyncLog</code> to delegate the threading to our new <code>ThreadDispatcher</code>. We've also added some dependency injection, using the <code>Logging</code> constructor to pass in our <code>ThreadDispatcher</code>. Everything is green. Even better, we can now update the original <code>AsyncLogShouldDoFunkyLoggingStuff()</code> and test the logging behaviour in isolation.</p>
+
+<pre>
+[TestFixture]
+public class LoggingFixture {
+  private class FakeThreadDispatcher : ThreadDispatcher {
+    public override AsyncCall Dispach(Action function) {
+      function();
+      return new AsyncCall(null);
+    }
+  }
+  [Test]
+  public void AsyncLogShouldDoFunkyLoggingStuff() {
+    ILogger logging = new Logging(new FakeThreadDispatcher());
+    logging.AsyncLog(&quot;some message&quot;);
+    //No more Thread.Sleep(...) here. Our FakeThreadDispatcher will do a synchronous call.
+    //AssertDesiredSideEffectOccurred();
+  }
+  //...
+}
+</pre>
+
+<p>You could also do some fancy mockFu for this, but in this case I think it's easier to hand code a <code>FakeThreadDispatcher</code> (if changes to the base class cascade down to our fake and it starts getting painful we can switch a generated mock or stub).</p>
+
+<h2>Conclusion</h2>
+<p>Our <code>Logging</code> implementation only calls <code>Console.WriteLine()</code>, so for our <code>AssertDesiredSideEffectOccurred()</code> we would need to fake that out. We won't go that far down the rabbit hole though, as the real logging implementation would be probably do all kinds of exciting things that we could test. The point is that we can now test the logging in isolation from our threading. Our threading code is also tested, and we can test our original employee look up too (by setting a stub <code>ILogger</code> when testing  <code>BigImportantClass</code>).</p>
+
+<p>Best of all, the only really changes of any consequence we made to our original code is implementing a singleton <code>Logging</code> instance and extracting the thread launching code to a new class. So, from a unit testing point of view, we have gained a lot for very little risk.</p>
+
+<p>This was a very simple bunch of refactorings to perform. I hope that came across during the post, but sometimes these things don't translate well to post format. If that's the case then try picking up the code from the start of this post and go through the process of getting it under test.</p>
+
+<p>As always feel free to pick holes in this post and let me know via comment or email. Hope this helps!</p>

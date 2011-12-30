@@ -1,0 +1,52 @@
+---
+layout: "post"
+title: "Top-down vs. bottom-up design"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-702483270713934571"
+categories: ["imho", "tdd", "roundup", "dev practices"]
+date: "2008-05-27T12:39:00.0+10:00"
+updated: "2008-05-27T12:44:50.564+10:00"
+---
+
+<p>I've been having a think about top-down (a.k.a. outside-in) design during my recent <a href="http://davesquared.blogspot.com/2008/05/garden-race-pt-2-adding-multiple.html">iterative development exercise</a>. In the series I've been putting off testing from the client layer down, primarily because GUIs have a reputation for being hard to test and harder to test-drive, and I wanted to make some early, easy progress on the core logic of the game.</p>
+
+<p>I started to think that this approach might be a mistake. I'm dealing with the model that I <i>think</i> we'll need, not one demanded from the primary client of the model -- the GUI. <a href="http://www.lostechies.com/blogs/chad_myers/archive/2008/05/14/ping-pong-pairing-session-screencast-with-ben-scheirman.aspx">Chad</a> and <a href="http://flux88.com/ScreencastTestDrivingAnInventoryScreen.aspx">Ben</a> mentioned in their <a href="http://www.benscheirman.com/screencasts/tdd-inventory">recent screencast</a> that bottom-up implementation tended to lead to mistaken assumptions about infrastructure required by the top layers. I saw a <a href="http://groups.google.com/group/behaviordrivendevelopment/browse_thread/thread/329ee6604f56231b/edb191c2152a1572?hl=en#edb191c2152a1572">similar point made on the BDD mailing list by Pat Maddox</a>. Pat wrote (emphasis mine):</p>
+
+<blockquote>"I find an outside-in style of development to be very helpful...  
+It forces you to think of your objects at a high
+level, so <b>your design is driven by real need</b>, and then you apply your
+design skills as you go on.  <b>When I use a pure bottom-up style, I
+write more speculative code and go down the wrong path far more often
+than I'd like</b>.  That's not to say that it's a problem inherent with
+that style, but rather a problem that I've personally experienced, and
+have more or less solved by using an outside-in approach."</blockquote>
+
+<p>This is opinion is echoed in an <a href="http://tech.groups.yahoo.com/group/testdrivendevelopment/message/28244">unrelated post to the TDD mailing list by Olof Bjarnason</a>:</p>
+
+<blockquote>&quot;I've been using TDD [bottom-up] for 2 years now, and it's been mostly a _great_
+experience. The thing that bothers me most with &quot;classic TDD&quot; is that
+sometimes I build too much functionality in my classes, which isn't
+used in the end application after all. Even whole objects are wasted
+in the worst case.&quot;</blockquote>
+
+<p>The view here is that bottom-up design can lead to speculation and waste. By having a design driven directly by the overall, required behaviour, you only implement (and test) things that directly serve that behaviour. This can help eliminate speculative implementations of lower-level behaviour based on what you think the overall required behaviour will be.</p>
+
+<h2>Not so fast...</h2>
+<p>Sounds great! So what about inside-out / bottom-up / middle-out design? <a href="http://www.xprogramming.com/">Ron Jeffries</a> recently stated on the TDD mailing list that he <a href="http://tech.groups.yahoo.com/group/testdrivendevelopment/message/28250">generally prefers to start with the model</a> (unless the project is simply to build a viewer). Maybe there's a bit more to it?</p>
+
+<p>Digging further into <a href="http://tech.groups.yahoo.com/group/testdrivendevelopment/message/28243">that thread on the TDD list</a>, there are a number of great points of view on the topic. Some TDD-ists argue that bottom-up design lets you build in small, easy steps, and refactor your way to the required behaviour that you would otherwise start with in top-down design. Others state that this leads to waste -- writing code and tests that just get refactored away. Which resulted in a couple of great quotes on the difference between refactored code and waste:</p>
+
+<blockquote>&quot;I suppose we could also call the scaffold we use when
+constructing a large building as waste, or the safety
+harnesses as waste.&quot; -- <a href="http://tech.groups.yahoo.com/group/testdrivendevelopment/message/28260">John Roth to TDD list</a></blockquote>
+
+<blockquote>&quot;The analogy with scaffolding for a house is an excellent one -
+there is a lot of &quot;stuff&quot; constructed when building a house, *just* to
+support the construction - it is then discarded.&quot; -- <a href="http://tech.groups.yahoo.com/group/testdrivendevelopment/message/28274">Casey Charlton to TDD list</a></blockquote>
+
+<p>Top-down design can also lead to a <a href="http://codebetter.com/blogs/ian_cooper/archive/2008/02/04/classicist-vs-mockist-test-driven-development.aspx">&quot;mockist&quot; approach to TDD</a>, where you need to mock all the required dependencies to implement the high level behaviour. This isn't necessarily a bad thing, but over-reliance on mocking can <a href="http://codebetter.com/blogs/ian_cooper/archive/2007/12/19/mocks-and-the-dangers-of-overspecified-software.aspx">result in fragile tests</a>. Martin Fowler has a great article on the pros and cons of <a href="http://martinfowler.com/articles/mocksArentStubs.html">&quot;classic&quot; and &quot;mockist&quot; TDD</a>.</p>
+
+<h2>Enough rambling already!</h2>
+
+<p>While planning for part 3 of my <a href="http://davesquared.blogspot.com/2008/05/garden-race-series.html">recent development exercise</a> I was coming to the conclusion that top-down was the way to go. After looking into it some more I was reminded of a whole host of advantages of bottom-up design. Even more importantly it reminded me that <a href="http://en.wikipedia.org/wiki/No_Silver_Bullet">there is no silver bullet</a>, and there are times when either, or a mix of both, approaches are fine. All this started to sound familiar, so firing up Google I noticed that I had read something to this effect in <a href="http://codebetter.com/blogs/jeremy.miller/archive/2008/03/03/unit-testing-playing-tennis-and-the-lack-of-absolutes-in-tdd.aspx">Jeremy Miller's excellent (as usual) post on the topic</a> (search for "Bottom Up versus Top Down", although the whole post is worth reading).</p>
+
+<p>I think the most important conclusion I've reached during this ramble is that if you are working in iterations to deliver a complete slice of the application (top <i>and</i> bottom) then you're never going to go too far wrong. Any "waste" from a bottom-up approach will be minimal as you'll be working toward and implementing the top almost immediately. And you'll still end up with higher-level behaviour specified with unit tests. Likewise starting top-down you'll still get the advantages of designing in small steps, particularly as you drive down into the design.</p>

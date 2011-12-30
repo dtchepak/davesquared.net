@@ -1,0 +1,18 @@
+---
+layout: "post"
+title: "Disable theming for an empty ASPX"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8968751953913221813"
+categories: [".net"]
+date: "2008-05-21T16:21:00.0+10:00"
+updated: "2008-05-21T16:39:09.138+10:00"
+---
+
+<p>I recently added an ASPX page whose sole purpose in life is to redirect in various ways (yes, I could use a handler, no I didn't in this case). It had no content other than the usual <code>&lt;%@ Page ...%&gt;</code> declaration. No head, body, or html tag. I got the following error message:</p>
+
+<pre>Using themed css files requires a header control on the page. (e.g. &lt;head runat=&quot;server&quot; /&gt;).</pre>
+
+<p>So naturally I added <code>&lt;%@ Page <b>EnableTheming=&quot;false&quot;</b> ...%&gt;</code>, and ... got the same error. Bit of Googling later and found <a href="http://blogs.visoftinc.com/archive/2007/09/12/theme-error-when-themes-are-disabled.aspx">this post</a> from Damien White (which in turn references <a href="http://www.west-wind.com/WebLog/posts/4662.aspx">a Rick Strahl post</a>). End result is that <code>EnableTheming</code> seems a bit useless (at least for this case):</p>
+
+<pre>&lt;%@ Page Language=&quot;C#&quot; <b>Theme=&quot;&quot;</b> ... %&gt;</pre>
+
+<p>Setting <code>Theme</code> to nothing works, <code>EnableTheming=&quot;false&quot;</code> doesn't. Bit odd. I know this is old news, but given the trouble I had searching for a solution I thought an extra search result floating around wouldn't hurt anyone.</p>

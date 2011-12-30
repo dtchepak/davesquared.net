@@ -1,0 +1,12 @@
+---
+layout: "post"
+title: "Ubuntu packages for current software versions - getdeb.net"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1547353960411378117"
+categories: ["linux"]
+date: "2006-12-31T21:13:00+11:00"
+updated: "2007-10-04T14:33:49.08+10:00"
+---
+
+<p><a href="http://www.getdeb.net/">GetDeb.net</a>  aims to provide the current versions of common applications for older Ubuntu versions. This is similar to the backports project, but is not limited to software versions being bundled with future releases. At present getdeb.net just provides FTP/HTTP links to the DEB files (rather than as a repository). I think I'll just download the DEBs I want to a <a href="http://www.debian.org/doc/manuals/repository-howto/repository-howto">local repository</a> so I can install everything using apt-get. If an application gets backported then I can easily switch to the "official" version.</p>
+
+<p>My motivation for looking into packaging stuff is to try and upgrade the version of f-spot on my Ubuntu 6.10 (Edgy) system to version 0.3.0. To compile from the source I needed to uninstall the version packaged with the distribution, but unfortunately it has been packaged with a dependency on <a href="http://packages.ubuntulinux.org/edgy/metapackages/ubuntu-desktop">ubuntu-desktop</a>, and I don't think I want to remove that. GetDeb has a version packaged for Edgy though, so we'll see how it goes.</p>

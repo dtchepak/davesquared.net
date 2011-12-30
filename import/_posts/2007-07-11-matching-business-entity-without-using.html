@@ -1,0 +1,29 @@
+---
+layout: "post"
+title: "Matching a business entity without using the address book"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4948989191728713544"
+categories: ["sharepoint"]
+date: "2007-07-11T15:48:00.0+10:00"
+updated: "2008-05-01T09:04:07.749+10:00"
+---
+
+<p>In MOSS 2007 you can use Business Data Catalogs (BDCs) to expose business entities. For example, you can add a column type that&nbsp;lets you choose one of your company's products.</p> <p>I had a BDC file that *almost* worked. It let you choose a product using the address book, but would not match the product when it was entered in the text area. In turns out you need to specify that the FilterDescriptor on your finder method is UsedForDisambigution. Clear as mud right? An extract from the BDC XML is shown below:</p><pre>&lt;Method Name="GetTradeProducts"&gt;
+  &lt;FilterDescriptors&gt;
+    &lt;FilterDescriptor Type="Wildcard" Name="TradeName"&gt;
+      &lt;Properties&gt;
+        <strong>&lt;Property Name="UsedForDisambiguation" Type="System.Boolean"&gt;true&lt;/Property&gt;
+</strong>      &lt;/Properties&gt;
+    &lt;/FilterDescriptor&gt;
+  &lt;/FilterDescriptors&gt;
+  &lt;Parameters&gt;
+    &lt;Parameter Direction="In" Name="tradeNameStartsWith"&gt;
+      &lt;TypeDescriptor TypeName="System.String" Name="TradeName" AssociatedFilter="TradeName" /&gt;
+    &lt;/Parameter&gt;
+    &lt;Parameter Direction="Return" Name="TradeProducts"&gt;
+      ...
+    &lt;/Parameter&gt;
+  &lt;/Parameters&gt;
+  &lt;MethodInstances&gt;
+    &lt;MethodInstance Type="Finder" ReturnParameterName="TradeProducts" ReturnTypeDescriptorName="ArrayOfTradeProduct" ReturnTypeDescriptorLevel="0" Name="GetTradeProductsInstance" /&gt;
+  &lt;/MethodInstances&gt;
+  ...</pre>

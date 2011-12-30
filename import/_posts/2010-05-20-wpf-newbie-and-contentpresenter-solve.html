@@ -1,0 +1,61 @@
+---
+layout: "post"
+title: "WPF newbie and ContentPresenter solve the case of the disappearing content"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8071597925603038257"
+categories: ["wpf"]
+date: "2010-05-20T23:00:00.0+10:00"
+updated: "2010-05-20T23:02:17.205+10:00"
+---
+
+<p>This cost me a bit of time (and 9'59&quot; of our UX Designer's time) a few weeks back. My aim was very simple: write a WPF <code><a href="http://msdn.microsoft.com/en-us/magazine/cc163497.aspx">ControlTemplate</a></code> that I could apply to certain controls and decorate their existing content. &quot;Easy&quot;, thought WPF newbie, &quot;I'll use a <code>ContentPresenter</code>!&quot;</p>
+
+<p>My understanding of <code>ContentPresenter</code> at the time was that it dumps whatever is in the control's content into that section of the template. So if I have something like this:</p>
+
+<pre>
+&lt;Button Template=&quot;{StaticResource FancyTemplate}&quot;&gt;Hello&lt;/Button&gt;
+&lt;Button Template=&quot;{StaticResource FancyTemplate}&quot;&gt;World&lt;/Button&gt;
+</pre>
+
+<p>With this template in the resource dictionary (except preferably something pretty):</p>
+
+<pre>
+&lt;ControlTemplate x:Key=&quot;FancyTemplate&quot;&gt;            
+    &lt;Grid Background=&quot;{StaticResource FancyBackground}&quot; Margin=&quot;10&quot;&gt;
+        &lt;ContentPresenter /&gt;
+    &lt;/Grid&gt;            
+&lt;/ControlTemplate&gt;
+</pre>
+
+<p>I expected to see something like this:</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S_UviA2KKfI/AAAAAAAABn0/c0uNWRRfcnM/s1600/ContentTemplate_Buttons.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://4.bp.blogspot.com/_wEsHWMWy090/S_UviA2KKfI/AAAAAAAABn0/c0uNWRRfcnM/s1600/ContentTemplate_Buttons.png" /></a></div>
+
+<p>But got this:</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://3.bp.blogspot.com/_wEsHWMWy090/S_UviS5G55I/AAAAAAAABn4/n4DKRLNDqYA/s1600/ContentTemplate_Buttons_Fail.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://3.bp.blogspot.com/_wEsHWMWy090/S_UviS5G55I/AAAAAAAABn4/n4DKRLNDqYA/s1600/ContentTemplate_Buttons_Fail.png" /></a></div>
+
+<p>That's right -- nothing. Nada. Zilch. No content. Not so much as a vague hint of the ghastly template I so thoughtlessly dumped into this post.</p>
+
+<p>So it turns out that <code>ContentPresenter</code> needs a little more information to be able to do its work. The easiest way to fix this was to set the <code>TargetType</code> on the template so our <code>ContentPresenter</code> knows what &quot;content&quot; is:</p>
+
+<pre>
+&lt;ControlTemplate x:Key=&quot;FancyTemplate&quot; <b>TargetType=&quot;Button&quot;</b>&gt;            
+    &lt;Grid Background=&quot;{StaticResource FancyBackground}&quot; Margin=&quot;10&quot;&gt;
+        &lt;ContentPresenter /&gt;
+    &lt;/Grid&gt;            
+&lt;/ControlTemplate&gt;
+</pre>
+
+<p>The other option is to explicitly specify the property from which the <code>ContentPresenter</code> will get the content, using <code>TemplateBinding</code>:</p>
+
+<pre>
+&lt;ControlTemplate x:Key=&quot;FancyTemplate&quot;&gt;            
+    &lt;Grid Background=&quot;{StaticResource FancyBackground}&quot; Margin=&quot;10&quot;&gt;
+        &lt;ContentPresenter <b>Content=&quot;{TemplateBinding Property=ContentControl.Content}&quot</b> ;/&gt;
+    &lt;/Grid&gt;            
+&lt;/ControlTemplate&gt;
+</pre>
+
+<p>Both of these options work fine. Hope this saves someone a bit of time.</p>

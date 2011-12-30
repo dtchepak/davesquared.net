@@ -1,0 +1,140 @@
+---
+layout: "post"
+title: "Messing around with ADO.NET Entity Framework Beta 3"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1705470793956877654"
+categories: ["orm", ".net"]
+date: "2008-01-03T13:56:00+11:00"
+updated: "2008-05-01T09:04:07.725+10:00"
+---
+
+<p><em>This post is part of a small series on .NET ORM tools. You
+can find the rest of them <a href=
+"http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html">
+here</a>.</em></p>
+<p>While I was checking out a number of .NET ORM tools, I thought
+I'd work through the exercise using the ORM-related bits from the <a href=
+"http://blogs.msdn.com/adonet/archive/2007/12/05/ado-net-entity-framework-beta-3-rleased.aspx">
+ADO.NET Entity Framework Beta 3</a> and the <a href=
+"http://blogs.msdn.com/adonet/archive/2007/12/06/entity-designer-ctp2.aspx">
+Entity Designer CTP2</a>.</p>
+<h2>Scene refresher</h2>
+<p>I have a table of suppliers, and a table of states (or
+provinces, territories, prefectures etc.). Both suppliers and
+states have names, which are stored as strings/varchars, and IDs,
+which are stored as Guids/uniqueidentifiers. Each supplier can
+service many states. So we have a simple many-to-many relationship
+between the two main entities. It looks a bit like this:</p>
+<p><a href=
+"http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png">
+<img id="BLOGGER_PHOTO_ID_5145922358406504498" style=
+"cursor: pointer" alt="" src=
+"http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png"
+border="0" name="BLOGGER_PHOTO_ID_5145922358406504498" /></a></p>
+<p>I am using Aussie states for my tests, so I have populated the
+State table with the following names: NSW, VIC, QLD, TAS, SA, WA,
+ACT, NT.</p>
+<h2>Setting up Entity Framework</h2>
+<p>I created a new C# class library project, then added an ADO.NET
+Entity Data Model file (.edmx) as a project item, which I named
+WorkshopModel.edmx. Adding the project item runs a wizard that 
+lets you choose the connection, and then select which database 
+items to include in the model (including tables, views and SPs):</p>
+<p><a href=
+"http://4.bp.blogspot.com/_wEsHWMWy090/R3wx3uaPYFI/AAAAAAAAAf8/bsQcXKs8N0g/s1600-h/EntityFrameworkModelCreatorScreen.png">
+<img style="cursor: pointer;" src=
+"http://4.bp.blogspot.com/_wEsHWMWy090/R3wx3uaPYFI/AAAAAAAAAf8/bsQcXKs8N0g/s400/EntityFrameworkModelCreatorScreen.png"
+alt="" id="BLOGGER_PHOTO_ID_5151046907225661522" border="0" name=
+"BLOGGER_PHOTO_ID_5151046907225661522" /></a></p>
+<p>Once the wizard completes the model is opened in the designer. Note the recognition of the many-to-many relationship between suppliers and states. I edited to default association name from Supplier_StatesServiced to StatesServiced to make it a bit easier to read.</p>
+<p><a href="http://1.bp.blogspot.com/_wEsHWMWy090/R3wx3-aPYGI/AAAAAAAAAgE/l8o_Kf3SBH8/s1600-h/EntityFrameworkModelDesignerScreen.png"><img style="cursor: pointer;" src="http://1.bp.blogspot.com/_wEsHWMWy090/R3wx3-aPYGI/AAAAAAAAAgE/l8o_Kf3SBH8/s400/EntityFrameworkModelDesignerScreen.png" alt="" id="BLOGGER_PHOTO_ID_5151046911520628834" border="0" /></a></p>
+
+<p> The designer provides access to loads of properties for the model, so it is possible that some of the code I am going to write further on could be simplified by tweaking the model. At this stage it feels very much like a WYSIWYG way of generating an NHibernate-style mapping file and accompanying entity classes. The designer generates a WorkshopData.Designer.cs file from my WorkshopData.edmx, which includes definitions of the Entity Framework-based classes.</p>
+
+<h2>Populating the database</h2>
+<p>As per my previous posts, I'll use a test fixture to run the
+remainder of the code. Here is the method used to create a supplier
+and map the states it services:</p>
+<pre>
+private static void createSupplier(String name, String[] statesServiced) {
+  using (WorkshopEntities entityModel = new WorkshopEntities()) {
+    Supplier supplier = Supplier.CreateSupplier(Guid.NewGuid(), name);
+    foreach (String stateName in statesServiced) {
+      supplier.State.Add(entityModel.State.Where(s =&gt; s.Name == stateName).First());
+    }
+    entityModel.SaveChanges();
+  } 
+}</pre>
+<p>The <code>WorkshopEntities</code> class gives us access to the relevant Entity Framework bits (it derives from <class>System.Data.Objects.ObjectContext</class>). The designer has generated a static <code>Supplier.CreateSupplier(...)</code> method, but I couldn't find a nice way of adding all the relevant states at once. I would have loved to do something like this:</p>
+<pre>
+List&lt;State&gt; states = (from state in entityModel.State
+            where statesServiced.Contains(state.Name)
+            select state).ToList();
+states.ForEach(state =&gt; supplier.State.Add(state));
+</pre>
+<p>But this gave me an exception:</p>
+<blockquote>
+EntityFrameworkWorkshop.EntityFrameworkFixture.DatabaseSetup : System.NotSupportedException : The 'Boolean Contains[String](System.Collections.Generic.IEnumerable`1[System.String], System.String)' method is not recognized by LINQ to Entities, and cannot be translated into a store expression.
+</blockquote>
+<p>The Entity Framework (as of this release) cannot map the <code>Contains</code> method to <a href="http://blogs.msdn.com/adonet/archive/2007/05/30/entitysql.aspx">Entity SQL</a>. The similar <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-linqtosql.html">LINQ to SQL query</a> works fine. The difference is that the LINQ to SQL provider is mapping direct to TSQL, whereas the LINQ to Entities provider is mapping to Entity SQL (I think, please correct me if I'm wrong), which needs to work over a variety of sources (not just relational databases). I'm assuming it's tougher to implement something that works over all sources than simply targeting TSQL, but maybe this is just because we aren't in RTM yet.</p>
+
+<p>I had a similar problem when I wanted to write <code>entityModel.State.Where(s =&gt; s.Name == stateName).Single()</code>, where I was told that it wouldn't map Single(), but that I might like to try First() instead. Which I did, and it all worked fine. There are a few more comments about this kind of thing <a href="http://www.msdner.com/dev-archive/209/153-533-2095640.shtm">here</a>, as well as a list of <a href="http://msdn2.microsoft.com/en-us/library/bb738550.aspx">supported and unsupported methods on MSDN</a>.</p>
+
+<p>Still, at least we have a nice recognition of the relationship between suppliers and states, which was a big drawback with the <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-linqtosql.html">LINQ to SQL example</a>. We'll then run the code below to populate the database with our test data:</p>
+
+<pre>createSupplier(&quot;Dave^2 Quality Tea&quot;, new string[] { &quot;NSW&quot;, &quot;VIC&quot; });
+createSupplier(&quot;ORMs'R'Us&quot;, new string[] { &quot;NSW&quot; });
+createSupplier(&quot;Lousy Example&quot;, new string[] { &quot;TAS&quot;, &quot;VIC&quot; });
+createSupplier(&quot;Bridge Sellers&quot;, new string[] { &quot;QLD&quot; });</pre>
+
+<h2>Querying the data</h2>
+<p>I'm going to favour using LINQ to Entities for querying in these examples, rather than Entity SQL. Similarly to NHibernate, which has HQL (Hibernate Query Language), Entity Framework can use a SQL-like language to query the domain objects. This gives both tools a lot of query power, at the cost of embedding logic in strings that aren't checked by the compiler and that generally won't work with refactoring tools. I used the ICriteria approach for strongly-typed queries in the <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">NHibernate example</a>, so I'll use LINQ to Entities for this one.</p>
+
+<p>I'll quickly run through the first two simple queries I've been using in the previous posts, first getting all suppliers and then suppliers that have an &quot;s&quot; in their name:</p>
+
+<pre>
+[Test]
+public void Should_be_able_to_get_all_suppliers() {
+  using (WorkshopEntities entityModel = new WorkshopEntities()) {
+    var suppliers = from supplier in entityModel.Supplier select supplier;
+    Assert.That(suppliers.Count(), Is.EqualTo(4));
+  }
+}
+[Test]
+public void Should_be_able_to_get_all_suppliers_with_s_in_their_name() {
+  using (WorkshopEntities entityModel = new WorkshopEntities())   {
+    var suppliers = from supplier in entityModel.Supplier
+            where supplier.Name.ToLower().Contains(&quot;s&quot;)
+            select supplier;
+    Assert.That(suppliers.Count(), Is.EqualTo(3));
+  }
+}
+</pre>
+
+<p>And here's the code to get data over the supplier-state relationship, retrieving all suppliers that service NSW:</p>
+<pre>
+[Test]
+public void Should_be_able_get_all_suppliers_that_service_NSW() {
+  using (WorkshopEntities entityModel = new WorkshopEntities())   {
+    var suppliers = from supplier in entityModel.Supplier
+            where supplier.State.Any(state =&gt; state.Name == &quot;NSW&quot;)
+            select supplier;
+    Assert.That(suppliers.Count(), Is.EqualTo(2));
+  }
+}
+</pre>
+
+<p>This is much nicer than the LINQ to SQL version, which required explicitly joining over the relationship:</p>
+<pre>
+var suppliers = from supplier in db.Suppliers
+        join servicedState in db.Supplier_StatesServiceds 
+          on supplier.SupplierId 
+          equals servicedState.SupplierId
+        where servicedState.State.Name == &quot;NSW&quot;
+        select supplier;
+</pre>
+
+<h2>Vague semblance of a conclusion</h2>
+
+<p>We've only really looked at the ORM side of the Entity Framework in this example, and it definitely seems very capable in this regard (at least for this simple example), but as noted by David Laribee, <a href="http://laribee.com/blog/2007/03/17/linq-to-entities-vs-nhibernate/">ORM is a very small part of the Entity Framework</a>. It's main potential is in querying across a model that incorporates different data sources and services (say, different databases, XML sources etc), which is definitely an exciting aim.</p>
+
+<p>The only real issue I had using the tool were the unmapped methods, but this was easy to work around. I think the real test of the tool will be how much you can get into the Entity Data Model and how easy it is to work with. Earlier releases faced <a href="http://codebetter.com/blogs/jeremy.miller/archive/2007/03/19/MVP-Summit-Recapped_3A00_-Linq-for-Entities_2C00_-MonoRail_2C00_-and-Shameless-Name-Dropping.aspx">some criticisms</a> regarding persistance ignorance and the fact you can't use POCOs for entities, but I believe some of the issues <a href="http://blogs.msdn.com/dsimmons/archive/2007/09/26/ef-persistence-ignorance-recap.aspx">are being addressed</a> (thanks to <a href="http://davesquared.blogspot.com/2008/01/messing-around-with-adonet-entity.html#c4674816261060793599">Tom</a> for the link) by the <a href="http://blogs.msdn.com/adonet/default.aspx">ADO.NET team</a> based on the feedback they have received.</p>

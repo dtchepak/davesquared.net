@@ -1,0 +1,291 @@
+---
+layout: "post"
+title: "Favour test driving logic over data"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-9056601603847630899"
+categories: ["imho", "featured", "tdd", "dev practices"]
+date: "2009-11-04T10:07:00.0+11:00"
+updated: "2009-11-27T21:30:06.677+11:00"
+---
+
+<div class="note"><b>Warning:</b> this post (and this blog as a whole) contains the opinions of someone who does not know what they are doing. I'm a novice at TDD, and while the advice in this post seems to have helped me, following it blindly may completely wreck your way of developing. I'm posting it more so people can take a critical look at it, and after careful consideration can choose to ignore or adopt any of it they see fit. We now return you to your regular, rambling blog post.</div>
+
+<p>It's taken me a long time to figure out this simple guideline. Your mileage may vary, but since I started using this guideline I've found TDD much easier and more effective.</p>
+
+<blockquote>&quot;Favour test driving logic over data&quot;</blockquote>
+
+<p> When given the option, I've found test driving the logic of the SUT, rather than driving out design by writing tests for various permutations of data, guides me towards a nice, flexible design and gives me some robust tests. When I focus on testing the logic of the SUT, I am really getting to the heart of my SUT's single responsibility, and this helps give feedback on the design. When I build up a design using data-specific tests I've found I end up focussing more on driving implementation (rather than the design), and I end up with messy and fragile tests.</p>
+
+<p>So what do I mean by data-based tests? You've probably seen this style of testing in almost every introductory TDD example out there. We start with an empty string, handle one input, handle multiple inputs, handle edge cases, handle exceptional cases etc. Now don't get me wrong -- I'm not saying this is bad. I'm just saying that if I've got an option I'll defer this kind of unit testing for as long as possible, preferring to unit test the logic of my class as explicitly as possible. This means that the classes that perform the actual grunt work of the application are at the very bottom, most concrete, and most specific parts of the design.</p>
+
+<h2>Cue long-winded example...</h2>
+
+<p>You can see the indirect application of this guideline in my recent <a href="http://www.davesquared.net/search/label/*Calculator%20TDD">Calculator Kata attempts</a>. The <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">first attempt</a> uses a data-based approach, while the <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">second attempt</a> uses a more behavioural approach. Rather than wading through that long and tedious series, let's take a look at this idea using a more focussed example (in a single long and tedious post ;)). Let's say we want to generate a filename that we're going to use to save some results. The file name needs to be based on the mode used and the date. We'll use an abbreviated form of the mode for the filename, and maybe just include the year from the date, and then add a ".txt" extension. Something like &quot;MD_2009.txt&quot;. </p>
+
+<h2>Using data-based tests for a file name generator</h2>
+
+<p>One way to start test driving this code is to start writing a code for a particular case, say, when we use <code>Mode.Gherkin</code> sometime in 2009. We could then test the same mode in 2007 and make sure the file name is still generated properly. We can then add a test for another mode and make sure that the mode abbreviation is correct. We could do a few permutations of this, then write a test for the exceptional case where we are given an unrecognised mode. Let's see some tests:</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class FileNameGeneratorFixture {
+    private FileNameGenerator _generator;
+    
+    [SetUp]
+    public void SetUp() { _generator = new FileNameGenerator(); }
+
+    private void AssertModeAndDateGiveExpectedFileName(string expectedFileName, Mode mode, DateTime date) {
+        var actualFileName = _generator.GetFileName(mode, date);
+        Assert.AreEqual(expectedFileName, actualFileName);
+    }
+
+    [Test]
+    public void ShouldGenerateFileNameForGherkinModeIn2009() {
+        var expectedFileName = &quot;GK_2009.txt&quot;;
+        AssertModeAndDateGiveExpectedFileName(expectedFileName, Mode.Gherkin, new DateTime(2009, 1, 1));
+    }
+
+    [Test]
+    public void ShouldGenerateFileNameForGherkinModeIn2007() {
+        var expectedFileName = &quot;GK_2007.txt&quot;;
+        AssertModeAndDateGiveExpectedFileName(expectedFileName, Mode.Gherkin, new DateTime(2007, 1, 1));
+    }
+
+    [Test]
+    public void ShouldGenerateFileNameForSnebel() {
+        var expectedFileName = &quot;SN_2007.txt&quot;;
+        AssertModeAndDateGiveExpectedFileName(expectedFileName, Mode.Snerbel, new DateTime(2007, 1, 1));
+    }
+
+    /*... snip some tests for each mode. We may not have to test that it uses the right year for each mode, as we know the logic is the same... /*
+    
+    [Test]
+    public void ShouldThrowAnExceptionOnUnrecognisedMode() {
+        var unrecognisedMode = (Mode) 123;
+        Assert.Throws&lt;ArgumentOutOfRangeException&gt;(() =&gt; _generator.GetFileName(unrecognisedMode, new DateTime()));
+    }
+}
+</pre>
+
+<p>This encourages an implementation that looks a bit like this:</p>
+
+<pre class="brush:csharp">
+public class FileNameGenerator {
+    public string GetFileName(Mode mode, DateTime dateTime) {
+        return GetModePrefix(mode) + &quot;_&quot; + GetYear(dateTime) + &quot;.txt&quot;;
+    }
+
+    private int GetYear(DateTime dateTime) {
+        return dateTime.Year;
+    }
+
+    private string GetModePrefix(Mode mode) {
+        switch (mode) {
+            case Mode.Gherkin: return &quot;GK&quot;;
+            case Mode.Flebel: return &quot;FL&quot;;
+            case Mode.Snerbel: return &quot;SN&quot;;
+            default: throw new ArgumentOutOfRangeException(&quot;mode&quot;);
+        }
+    }
+}
+</pre>
+
+<h2>What is this class really doing?</h2>
+
+<p>In this case our data-based tests are dancing around the real intention and logic of the SUT. The actual implementation says it quite clearly: <code>return GetModePrefix(mode) + &quot;_&quot; + GetYear(dateTime) + &quot;.txt&quot;;</code>. This is the real logic we should be testing. To do so we'll need to isolate each bit of functionality into its own class. Let's look at how we can refactor to this, but we could easily test drive it that way to begin with, or guide our refactoring with new tests.</p>
+
+<p>As an aside, you'll notice that our tests are giving us some signals that not all is well. We need to write basically the same test for each new mode we add  (yes, we could use <code>[RowTest]</code> or whatever equivalent your testing framework has, but the point is the same). The fact we can't isolate the date formatting properly and so are only testing it with one mode is also a bit concerning. We know our current implementation can be tested using a single mode, but when that implementation needs to change we might have to update a whole lot of tests. This ickiness is a sign we've got some design problems, which in this case are <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">OCP and SRP</a> violations.</p>
+
+<h2>Introducing dependencies</h2>
+
+<p>We have the <code>GetModePrefix()</code> and <code>GetYear()</code> methods on our <code>FileNameGenerator</code> class. The outputs of these functions change based on the data they are given, but the overall logic we are interested in is how our SUT uses these values, irrespective of what data is actually provided. Let's move these two methods to new classes and use them as dependencies for our <code>FileNameGenerator</code>. We can then test our SUT's logic in isolation.</p>
+
+<p>For our first step, let's create empty implementations of our dependencies for our <code>FileNameGenerator</code>. For now we'll just instantiate them in a default constructor so our existing tests won't break by changing constructor signatures.</p>
+
+<pre class="brush:csharp">
+//In FileNameGenerator.cs
+private readonly ModeFormatter _modeFormatter;
+private readonly DateFormatter _dateFormatter;
+
+public FileNameGenerator() {
+    _modeFormatter = new ModeFormatter();
+    _dateFormatter = new DateFormatter();
+}
+
+//Empty classes in separate files:
+public class ModeFormatter {}
+public clas DateFormatter {}
+</pre>
+
+<p>Now we want to move our private <code>GetYear()</code> and <code>GetModePrefix()</code> methods into our new classes. We'll then update the old private methods to delegate to the new methods on our dependencies. We end up with something like this:</p>
+
+<pre class="brush:csharp">
+public class FileNameGenerator {
+    private readonly ModeFormatter _modeFormatter;
+    private readonly DateFormatter _dateFormatter;
+
+    /* ... snip to conserve precious pixels ... */
+
+    private int GetYear(DateTime dateTime) {
+        //Copied the body of this method to dependency, and delegate to that...
+        return _dateFormatter.GetYear(dateTime);
+    }
+
+    private string GetModePrefix(Mode mode) {
+        //Same thing here...
+        return _modeFormatter.GetModePrefix(mode);
+    }
+}
+
+public class ModeFormatter {
+    public string GetModePrefix(Mode mode) {
+        switch (mode) {
+            case Mode.Gherkin: return "GK";
+            case Mode.Flebel: return "FL";
+            case Mode.Snerbel: return "SN";
+            default: throw new ArgumentOutOfRangeException("mode");
+        }
+    }
+}
+public class DateFormatter {
+    public int GetYear(DateTime dateTime) {
+        return dateTime.Year;
+    }    
+}
+</pre>
+
+<p>We can run our tests now and check that they all still pass. And they do, so now we can remove the private methods and call the dependencies directly. Our <code>FileNameGenerator</code> now looks nice and simple:</p>
+
+<pre class="brush:csharp">
+public string GetFileName(Mode mode, DateTime dateTime) {
+    return _modeFormatter.GetModePrefix(mode) + "_" + _dateFormatter.GetYear(dateTime) + ".txt"
+}
+</pre>
+
+<h2>Testing logic over testing data</h2>
+
+<p>We now have some code that, according to our unit tests, is doing exactly what the old code did, but has pushed out the bits of behaviour that change as the data changes into some dependencies. This has left our SUT with logic that we can test in isolation from the data. Now writing these tests is going to be a funny sort of refactoring where our production code will be testing our test code. Our test code currently passes when run against our production code, and after changing the test code it should still pass.</p>
+
+<p>First thing we want to do is fake out the responses from our dependencies so we remove the data-related variation. There are a few ways to do this in our beloved, statically typed little language, but one of the easiest that has some nice design implications, but at the cost of a bit more (trivial) code, is to extract interfaces for the dependencies. This way we have a guaranteed separated of logic from the implementation of the dependencies. I'll just point my refactoring tool of choice at the <code>ModeFormatter</code> and <code>DateFormatter</code> and extract interfaces, but you can write the interfaces manually without any trouble:</p>
+
+<pre class="brush:csharp">
+public interface IModeFormatter {
+    string GetModePrefix(Mode mode);
+}
+public interface IDateFormatter {
+    int GetYear(DateTime dateTime);
+}
+</pre>
+
+
+<p>We'll also provide an additional constructor to <code>FileNameGenerator</code> to allow us to inject dependencies as required. This will help us to test the logic of the class, but also gives us a handy way to change the class' behaviour by giving it different dependencies. (Cue <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">Open Closed Principle</a> reference.)</p>
+
+<pre class="brush:csharp">
+public class FileNameGenerator {
+    private readonly IModeFormatter _modeFormatter;
+    private readonly IDateFormatter _dateFormatter;
+
+    public FileNameGenerator(IModeFormatter modeFormatter, IDateFormatter dateFormatter) {
+        _modeFormatter = modeFormatter;
+        _dateFormatter = dateFormatter;
+    }
+
+    public FileNameGenerator() : this(new ModeFormatter(), new DateFormatter()) {}
+ /* ... snip ... */
+} 
+</pre>
+
+<p>I've left the default constructor in at this stage and just chained it to the new constructor. That way we can still run our tests and code without further changes. (This is also referred to as "Poor Man's Dependency Injection", probably because it is commonly employed when we can't afford one of the great, free DI containers in the OSS market. :P)</p>
+
+<p>Finally, we're in a position to write some logic-based tests. In fact, we only really need one: </p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class FileNameGeneratorFixture {
+    private FileNameGenerator _generator;
+    private Mode mode;
+    private string modePrefix;
+    private DateTime date;
+    private int year;
+    
+    [SetUp]
+    public void SetUp() {
+        var modeFormatter = MockRepository.GenerateStub&lt;IModeFormatter&gt;();
+        var dateFormatter = MockRepository.GenerateStub&lt;IDateFormatter&gt;();
+
+        mode = Mode.Snerbel;
+        modePrefix = &quot;MODE&quot;;
+        modeFormatter.Stub(x =&gt; x.GetModePrefix(mode)).Return(modePrefix);
+
+        date = new DateTime();
+        year = 1234;
+        dateFormatter.Stub(x =&gt; x.GetYear(date)).Return(year);
+
+        _generator = new FileNameGenerator(modeFormatter, dateFormatter);    
+    }
+
+    [Test]
+    public void ShouldGenerateFileNameUsingModePrefixAndYear() {
+        var result = _generator.GetFileName(mode, date);
+        Assert.That(result, Is.EqualTo(modePrefix + &quot;_&quot; + year + &quot;.txt&quot;));
+    }
+}
+</pre>
+
+<p>Normally I <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">use a style that is a bit easier to read</a>, but as far as a basic refactoring goes this reads pretty clear to me. We are now testing <b>exactly</b> what we expect our class to do. But what about all the other tests we had? Well, we simply move those to new fixtures testing the implementations of our dependencies. These will still be data-based tests, but we can simplify the cases and number of tests as we don't need to deal with combinations of data:</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public class ModeFormatterFixture {
+    private ModeFormatter _formatter;
+    
+    [SetUp]
+    public void SetUp() {
+        _formatter = new ModeFormatter();
+    }
+
+    [Test]
+    [TestCase(Mode.Flebel, &quot;FL&quot;)]
+    [TestCase(Mode.Snerbel, &quot;SN&quot;)]
+    [TestCase(Mode.Gherkin, &quot;GK&quot;)]
+    public void PrefixForMode(Mode mode, string expectedPrefix) {
+        Assert.That(_formatter.GetModePrefix(mode), Is.EqualTo(expectedPrefix));
+    }
+
+    [Test]
+    public void ShouldThrowAnExceptionOnUnrecognisedMode() {
+        var unrecognisedMode = (Mode)123;
+        Assert.Throws&lt;ArgumentOutOfRangeException&gt;(() =&gt; _formatter.GetModePrefix(unrecognisedMode));
+    }
+}
+
+[TestFixture]
+public class DateFormatterFixture {
+    [Test]
+    public void ShouldReturnYearFromDate() {
+        var formatter = new DateFormatter();
+        var date = new DateTime(2009, 1, 1);
+        Assert.That(formatter.GetYear(date), Is.EqualTo(2009));
+    }
+}
+</pre>
+
+<h2>What have we achieved?</h2>
+
+<p>We now have the same coverage as we had before, but we aren't trying to test all the different combinations of data, just the basic logic of each class. If we want to add a mode, we can do so without touching our <code>FileNameGenerator</code> or its tests. We also don't have any need to check that the filenames are generated properly when given different dates -- those responsibilities are completely separate. If you extrapolate this to more complex examples, you get code that is easier to change without worrying about breaking loads of tests. </p>
+
+<h2>When we are stuck with testing data...</h2>
+
+<p>You'll notice our data-specific tests now reside at the bottom layer of our application. Generally as we move from less abstract to more concrete we start having to make compromises for reality, and this is where we need to drop back to data-based tests. And that's fine -- if we keep these parts of the application at the bottom, and the code above is isolated from the implementation via interfaces, then we won't end up depending on the data and so our code will stay easy to change.</p>
+
+<p>Data-based tests can be good candidates for customer-facing / acceptance tests. Our customers will be the ones most likely to care about what prefixes are used for each mode, and having it in a format they can read, and possibly change, can be helpful in getting the requirements correct. When our data-specific code is kept isolated these tests can be very easy to write.</p>
+
+<p>A complementary technique I've found useful for separating logic from variable data is to pass in variable data as a configuration detail. I've found it is very easy to fall into testing data combinations while implementing domain/business rules by inadvertently coupling the implementation of the rule to the way that rule is processed. In this case we can separate out the logic of finding the right rule and executing it, and then inject the required collection of rules into our class which we can test independently. (See the <a href="http://en.wikipedia.org/wiki/Specification_pattern">Specification Pattern</a> for an example of how to do this.)</p>
+
+<p>Our <code>ModeFormatter</code> could be a possible candidate for this kind of approach. Rather than having our data-based test for each prefix we could interate over an enumerable of rules that map modes to prefixes, especially if the rules became more complex (for example, if <code>Mode</code> became a <code>[Flags]</code> enum). We could then test that our formatter picks the correct formatting specification and applies it. The mapping itself we may decide not to test, or we could rely on an acceptance test, or we could just write unit tests at that low level of abstraction knowing the code is isolated properly.</p>
+
+<h2>Conclusion</h2>
+<p>This may seem like a silly little example, but looking back over code I've test driven over the last 12 months I've found data-based testing like this has been one of my major sources of troubles, and it's surprisingly easy trap to fall into when you're not keeping an eye out for it. I think the more technical correct expression of this guideline is in terms of SRP, OCP, and Tell Don't Ask, but for me at least the basic approach of preferring test driving logic over data is easy to apply and a pretty easy smell to detect when you're looking out for it.</p>
+
+<p>Next time you find yourself writing tests for a whole lot of combinations of inputs to the one behaviour, have a think about your current level of abstraction, and whether you may be better off isolating the logic from the data variability.</p>
+
+<p>As always, I'd love to hear your thoughts, so please feel free to leave a comment or email me. :)</p>

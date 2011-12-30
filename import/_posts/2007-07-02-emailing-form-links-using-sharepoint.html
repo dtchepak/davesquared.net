@@ -1,0 +1,10 @@
+---
+layout: "post"
+title: "Emailing form links using SharePoint Designer"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3763892970801358049"
+categories: ["sharepoint"]
+date: "2007-07-02T16:08:00.0+10:00"
+updated: "2008-05-01T09:04:07.753+10:00"
+---
+
+<p>It is surprisingly difficult to email a link to a relevant input form in a SharePoint Designer workflow. There is no built in property, not even a nice way of getting server name/domain. The only option I have found is to build up the string.</p> <p>I have tended to put an "Initialise variables" task as the first step in my workflow, then use the <a href="http://blogs.3sharp.com/Blog/davidg/archive/2007/02/28/2979.aspx">Build Dynamic String</a> action. I can then use this dynamic string in my workflow emails and feel slightly less dirty about hard coding in domains and so forth :)</p> <p>Here are the basic steps to configure this in the&nbsp;"Initialise variables" task (the link above has some nice pictures of the relevant screens):</p> <ul> <li>Create a new variable, <strong>serverUrl</strong>, or similar.  <li>First action, set the variable to the domain: http://myserver/  <li>Add a "Build Dynamic String" action as the second action. For the string to store, I had something like this:<br><code>[%Variable: serverUrl%][%Tasks:Path%]/DispForm.aspx?ID=[%Tasks:ID%]</code>  <li>Store this dynamic string in another variable, such as <strong>displayFormUrl</strong>.</li></ul> <p>The above example builds a link to the display form of the current item, which is a task in this case. You can then use the <strong>displayFormUrl</strong> variable within your email task.</p>

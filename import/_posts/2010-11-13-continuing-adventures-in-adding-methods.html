@@ -1,0 +1,99 @@
+---
+layout: "post"
+title: "Continuing adventures in adding methods to Ruby instances"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5887383697252622014"
+categories: ["ruby"]
+date: "2010-11-13T23:55:00.0+11:00"
+updated: "2010-11-14T13:03:44.04+11:00"
+---
+
+<p>In the <a href="http://www.davesquared.net/2010/11/replacing-ruby-instance-method-with.html">last post</a> we looked at the hoops we had to go through to redefine a method on a single instance using a closure. In this post we'll look at ways to make this easier on ourselves.</p>
+
+<p>I should stress that I'm a Ruby n00bie, so take this all with a grain of salt. Please let me know if I've got it wrong.</p>
+
+<h2>First attempt</h2>
+<p>We found out last time that to add an instance method to a single object using a closure we had to obtain a reference to that instance's <i>metaclass</i> (or <i>eigenclass</i> as it is also known) using the <code>class &lt;&lt; instance</code> syntax. We could then use the metaclass's private <code>define_method</code> via the <code>send</code> method.</p>
+<pre class="brush: ruby">
+class Greeter
+    def say_hello
+        puts "Hello World!"
+    end
+end
+greeters_metaclass = class &lt;&lt; greeter; self; end
+greeters_metaclass.send(:define_method, :say_hello) do
+    puts "G'day #{name}"
+end
+greeter.say_hello
+#=&gt; G'day Anonymous Dave
+</pre>
+
+<p>We can make this a bit easier by extracting this into a method. If we put it in a Ruby <i>module</i>, we can open up any class or instance and import this code as required.</p>
+
+<pre class="brush: ruby">
+module Meta
+    def define(name, &block)
+        meta = class &lt;&lt; self; self; end
+        meta.send(:define_method, name, block)
+    end
+end
+</pre>
+
+<p>And this works the same way as the previous code, just a bit neater:</p>
+
+<pre class="brush: ruby">
+# Open up Greeter class and import the Meta module:
+class Greeter
+    include Meta
+end
+
+# Our greeter gains the new syntax:
+name = "Anonymous Dave"
+greeter.define(:say_hello) do
+    puts "G'day #{name}"
+end
+
+greeter.say_hello
+#=&gt; G'day Anonymous Dave
+</pre>
+<p>We can do better.</p>
+
+<h2>Second attempt</h2>
+<p>It would be really nice to be able to just write <code>greeter.define.say_hello { puts "blah" }</code>. Let's make it work. We'll need to make a <code>define</code> method that returns some sort of object that responds to any method, whether it exists or not. Ruby has a handy <code>method_missing</code> method we can define which will be invoked in the event it cannot resolve a particular method. We can just move the method creation into there:</p>
+
+<pre class="brush: ruby">
+module Meta
+    def define
+        meta = class &lt;&lt; self; self; end
+        Creator.new(meta)
+    end
+    class Creator
+        def initialize(meta)
+            @meta = meta
+        end
+        def method_missing(symbol, *args, &block)
+            @meta.send(:define_method, symbol, block)
+        end
+    end
+end
+</pre>
+
+<p>This then gives us a nicer syntax whenever we import the module:</p>
+
+<pre class="brush: ruby">
+name = "Anonymous Dave"
+greeter.define.say_hello do
+    puts "G'day #{name}"
+end
+greeter.say_hello
+#=&gt; G'day Anonymous Dave
+
+
+greeter.define.say_hello do
+    puts "Howdy!"
+end
+greeter.say_hello
+#=&gt; Howdy!
+</pre>
+
+<h2>Parting thoughts</h2>
+<p>Like I said, I'm new to this stuff and have absolutely no idea if this is completely terrible. I do know that I'm really impressed with how easily even a newbie like me could add the syntax I wanted to absolutely everywhere in Ruby I could possibly need it, in a fairly neat and reusable way.</p>

@@ -1,0 +1,65 @@
+---
+layout: "post"
+title: "Configuring dependencies' dependencies with StructureMap 2.5.1 [.NET,C#]"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-866774136959907218"
+categories: ["tools", ".net"]
+date: "2009-09-10T23:39:00.0+10:00"
+updated: "2009-09-10T23:40:17.385+10:00"
+---
+
+<p>To date I've generally only used the most basic of <a href="http://structuremap.sourceforge.net/Default.htm">StructureMap's</a> configuration options. Stuff like <code>init.ForRequestedType&lt;SomeInterface&gt;().TheDefaultIsConcreteType&lt;SomeImplementor&gt;()</code>. But I recently needed to resolve two types which needed different configurations of the same dependency type. Here is how I got it to work, but be aware that I'm a StructureMap newbie so there might be better ways of doing this.</p>
+
+<h2>A contrived example</h2>
+
+<p>Say we have two types that both require an <code>IController</code>:</p>
+
+<pre class="brush:csharp">
+public class HelloView {
+    public HelloView(IController controller) {}
+}
+
+public class HowdyView {
+    public HowdyView(IController controller) {}
+}
+</pre>
+
+<p>Our <code>IController</code> implementation requires an <code>IStuffDoer</code>:</p>
+
+<pre class="brush:csharp">
+public class Controller : IController {
+    public Controller(IStuffDoer stuffDoer) {}
+}
+</pre>
+
+<p>Finally, we have two <code>IStuffDoer</code> implementations:</p>
+
+<pre class="brush:csharp">
+    public class SayHelloWorldDoer : IStuffDoer {}
+    public class SayHowdyWorldDoer : IStuffDoer {}
+</pre>
+
+<h2>Configuration using StructureMap</h2>
+
+<p>Now we want our <code>HelloView</code> to have a <code>Controller</code> configured with a <code>SayHelloWorldDoer</code>, while our <code>HowdyView</code> controller needs a <code>SayHowdyWorldDoer</code>. Now this is obviously a silly, contrived example, but some semi-decent reasons to do something like this could be configuring an enumerable of <code>Specification</code> instances, or passing through different pipelines to change behaviour of dependencies. For now let's try and wire up our silly example:</p>
+
+<pre class="brush:csharp">
+public class Bootstrapper {
+    public static void WireUpApplication() {
+        ObjectFactory.Initialize(init =&gt; {
+            init.ForConcreteType&lt;HelloView&gt;()
+                .Configure.CtorDependency&lt;IController&gt;().Is(
+                    x =&gt; x.OfConcreteType&lt;Controller&gt;().CtorDependency&lt;IStuffDoer&gt;().Is&lt;SayHelloWorldDoer&gt;()
+                 );
+            init.ForConcreteType&lt;HowdyView&gt;()
+                .Configure.CtorDependency&lt;IController&gt;().Is(
+                    x =&gt; x.OfConcreteType&lt;Controller&gt;().CtorDependency&lt;IStuffDoer&gt;().Is&lt;SayHowdyWorldDoer&gt;()
+                 );
+        }
+        );
+    }
+}
+</pre>
+
+<p>Now when we try and resolve a <code>HelloView</code> with a call to <code>ObjectFactory.GetInstance&lt;HelloView&gt;()</code>, StructureMap will inject a <code>Controller</code> configured with a <code>SayHelloWorldDoer</code> for it's <code>IStuffDoer</code>.</p>
+
+<p>Another way to do this is with named instances in StructureMap, but I think the approach above reads reasonably neatly and reveals our intent. It's also worth pointing out that if our wireup logic becomes particularly complicated we may be better off moving parts of it into a factory or builder.</p>

@@ -1,0 +1,14 @@
+---
+layout: "post"
+title: "Information Schema views in SQL Server 2005"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-381994047570584766"
+categories: ["imho", "database"]
+date: "2007-04-23T12:17:00+10:00"
+updated: "2007-10-16T21:24:11.504+10:00"
+---
+
+<p>I keep forgetting the exact syntax for this and have to do some  hit-and-miss with Books On-Line.</p>
+<code><span style="color: rgb(0, 0, 255);font-size:85%;" > </span></code><p><span style="color: rgb(0, 0, 255);font-size:85%;" >SELECT </span><span style="color: rgb(128, 128, 128);font-size:85%;" >*
+</span><span style="color: rgb(0, 0, 255);font-size:85%;" >FROM </span><span style="color: rgb(0, 128, 0);font-size:85%;" >INFORMATION_SCHEMA.COLUMNS
+</span><span style="color: rgb(0, 0, 255);font-size:85%;" >WHERE  </span><span style="font-size:85%;">TABLE_SCHEMA </span><span style="color: rgb(128, 128, 128);font-size:85%;" >=</span><span style="font-size:85%;"> </span><span style="color: rgb(255, 0, 0);font-size:85%;" >'dbo'</span><span style="font-size:85%;"> </span><span style="color: rgb(128, 128, 128);font-size:85%;" >AND</span><span style="font-size:85%;"> TABLE_NAME </span><span style="color: rgb(128, 128, 128);font-size:85%;" >=</span><span style="font-size:85%;"> </span><span style="color: rgb(255, 0, 0);font-size:85%;" >'Employee'
+</span><span style="color: rgb(0, 0, 255);font-size:85%;" >ORDER BY </span><span style="font-size:85%;">ORDINAL_POSITION</span></p><p>See the <a href="http://msdn2.microsoft.com/en-us/library/ms186778.aspx">MSDN article</a> for more information. It is generally easier using these views than mucking  about with <code>sysobjects</code>, <code>syscomments</code> etc.</p>

@@ -1,0 +1,100 @@
+---
+layout: "post"
+title: "Messing around with LinqToSql"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5323178981841080873"
+categories: ["orm", ".net", "linq"]
+date: "2007-12-21T16:06:00.0+11:00"
+updated: "2008-05-01T09:04:07.726+10:00"
+---
+
+<p><em>This post is part of a small series on .NET ORM tools. You can find the rest of them </em><a href="http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html"><em>here</em></a><em>.</em></p>  <p>As part of my continuing efforts to fragrantly misuse a number of .NET ORM tools, here is my effort with LinqToSql. The usual proviso applies: all of this is really quick and hacky, as it is just to get a little familiarity with the tool rather than to uncover any &quot;best practices&quot; or similar.</p>  <h2>Scene refresher</h2>  <p>I have a table of suppliers, and a table of states (or provinces, territories, prefectures etc.). Both suppliers and states have names, which are stored as strings/varchars, and IDs, which are stored as Guids/uniqueidentifiers. Each supplier can service many states. So we have a simple many-to-many relationship between the two main entities. It looks a bit like this:</p>  <p><a href="http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png"><img id="BLOGGER_PHOTO_ID_5145922358406504498" style="cursor: pointer" alt="" src="http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png" border="0" /> </a></p>  <p>I am using Aussie states for my tests, so I have populated the State table with the following names: NSW, VIC, QLD, TAS, SA, WA, ACT, NT.</p>  <h2>Setting up LinqToSql</h2>  <p>I created a new C# class library project, then added a LinqToSql Classes project item, which I named WorkshopDb.dbml. In true Microsoft style, you simply drag and drop the tables from the database onto the designer, which generates the necessary classes for you:</p>  <p><a href="http://1.bp.blogspot.com/_wEsHWMWy090/R2tBAOaPYEI/AAAAAAAAAf0/ohPjWy3y-3w/s1600-h/ormSample_LinqClasses.png"><img id="BLOGGER_PHOTO_ID_5146278471324885058" style="cursor: pointer" alt="" src="http://1.bp.blogspot.com/_wEsHWMWy090/R2tBAOaPYEI/AAAAAAAAAf0/ohPjWy3y-3w/s400/ormSample_LinqClasses.png" border="0" /></a></p>  <p>This adds an app.config file to the project, containing the relevant connection string. We are now ready to go!</p>  <h2>Populating the database</h2>  <p>As per my previous posts, I'll a test fixture to run the remainder of the code. After cleaning out my little database again, I'll add a method to encapsulate the process of creating a supplier and mapping the states it services:</p>  <pre>private static void createSupplier(String name, String[] statesServiced) {
+  WorkshopDbDataContext db = new WorkshopDbDataContext();
+
+  Supplier supplier = new Supplier();
+  supplier.SupplierId = Guid.NewGuid();
+  supplier.Name = name;
+
+  List&lt;State&gt; states = (
+        from state in db.States
+        where statesServiced.Contains(state.Name)
+        select state
+      ).ToList();
+
+  states.ForEach(
+    state =&gt; supplier.Supplier_StatesServiceds.Add(
+      new Supplier_StatesServiced() {
+        SupplierId = supplier.SupplierId,
+        StateId = state.StateId
+      }
+    ));
+    
+  db.Suppliers.InsertOnSubmit(supplier);
+  db.SubmitChanges();
+}</pre>
+
+<p>As with SubSonic, LinqToSql does not automatically let me traverse the many-to-many relationship, but the new <code>ForEach</code> method makes it pretty easy to map each state to the <code>supplier.Supplier_StatesServiceds</code> collection (man, I really should have aliased that mapping table first).</p>
+
+<p>We can now use that method to add the following test data:</p>
+
+<pre>createSupplier(&quot;Dave^2 Quality Tea&quot;, new string[] { &quot;NSW&quot;, &quot;VIC&quot; });
+createSupplier(&quot;ORMs'R'Us&quot;, new string[] { &quot;NSW&quot; });
+createSupplier(&quot;Lousy Example&quot;, new string[] { &quot;TAS&quot;, &quot;VIC&quot; });
+createSupplier(&quot;Bridge Sellers&quot;, new string[] { &quot;QLD&quot; });</pre>
+
+<h2>Querying the data</h2>
+
+<p>Let's run through the usual tests. First, getting a list of all suppliers.</p>
+
+<pre>[Test]
+public void Should_be_able_to_get_all_suppliers() {
+  WorkshopDbDataContext db = new WorkshopDbDataContext();
+  var suppliers = from supplier in db.Suppliers select supplier;
+  Assert.That(suppliers.Count(), Is.EqualTo(4));
+}</pre>
+
+<p>So far so good. Now let's get all suppliers with an &quot;s&quot; in their name.</p>
+
+<pre>[Test]
+public void Should_be_able_to_get_all_suppliers_with_s_in_their_name() {
+  WorkshopDbDataContext db = new WorkshopDbDataContext();
+  var suppliers = from supplier in db.Suppliers
+          where supplier.Name.ToLower().Contains(&quot;s&quot;)
+          select supplier;
+  Assert.That(suppliers.Count(), Is.EqualTo(3));
+}</pre>
+
+<p>And finally, let's navigate over the supplier-state relationship to get all suppliers that service NSW:</p>
+
+<pre>[Test]
+public void Should_be_able_get_all_suppliers_that_service_NSW() {
+  WorkshopDbDataContext db = new WorkshopDbDataContext();
+  var suppliers = from supplier in db.Suppliers
+          join servicedState in db.Supplier_StatesServiceds 
+            on supplier.SupplierId 
+            equals servicedState.SupplierId
+          where servicedState.State.Name == &quot;NSW&quot;
+          select supplier;
+  Assert.That(suppliers.Count(), Is.EqualTo(2));
+}</pre>
+
+<p>Pretty straight forward. This actually generates very similar SQL to the NHibernate example, but because I never actually get a list from the <code>suppliers</code> expression, the <code>suppliers.Count()</code> call actually uses <code>SELECT Count(*) ...</code> (I believe you can do similar queries in both NHibernate and SubSonic). The following is roughly what is executed via <code>sp_executesql</code>:</p>
+
+<pre>SELECT COUNT(*)
+FROM [dbo].[Supplier]
+INNER JOIN [dbo].[Supplier_StatesServiced] ON [Supplier].[SupplierId] = [Supplier_StatesServiced].[SupplierId]
+INNER JOIN [dbo].[State] ON [State].[StateId] = [Supplier_StatesServiced].[StateId]
+WHERE [State].[Name] = @p0</pre>
+
+<h2>Vague semblance of a conclusion</h2>
+
+<p>LinqToSql was extremely easy to use, especially in the initial configuration department. Like NHibernate, the query syntax takes a bit of getting used to, but it is something that becomes familiar fairly quickly.</p>
+
+<p>I should point out that both SubSonic and NHibernate currently target the .NET 2.0 world, so the &quot;Language INtegrated Query&quot; part of LinqToSql was always going to give LinqToSql a bit of an expressiveness advantage. If you are a big fan of LINQ queries, they may be <a href="http://www.ayende.com/Blog/archive/2007/03/16/Linq-for-NHibernate.aspx">coming to an ORM tool near you</a> in the not-too-distant future now that .NET 3.5 has been released. That said, I still quite like how the query criteria works in the NHibernate example.</p>
+
+<p>I also noticed that NHibernate was more domain model (i.e. classes) focused, whereas the LinqToSql query for retrieving all the suppliers that service NSW was more data-schema focussed (using the <code>JOIN</code> construct rather than have a working knowledge of the relationship). This isn't meant as praise or criticism of either, just a difference in the approaches. As a quick side note, I believe the ADO.NET Entity Framework is meant to have more advanced support for many-to-many relationships.</p>
+
+<p>So far I've actually felt SubSonic was the most difficult to use for this particular scenario, but this is largely a result of the contrived example I used. I have used SubSonic a few times and in general it is exceptionally straight forward to get working.</p>
+
+<p>As I was mainly looking into how each tool tackled this particular scenario, I have not gone into the different architectural approaches of the tools (ActiveRecord vs. DataMapper, implications for testability and persistence ignorance etc.). It's definitely worth looking into this side of things if you are unfamiliar with the tools. Ian Cooper has a <a href="http://iancooper.spaces.live.com/blog/cns!844BD2811F9ABE9C!397.entry">great post on some of these issues</a> as applied to LinqToSql.</p>
+
+<p>That's it for now. Good luck on your ORM travels!</p>

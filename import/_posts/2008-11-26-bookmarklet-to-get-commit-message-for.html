@@ -1,0 +1,44 @@
+---
+layout: "post"
+title: "Bookmarklet to get commit message for JIRA integration"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4324217738947167040"
+categories: []
+date: "2008-11-26T12:30:00.0+11:00"
+updated: "2008-11-26T12:59:12.801+11:00"
+---
+
+<p>At my work we use JIRA for issue tracking, and the <a href="http://confluence.atlassian.com/display/JIRAEXT/FishEye+for+JIRA">FishEye</a> plugin to integrate with our source control system. This means that for each commit against an issue we need to start our commit message with details of the issue so that JIRA/FishEye can pick it up. For example:</p>
+
+<pre>DAVE-1234 (Pairing with Dave is annoying)
+
+* Updated code to crash while Dave is around, so pairing can finish.
+</pre>
+
+<p>Here &quot;DAVE-1234&quot; is the issue number, and &quot;Pairing with Dave is annoying&quot; is the issue title. Speaking of annoying, it was becoming so to copy and paste the issue number and title from the issue's JIRA page, as the values do not appear together in our current page template. So I thought I would write up a bit of javascript to parse the details directly from the JIRA page. Yes, I would be better off getting the page template updated, but I've been intending to do that for weeks, so horrible-javascript-hack-over-lunch it is. :)</p>
+
+<p>The title of the JIRA page for an issue has all the information we need:</p>
+
+<pre>[#DAVE-1234] Pairing with Dave is annoying - Your JIRA Instance Name</pre>
+
+<p>You can hackily parse this using javascript:</p>
+
+<pre>
+var title = document.title;
+
+var endOfIssueKeyIndex = title.indexOf(&quot;]&quot;);
+var endOfIssueNameIndex = title.lastIndexOf(&quot; - &quot;);
+var issueKey = title.substring(&quot;[#&quot;.length, endOfIssueKeyIndex);
+var issueName = title.substring(endOfIssueKeyIndex + &quot;] &quot;.length, endOfIssueNameIndex);
+
+window.alert(issueKey + &quot; (&quot; + issueName + &quot;)&quot;);
+</pre>
+
+<p>If you prefix that with <code>javascript:</code> and copy and paste it into the location field of a FireFox bookmark, you can click on the bookmark to throw up an alert containing the text formatted as required (this will probably work on other browsers with a little tweaking as well). You can then CTRL+A to select the text and CTRL-C to copy it. If you put the bookmark on your FireFox bookmarks toolbar this almost becomes useful. :)</p>
+
+<p>FireFox reformats the bookmark location automatically, but here is what you end up with for completeness' sake:</p>
+
+<pre>
+javascript:var%20title%20=%20document.title;%20%20var%20endOfIssueKeyIndex%20=%20title.indexOf("]");%20var%20endOfIssueNameIndex%20=%20title.lastIndexOf("%20-%20");%20var%20issueKey%20=%20title.substring("[#".length,%20endOfIssueKeyIndex);%20var%20issueName%20=%20title.substring(endOfIssueKeyIndex%20+%20"]%20".length,%20endOfIssueNameIndex);%20%20window.alert(issueKey%20+%20"%20("%20+%20issueName%20+%20")");
+</pre>
+
+<p>It's also possible to get javascript to copy this directly to your clipboard, but it takes a bit more mucking around. It will obviously stuff up if your JIRA title is in a different format, or if you go around running it on arbitrary web pages :), but it <a href="http://www.codinghorror.com/blog/archives/000818.html">works on my machine</a> -- hope it works on yours too! :)</p>

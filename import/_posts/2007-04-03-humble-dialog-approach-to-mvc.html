@@ -1,0 +1,16 @@
+---
+layout: "post"
+title: "The Humble Dialog approach to MVC"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5775676017185576362"
+categories: ["patterns"]
+date: "2007-04-03T10:37:00+10:00"
+updated: "2008-05-01T08:54:09.06+10:00"
+---
+
+<p><a href="http://www.michaelfeathers.com/">Michael Feathers'</a> famous paper titled "The Humble Dialog Box" has a nice, simple summary of the steps require to develop a controller class for the model-view-controller pattern:</p>
+<blockquote><ol>
+<li>Create a class for the smart object, and an interface class for the view. Pass the view to the smart object</li>
+<li>Develop commands against the smart object, test first. Write your tests against a mock view.</li>
+<li>Create your dialog class and implement the view interface on it. Gestures on the dialog should delegate to commands on the smart object. Calls from the smart object to the dialog should resolve to simple setter methods.</li></ol>
+</blockquote>
+<p>All the articles on Michael's site are worth a read.</p>

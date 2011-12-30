@@ -1,0 +1,34 @@
+---
+layout: "post"
+title: "Reflecting on JavaScript objects"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5816040984290701650"
+categories: ["javascript", "imho"]
+date: "2007-11-30T11:59:00.0+11:00"
+updated: "2007-11-30T12:04:36.192+11:00"
+---
+
+<p>I have been doing some more playing around with JavaScript recently, and wanted to do some <a href="http://en.wikipedia.org/wiki/Reflection_(computer_science)">reflection</a> over JavaScript objects to see what functions they had, and then execute some of those functions. This is made fairly easy for us due to JavaScript's use of associative arrays&nbsp;(from&nbsp;<a href="http://en.wikipedia.org/wiki/Reflection_(computer_science)">Wikipedia's example</a>:&nbsp;<code>obj.x = 10;</code> is the same as <code>obj["x"] = 10;</code>).</p> <p>First let's embed some JavaScript into a local HTML file:</p><pre>&lt;script&gt;
+  var MyClass = function() {}
+  MyClass.prototype = {
+    aFunction: function() { return 1; },
+    anotherFunction: function() { return 2; }        
+  }
+&lt;/script&gt;
+</pre>
+<p>Here we have a basic MyClass class. We can use the <code>for..in</code> statement to enumerate through the items in this class:</p><pre>for (var member in MyClass) {
+  document.write(member + "&lt;br/&gt;");        
+}
+</pre>
+<p>This writes "prototype" (plus line break) to the page in FireFox (not in IE7, but haven't looked into why), which is the only&nbsp;thing defined for MyClass. You can also enumerate over MyClass.prototype to see what's there. In my case I wanted to check and run methods from an instance of MyClass (which is initialised from the prototype):</p><pre><strong>var instanceOfMyClass = new MyClass();</strong>
+for (var member in instanceOfMyClass) {
+ document.write(member);
+ document.write(": " + <strong>instanceOfMyClass[member]()</strong>);
+ document.write("&lt;br/&gt;");
+}                 
+</pre>
+<p>Which displays the following (in both FireFox and IE7):</p><pre>aFunction: 1
+anotherFunction: 2
+</pre>
+<p>Here we access the functions in <code>instanceOfMyClass</code> by looking up the value associated with&nbsp;each <code>member</code>. One quick gotcha: the <code>for..in</code> enumeration in this case returns strings, not pointers to the member itself (so you can't&nbsp;use <code>member()</code> to evaluate it).</p>
+<p>Another option is to use the <code>eval</code> function to execute the method, but that isn't quite as pretty as it involves building up strings&nbsp;(<code>eval("instanceOfMyClass." + member + "()")</code>).</p>
+<p>Note we aren't accounting for argument lists here. You might want to look at the <a href="http://developer.mozilla.org/en/docs/Core_JavaScript_1.5_Reference:Objects:Function">Function class</a> for getting more data about functions and their arguments. We also are not catering for members that are not functions. You can use <code>typeof</code> to filter out other values.</p>

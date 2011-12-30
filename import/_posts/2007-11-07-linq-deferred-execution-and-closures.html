@@ -1,0 +1,48 @@
+---
+layout: "post"
+title: "LINQ, deferred execution and closures"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8482633872104985210"
+categories: ["imho", ".net", "link"]
+date: "2007-11-07T12:32:00.0+11:00"
+updated: "2007-11-07T12:32:39.09+11:00"
+---
+
+<p>Reading Anders' post on <a href="http://andersnoras.com/blogs/anoras/archive/2007/11/06/lexical-closures-deferred-execution-and-kicker-methods.aspx">Lexical Closures, Deferred Execution and Kicker Methods</a> with respect to LINQ and Quaere, I thought I would write some notes&nbsp;since&nbsp;<a href="http://blogs.zdnet.com/microsoft/?p=898">VS 2008 is RTM this month</a> and I'll hopefully get to start doing some more LINQing. </p> <p>I have used&nbsp;<a href="http://andersnoras.com/blogs/anoras/archive/2007/11/06/lexical-closures-deferred-execution-and-kicker-methods.aspx">Anders' example</a>. What result is printed?</p><pre>int[] numbers = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+int i = 1;
+var numbersPlusI = from n in numbers
+                   select n + i;
+i++;
+foreach (var n in numbersPlusI) {
+  Console.Write(n);
+  Console.Write(" ");
+}
+</pre>
+<p>To make the answer more obvious, let's rewrite without the layer of syntactic sugar. As I don't have .NET 3.5 handy on this PC, this is just an approximation built on .NET 2.0:</p><pre>int[] numbers = new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}; 
+int i = 1;
+IEnumerable&lt;int&gt; numbersPlusI = 
+  Enumerable.Select&lt;int&gt;(numbers, <strong>delegate(int n) { return n + i; }</strong> );
+i++;
+foreach (int n in numbersPlusI) {
+  Console.WriteLine(n);
+  Console.Write(" ");
+}
+</pre>
+<p>LINQ builds up an expression for <code>numbersPlusI</code>, but doesn't execute it <a href="http://davesquared.blogspot.com/2007/08/linq-enumeration-gotcha.html">until the result is enumerated</a>. Now remembering that C# has closures, the delegate binds to the local variable <code>i</code> (not its value at the point of declaration).&nbsp;When the enumeration is being performed, the delegate is called using <code>i</code>, which is 2 at the time of execution (i=1; i++). So we get:
+<p><pre>2 3 4 5 6 7 8 9 10 11 </pre>
+<p>If you want to run the code on .NET 2.0, here is my approximation of <code>System.Linq.Enumerable</code> and the <code>Func&lt;&gt;</code> delegate relevant for the example. Probably not brilliant, but I am really aiming to illustrate how variables a captured by closures in C#.</p><pre>public delegate T Func&lt;T, A&gt;(A a);
+public class Enumerable {
+  public static IEnumerable&lt;T&gt; Select&lt;T&gt;(IEnumerable&lt;T&gt; source, Func&lt;T,T&gt; valueFromSource) {
+    foreach (T value in source) {
+      yield return valueFromSource(value);
+    }
+  }
+}
+</pre>
+<p>Some good references on this: 
+<ul>
+<li>More from Anders Norås: <a href="http://andersnoras.com/blogs/anoras/archive/2007/10/18/bare-naked-linq.aspx">Bare naked LINQ</a>
+<li><a href="http://www.interact-sw.co.uk/iangblog/2005/09/30/expressiontrees">IanG: C# 3.0 and LINQ - Expression Trees</a>
+<li><a href="http://blogs.msdn.com/ericwhite/pages/Lambda-Expressions.aspx">Eric White: Lambda Expressions</a> 
+<li><a href="http://blogs.msdn.com/wesdyer/archive/2007/01/03/how-linq-to-objects-queries-work.aspx">Wes Dyer: How Linq to Objects Queries Work</a>
+<li><a href="http://msdn2.microsoft.com/en-gb/library/bb308959.aspx">Don Box and Anders Hejlsberg writing about LINQ in Feb 2007</a>
+<li><a href="http://www.martinfowler.com/bliki/Closure.html">Martin Fowler on closures</a></li></ul>

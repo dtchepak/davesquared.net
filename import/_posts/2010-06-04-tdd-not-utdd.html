@@ -1,0 +1,54 @@
+---
+layout: "post"
+title: "TDD, not UTDD"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6646192113185340791"
+categories: ["tdd", "testing"]
+date: "2010-06-04T23:16:00.121+10:00"
+updated: "2010-06-05T22:46:19.285+10:00"
+---
+
+<p>When I first learned TDD I was taught that the first step in the process is to write a failing <i>test</i>, not specifically a failing <i>unit test</i>. After all, it is Test Driven Development, not Unit Test Driven Development. I even read books that were apparently written using a TDD-style approach, without a unit test in sight*. This didn't stop me from focussing almost entirely on using unit tests for TDD.</p>
+
+<p>Fast forward a few years and I'm now finding a lots of benefits in other forms of testing for TDD, to complement the <a href="http://www.artima.com/weblogs/viewpost.jsp?thread=126923">traditional unit test</a>.</p>
+
+<div style="font-size: x-small; font-style: italic;"><b>*</b> In case you're wondering how this works:  write the goal for an unwritten section, write the section, verify it meets the goal, edit. Red, green, refactor. :)</div>
+
+<h2>Accepting acceptance tests</h2>
+
+<p>Acceptance testing is a practice that seems very easy to get wrong in ways that cause a lot of friction, resulting in it being ignored or given only cursory treatment by developers. This is unfortunate, as I see acceptance testing as essential for effective TDD.</p>
+
+<p>In Steve Freeman's and Nat Pryce's <a href="http://www.amazon.com/Growing-Object-Oriented-Software-Guided-Tests/dp/0321503627">Growing Object Oriented Software, Guided by Tests</a>, the first failing test they write is an acceptance test for the feature they are working on. They then drill down into unit tests so they can take small steps to incrementally build an implementation that passes the acceptance criteria. This was how I was initially introduced to TDD from reading about Extreme Programming (XP): an outer TDD cycle with acceptance tests, and an inner cycle with unit tests that had several iterations to get the acceptance test to pass.</p>
+
+<p>The key to effective acceptance tests (at least for me, YMMV) is making sure they exercise a specific feature of the system from top to bottom, using as much of the real system as possible. It should clearly specify the behaviour of that feature -- once it passes you should be fairly confident that the customer's requirements for that feature have been met.</p>
+
+<p>The main benefit I've found from acceptance testing is that the feedback from these tests help produce an architecture that is flexible, maintainable, and scriptable by virtue of being testable at such a high level. They also help me focus on exactly what I need to get this feature done, which in turn helps guide where I should start applying unit tests to drive the more specific elements of my design.</p> 
+
+<p>These benefits, using tests to define and design, are fairly universal to TDD regardless of which type of tests are used. In the case of acceptance tests, the large scope of the tests provide feedback on the larger aspects of the design.</p>
+
+<p>I've also found acceptance tests to be invaluable when I've had to make radical design changes (e.g. when I've stuffed up somewhere), letting me cull over-specified unit tests and make sweeping changes while still having enough coverage to be confident the software works.</p>
+
+<p>If you're doing TDD but not using acceptance tests, or have tried acceptance testing before but haven't been able to make it work for you, I'd really recommend giving it another shot. Don't worry about them being customer-writable (or even customer-readable for now, provided you can explain what is being tested), don't worry about what tool you use, just get them working. You're architecture will thank you for it. :)</p> 
+
+<h2>Don't mock types you don't own -- integration test them!</h2>
+
+<p>Recently I was test driving some code that uses Castle DynamicProxy. I mocked out the Castle interface and checked my subject under test interacted with that library in a way that I thought was correct. The problem here is I do not own the Castle type, and <a href="http://stevef.truemesh.com/archives/000194.html">you should not mock types you don't own</a>.</p>
+
+<p>Mocking types you don't own gives you very little in the way of ensuring correctness, and is potentially misleading in terms of the design guidance it provides. The problem is that you are testing based on your assumption of how the type works, not how it actually works. Sure, you're testing that your code correctly calls the method you told it to, but what about testing it calls the correct method? If the type changes in a later version, or if it's behaviour is slightly different than you expect under different conditions or arguments, then your tests can pass but your software fails. A misleading test like this can be more harmful than having no test.</p>
+
+<div class="note"><b>Aside:</b> The same criticism can be levelled at mocking in general. The difference is that you have tests defining how your own types work, and have the ability to easily change the types if they do not function as required.</div>
+
+<p>Another drawback, especially if you are working with libraries or frameworks that are not designed in a particularly test-friendly way (to put it diplomatically**), is that you may end up starting to push the behaviour of those libraries into those mocks in order for your class under test to interact with them in a meaningful way. Once you start simulating behaviour in your mocks you are doing it wrong -- you are well on your way to brittle, over-specified, complicated tests.</p>
+
+<div style="font-size: x-small; font-style: italic"><b>**</b>  I'm not talking about Castle here, it's awesome. I will remind readers I have worked with SharePoint before... :)</div>
+
+<p>Of course, if you are avoiding mocking types you don't own, this implies you need to use the real types, which means we are in the realms of integration testing. For my Castle-calling code, I ended up unit testing down to my own class that needed to use Castle to achieve something, then writing integration tests with real Castle objects to ensure that my class actually did use Castle correctly. This ended up being much more valuable to me, and much more flexible. It was more valuable because my tests actually told me my class was using the library correctly and was getting the results my system required, rather than just calling the method I thought was needed. It was more flexible because I had not over-specified every interaction with the third-party library, and so could easily and independently vary both my code and how my code interacted with that library.</p>
+
+<p>I've had a habit of avoiding integration tests as I always assumed they had too wider scope and were too slow to be useful. Now I look forward to hitting a case I can easily cover with integration tests, as it means I've reached the bottom of my software's abstractions and can just test a concrete piece that actually does some real work by interacting with its environment.</p>
+
+<div class="note"><b>Note:</b> A few words of caution about integration tests. I wouldn't recommend switching to integration tests until you are at the very bottom layers of abstraction. Test-drive down until you reach a single class that is an effective facade for some behaviour from a third-party library, then use integration tests to make sure it works as required. Integration tests can also slow down your test suite if they end up hitting the file system, database etc., in which case you should make sure you are able to run them separately from your unit tests and only run them when needed (such as prior to checkin or when you change something related).</div>
+
+<h2>Conclusion</h2>
+
+<p>I still rely very heavily on unit tests when test driving software, but I feel it is really important to know when to use other forms of testing with TDD (and without TDD for that matter). Acceptance tests are a great way to kick off a TDD cycle from the top down, while integration tests are invaluable once you reach the bottom and need to write the code that interacts with the rest of the world. Then there's unit testing for everything in between.</p>
+
+<p>Finally, of course, there's manual, exploratory testing. This probably won't feature too much in your standard TDD cycle, but is so important for checking your software actually works that it didn't feel right not to mention it. :)</p>

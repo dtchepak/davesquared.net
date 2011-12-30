@@ -1,0 +1,106 @@
+---
+layout: "post"
+title: "Don't mock types you don't own"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1556323620721918996"
+categories: ["tdd"]
+date: "2011-04-28T23:57:00.0+10:00"
+updated: "2011-04-29T00:06:31.02+10:00"
+---
+
+<p>I've found applying the guideline* of <a href="http://stevef.truemesh.com/archives/000194.html">not mocking types you don't own</a> to have helped my designs a fair bit recently. I've <a href="http://www.davesquared.net/2010/06/tdd-not-utdd.html">mentioned it before</a>, but I wanted to take a closer look at the topic in an attempt to improve my own understanding. And in that spirit of improving my understanding, please feel free to rip this to shreds. :)</p>
+
+<div class="note"><b>*</b> Guideline, not a <a href="http://www.davesquared.net/2011/01/rules.html">rule</a>. :)</div>
+
+<h2>But I don't use mocks! I use stubs!</h2>
+
+<p>Let's start by clarifying that by "mocking" I'm referring to the <a href="http://martinfowler.com/articles/mocksArentStubs.html">mocks and stubs</a> we use as test doubles; the kind we tend to get from our mocking/substitution/fake/isolation framework of choice. By "types we don't own" we're talking about any type that isn't defined and tested as part of the current build (or solution, to use Visual Studio parlance). This includes anything from types in a base class library to APIs for accessing another system or service.</p>
+
+<h2>When mocking makes sense</h2>
+
+<p>To me the sweet spot for mocking is when we're using TDD to drive out the design of a collaborator that doesn't exist yet, or one that requires modification.</p>
+
+<p>In these cases we're defining how the type will act, and we have the ability to adjust this behaviour as required by the type's consumers by altering these tests. At this level our design is really quite fluid; we can shuffle responsibilities between types, and create new or collapse existing types as we see fit. We are working within our own abstractions, optimised (hopefully) for making our code easy to work with.</p>
+
+<p>A more general form of this case is when we want to isolate a class under test from its dependencies. This allows us to configure explicit behaviour for our test doubles so we don't need to test a whole host of input combinations; we can assume the collaborators' behaviours and just worry about the class under test. It also can shield us from long running tests by replacing slow collaborators (such as those that make database or web service calls), or from difficult test setups due to collaborators that need to run in an explicitly configured environment (such as those that make database or web service calls), or from unreliable tests due to collaborators with variable behaviour (such as those that make database or web service calls ;)).</p>
+
+<p>However this more general case has landed me in trouble more than a few times when I've tried mocking (and stubbing) the interactions with types I don't own.</p>
+
+<h2>Tests that do little</h2>
+
+<p>When we are writing a test as part of TDD we are primarily specifying how our type will behave, and as a result defining the behaviour of the type's collaborators. The interactions between these types are tested as well, but the next step we'll do is drive down into the collaborating type and make sure it will work as required. As we have full control over the types at each end of the exchange, we can be reasonably confident our real code is going to do what we expect. After all, we wrote and tested that code in accordance with how our tests told us it was going to behave.</p>
+
+<p>For types we don't own we don't have this level of transparency. They already have a fixed design and behaviour specified elsewhere. By testing interactions with a mocked version of this type, we really are not using our test to check for the correct behaviour, nor to drive out a collaborator's design. All our test is doing is reiterating our guess as to how the other type works. Sure, it's better than no test, but not necessarily by much. Just because we have checked we successfully called <code>database.Save(data)</code> doesn't mean that we didn't need to call <code>database.OpenConnection()</code> first.</p>
+
+<p>Even when we know an external library really well, and so completely understand the interactions required, mocking that library can still give us misleading tests. If we update the library version and there has been a subtle change to the required interactions, our tests can still pass but our code will fail. Just because we have always received events in a particular order from a library doesn't mean we can assume that will always be the case, particularly if it is not documented behaviour and/or it was just a side-effect of the implementation used in previous versions.</p>
+
+<p>These integration issues can also be a problem with types we do own, but I've found that because we're driving out each step in an end-to-end behaviour, we get added transparency and more focussed abstractions that tend to make this much less common than when dealing with external types.</p>
+
+<h2>Tests that do too much</h2>
+
+<p>Another risk we run in specifying all the required interactions with types we don't own is having <a href="http://xunitpatterns.com/Fragile%20Test.html#Overcoupled%20Test">overspecified tests</a>. These tests quickly become a pain point; they are hard to change because they are so coupled to the specific implementation and pattern of interactions with a type, and refactoring which doesn't actually change the behaviour can result in tests failing.</p>
+
+<p>This can also mean large, convoluted setups as we attempt to mimic the way the collaborating types work, which can make our tests difficult to read, understand and maintain. In general, once we find ourselves setting up complex interactions and behaviour using mocking framework constructs, chances are we're doing it wrong.</p>
+
+<p>This can be mitigated to some extent by the way we encapsulate the library and the setup needed for our test fixtures, but eventually we're going to have to pay for the impedance mismatch between our abstractions and the abstractions used for the type we don't own. Which segues neatly to our next point...</p>
+
+<h2>Corrupted abstractions</h2>
+
+<p>Depending on the complexity of the interactions with types we don't own, the abstractions used for those types can leak into and influence our own abstractions. We may add abstractions just to give us enough visibility into interactions with these types to ensure we have specified all the calls we expect, rather than because they make sense to the problem we are trying to solve. This could mean a whole lot of wrappers over external types, or new factories to create specific objects required by the interactions.</p>
+
+<p>This isn't necessarily bad, but it does mean we're no longer writing the code that best solves or abstracts away our current problem, and also can leave us more tightly coupled than we'd like to the library that owns the type. Because we're not defining the behaviour in our tests, we end up coupling our design to the implementation of the external types instead.</p>
+
+<p>Writing and maintaining these additional abstractions can also be quite expensive, especially considering the questions we've already raised about how useful those tests are.</p>
+
+<p>Remember, external libraries are built to help people solve a general problem. When we design code for a project we are trying to solve specific problems. An abstraction that is handy for addressing the more general problem is not necessarily going to match the abstractions that help us.</p>
+
+<h2>Well how do I test code that uses external types then?</h2>
+
+<p>One way of looking at this is that we are switching from TDD-style tests with the aim of driving design to good old fashion "check this works" tests. In my experience the mindset is fairly different, as are the tests themselves.</p>
+
+<p>One way of making this switch is to use the real types and do an integration test. Test drive our design down to a level of abstraction that is useful, then integration test over the boundary. Rather than checking our class interacts with an external type in a certain way, we check it gives us the behaviour we require.</p>
+
+<p>If we are testing that we're using an ORM properly, we can use the real ORM and database and check that we can load up the required details after a save operation. If we're using <a href="http://www.castleproject.org/">Castle DynamicProxy</a>, then we can call our code that uses DynamicProxy and check the object we get back forwards to the interceptor we expect, rather than asserting we return a specific object from a mocked <code>ProxyGenerator</code> class we don't own and whose ins and outs we may not fully understand. We're checking the consequence of the action, rather than the details of the action itself.</p>
+
+<p>This isn't to say that we add a whole host of tests around a component we don't own -- we really need to have a little faith in it working as advertised otherwise it would probably be quicker to just write our own. Instead the purpose of our test should focus on getting some degree of confidence that our use of the library has the basic desired behaviour. Rather than stating we need certain interactions with the library, we can use some simple, focussed cases with the real types to sanity check assumptions we made about the required interactions.</p>
+
+<p>I've found that doing this frequently gives me much cleaner tests and implementations than if I had wrapped and tested the different elements of the interactions with types from another library. Provided the abstraction I've ended up with in my own code is OK, testing the behaviour tends not be too arduous.</p>
+
+<p>As an alternative (or ideally complimentary) approach, we can use acceptance tests to make sure the entire feature works as expected (i.e. not just covering the call over the integration boundary, but exercising as much of the real feature as possible). Again, we're checking behaviour, not implementation specifics for types where we don't have a constant, transparent view into those implementations.</p>
+
+<h2>What about when I just can't use the real type?</h2>
+
+<p>There are times when using the real types is not practical. Maybe setting up an email server on each dev machine and checking the email account receives the required email is too much for our regular test suite (possibly a great test to run on a CI server or similar though). Or perhaps actually firing the doomsday device just isn't prudent for a test case that runs several times an hour... :)</p>
+
+<p>In these cases we can create our own fake version of the external system or library. This is probably not going to come from our mocking framework of choice; as previously mentioned, once we find ourselves setting up complex interactions and behaviour using mocking framework constructs, we're probably doing it wrong. The important thing is to verify that our calls to the fake are compatible with the real classes, and where possible check that the behaviour matches what we expect. Martin Fowler calls these <a href="http://martinfowler.com/bliki/IntegrationContractTest.html">Integration Contract Tests</a>. The idea is that if we pass a certain range of values to our fake, the real version should also be able to handle these values. If we assume the real version behaves in a certain way and replicate that in our fake, we can write a test to try and verify that assumption.</p>
+
+<p>In some cases we can use the real type with a different configuration as our fake. For example, we could run tests through our ORM configured to use an in-memory database. This won't test the final hop to our target RDBMS, but it will give us some confidence that our use of the API is correct, and we can setup more comprehensive tests against the real configuration on our CI server.</p>
+
+<h2>Limitations of integration tests</h2>
+
+<p>It would be remiss of me not to mention <a href="http://www.jbrains.ca">J.B. Rainsberger's</a> assertion that <a href="http://www.jbrains.ca/series/integrated-tests-are-a-scam">integration tests are a scam</a>, which is nicely <a href="http://b-speaking.blogspot.com/search/label/integration%20tests">summarised by Gabino Roche Jr</a>. I'm not proficient enough with this stuff to talk definitively on this, but I'll give you my 2 cents, then you should go through J.B.'s work and see how you can apply it. It's also worth looking at the <a href="http://www.growing-object-oriented-software.com/">GOOS book</a>; it has some really interesting examples of how to effectively use acceptance tests for driving development, including the need to deal with other libraries and systems.</p>
+
+<p>My limited understanding of J.B.'s objections to integration tests is that they are not going to ensure correctness (you can't test exhaustively), they can be brittle and difficult to write and maintain, and that they can end up as a <a href="http://blog.thecodewhisperer.com/post/1325858548/integrated-tests-are-a-scam">"self-replicating virus"</a> when used as a crutch any time a programmer can't find a good, testable abstraction and therefore can't unit test the code.</p>
+
+<p>Almost without fail whenever I have mocked a type I don't own I end up experiencing pain. Best case is I get lots of fairly useless abstractions that cover different operations within the external library's API. Worst case is I get lots of useless abstractions that don't work with the real API and are really difficult to change. This only leaves me with integration/acceptance-style tests for code that uses these types, so for me the question becomes one of how to write these tests effectively while trying to limit the legitimate problems J.B. has highlighted. I don't have the answer to this, but here's some guidelines I've been using:</p>
+
+<ul>
+<li>If possible, limit the amount of exposure we have to the external library. When <a href="https://github.com/nsubstitute/NSubstitute/blob/v1.0.0/Source/NSubstitute/Proxies/CastleDynamicProxy/CastleDynamicProxyFactory.cs">using DynamicProxy for NSubstitute</a> we could get away with using only a very small part of the library, which meant we <a href="https://github.com/nsubstitute/NSubstitute/blob/v1.0.0/Source/NSubstitute.Specs/Proxies/CastleDynamicProxy/CastleDynamicProxyFactorySpecs.cs">had only a few things to integration test</a>.</li>
+<li>The abstractions we choose are important; they can determine how much work we have to do in each interaction with the external system. If there is a big mismatch between the abstraction we've driven out and the external code we need to work with, it might just be a sign we need a better fit for our requirements. (e.g. maybe we should persist using a document DB instead of an RDBMS? Or maybe just throwing data on the file system would fit better?)</li>
+<li>Accept we can't test exhaustively, and focus on the most helpful cases. We generally want to assume the external stuff works as advertised, so we really just want to get some confidence that we are using it in a way that seems to give us the behaviour we expect.</li>
+<li>If we keep coming up against integration bugs, adding integration tests is probably not the answer. We may need to examine ways we can push out more responsibility into unit-testable abstractions to simplify the integration.</li>
+<li>Sometimes it is worth the time to develop a good, fake implementation of a complex external system. Examples include simulating external hardware, or using an in-memory database instead of an external one.</li>
+<li>Make the tests easy to read and write. If you have long, complicated test setups we need to either look for better abstractions, or encapsulate the setup process in its own abstraction.</li>
+</ul>
+
+
+<h2>Conclusion</h2>
+
+<p>In summary, my current thinking on the subject is that while using mocks and stubs is really beneficial when driving out the design of collaborators using TDD, it is important to identify when we need to stop test-driving and start testing. This is generally the point where we hit a type we don't own from a library or external system.</p>
+
+<p>Using test doubles for types we don't own can end up with fragile tests that don't actually test much of value, or can even compromise our design and the effectiveness of the abstractions we use. Even when mocking a library we know really well we can end up with compromised abstractions and fragile tests due to relying on implementation details or assumptions based on previous versions of the library.</p>
+
+<p>I've found switching to integration and acceptance tests to test over the boundary between my code and the other types a very useful alternative, but it is important to be aware that this approach can bring its own problems, and we need to try and mitigate these when writing our tests.</p>
+
+<p>And finally, we should remember that this is just a guideline. If we find a situation where it is going to be both safe and simpler to mock a type we don't own, we may as well do so, but at least we've considered our options. :)</p>
+
+<p>Have I got this all wrong? Please leave a comment or email me at davesquared.net. :)</p>

@@ -1,0 +1,134 @@
+---
+layout: "post"
+title: "Using conventions and StructureMap to wire up Views and View Models"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4030053349317575445"
+categories: ["patterns", ".net"]
+date: "2010-03-15T23:07:00.0+11:00"
+updated: "2010-03-15T23:47:39.991+11:00"
+---
+
+<p>In the small WPF project I'm currently working on we are using <a href="http://www.davesquared.net/2010/02/attempt-at-simple-mvvm-with-wpf.html">MVVM (Model - View - ViewModel)</a> to separate our UI concerns from other logic.</p>
+
+<p>Now for various reasons we've ended up with two main projects (excluding tests): the core application DLL, and the WPF UI executable that references the core DLL. Our ViewModels are defined in the application DLL, which knows absolutely nothing about the UI executable. Our Views (XAML) live in the UI exe, and depend on the ViewModels in the core DLL. All pretty standard.</p>
+
+<p>The one hiccup is that sometimes our application DLL needs to do something that will result in getting a reference to a view. For example, an application controller, screen conductor, or in our case, an <code>ApplicationShellViewModel</code> needs to load up the relevant views (it's a small project, remember? :)). So how does it do this when it knows nothing about the views in the UI exe?</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://2.bp.blogspot.com/_wEsHWMWy090/S54iWvt1bhI/AAAAAAAABgQ/hViASY9r3fA/s1600-h/ui_and_core_components.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="109" src="http://2.bp.blogspot.com/_wEsHWMWy090/S54iWvt1bhI/AAAAAAAABgQ/hViASY9r3fA/s320/ui_and_core_components.png" width="320" /></a></div>
+
+<p>In this case we decided to use a convention to map a ViewModel to a View. We've mandated that each View will have one and only one ViewModel (not strictly always the case, but works for us). So we can use our ViewModel types as "currency" to deal with our views, and exchange it for a view when required. We just need a way to map between a ViewModel and its View. </p>
+
+<p>The way we decided to do this mapping is to use an <code>IView</code> marker interface (defined in the core DLL) on all our views in the UI exe, and use a <code>ViewFactory</code> class to resolve an <code>IView</code> based on the name of a ViewModel, with the help of our IoC container (StructureMap 2.6). The naming convention we'll use is very simple: if we have a <code>GherkinViewModel</code>, we expect the matching view to be of type <code>Gherkin</code>. If you're new to IoC containers this all probably sounds a little confusing, so let's look at some code.</p>
+
+<div class="note"><b>Note:</b> This is probably a good time to stress that this post isn't about great ways to wire up MVVM components. It is more an example of using conventions and StructureMap to implement a fairly naive approach to View/View Model wire-up. If you are after more the former than the latter then you may want jump over to <a href="http://www.nikhilk.net/View-ViewModel-Hookup-Convention-Configuration.aspx">Nikhil's post on View/ViewModel association</a>. I won't take it personally. :)</div>
+
+<h2>The <code>ViewFactory</code></h2>
+
+<p>Given a ViewModel type, we want our <code>ViewFactory</code> to get an instance of the <code>IView</code> for that view model using our naming convention. Let's write a test for this, specifying that we want to resolve an <code>IView</code> named "Example" for our <code>ExampleViewModel</code>:</p>
+
+<pre class="brush:csharp">
+public class ViewFactoryFixture {
+    [Test]
+    public void ShouldResolveViewForViewModelUsingNamingConvention() {
+        var exampleView = MockRepository.GenerateStub&lt;IView&gt;();
+        var applicationFactory = MockRepository.GenerateStub&lt;IApplicationFactory&gt;();
+        var viewFactory = new ViewFactory(applicationFactory);
+        applicationFactory.Stub(x =&gt; x.ResolveNamed&lt;IView&gt;(&quot;Example&quot;)).Return(exampleView);
+
+        var result = viewFactory.CreateViewFor&lt;ExampleViewModel&gt;();
+
+        Assert.That(result, Is.SameAs(exampleView));
+    }
+
+    public class ExampleViewModel {}
+}
+</pre>
+
+<p>The <code>ViewFactory</code> will need to use our IoC container to resolve the instance, which we've wrapped in an <code>IApplicationFactory</code> interface (not the best name perhaps -- it creates application objects). Our test is specifying that when we ask the <code>ViewFactory</code> to create a view for our <code>ExampleViewModel</code> type, it should return the instance resolved from the <code>IApplicationFactory</code> named "Example". Let's pass this:</p>
+
+<pre class="brush:csharp">
+public class ViewFactory : IViewFactory {
+    private IApplicationFactory _applicationFactory;
+
+    public ViewFactory(IApplicationFactory applicationFactory) { _applicationFactory = applicationFactory; }
+
+    public IView CreateViewFor&lt;TViewModel&gt;() {
+        var viewNameByConvention = typeof (TViewModel).Name.Replace(&quot;ViewModel&quot;, &quot;&quot;);
+        return _applicationFactory.ResolveNamed&lt;IView&gt;(viewNameByConvention);
+    }
+}
+</pre>
+
+<p>Now we just need to implement an <code>IApplicationFactory</code> class and we're done.</p>
+
+<h2>Registering named views in StructureMap</h2>
+
+<p>For our project our core StructureMap configuration lives in the core application DLL -- the one with no references to the UI exe that has our views. Thankfully StructureMap has a really nice way of looking through assemblies and wiring up types you're interested in.</p>
+
+<pre class="brush:csharp">
+class CoreRegistry : Registry {
+    public CoreRegistry(IApplicationFactory applicationFactory) {
+        For&lt;IApplicationFactory&gt;().Use(applicationFactory);
+        Scan(x =&gt;
+            {
+                x.AssembliesFromApplicationBaseDirectory(
+                    assembly =&gt; assembly.FullName.StartsWith(&quot;DaveSquared.&quot;));
+                x.AddAllTypesOf&lt;IView&gt;().NameBy(type =&gt; type.Name);
+                x.WithDefaultConventions();
+            });
+    }
+}
+</pre>
+
+<p><code>Registry</code> is a StructureMap type that is used to configure the container. We're telling StructureMap to <a href="http://structuremap.github.com/structuremap/ScanningAssemblies.htm">scan</a> the assemblies in the application base directory, and add those that are specific to this project (which in this example will be <code>DaveSquared.MvvmConventionWireup.Core</code> and <code>DaveSquared.MvvmConventionWireup.UI</code>). The magic happens in this line:</p>
+
+<pre class="brush:csharp">
+x.AddAllTypesOf&lt;IView&gt;().NameBy(type =&gt; type.Name);
+</pre>
+
+<p>Here we're telling the StructureMap scanner to add all types that implement <code>IView</code> into the container, and name each specific type by the short type name. This, you'll remember, is our naming convention. When asked for the view for <code>ExampleViewModel</code> we'll lookup an <code>IView</code> called "Example" (which will live in the UI project in a <code>Example.xaml</code> file). </p>
+
+<p>Some other quick notes: <code>WithDefaultConventions()</code> tells StructureMap to automatically wireup cases where there is only one concrete type that implements an interface (for example, <code>Foo</code> for <code>IFoo</code>). Also we register a singleton <code>IApplicationFactory</code> instance, as we need this as a dependency into our <code>ViewFactory</code>.</p>
+
+<p>The last step is just to put this altogether for our <code>IApplicationFactory</code> implementation:</p>
+
+<pre class="brush:csharp">
+public class ApplicationFactory : IApplicationFactory {
+    public ApplicationFactory() {
+        ObjectFactory.Initialize(x =&gt; x.AddRegistry(new CoreRegistry(this)));
+    }
+
+    public T Resolve&lt;T&gt;() {
+        return ObjectFactory.GetInstance&lt;T&gt;();
+    }
+
+    public T ResolveNamed&lt;T&gt;(string name) {
+        return ObjectFactory.GetNamedInstance&lt;T&gt;(name);
+    }
+
+    class CoreRegistry : Registry { /* ... snipped, already shown above ... */ }
+}
+</pre>
+
+<div class="note"><b>Aside:</b> I can't help but point out that this <code>ApplicationFactory</code> is covered by tests. We make sure we can resolve views by name, and resolve a view factory, and a few other key instances. These are integration tests, but I've made the mistake of not testing this stuff before and having it grow into a real mess, the lack of tests encouraging sloppiness to creep in. There are better ways to test more complex configurations, but this is a nice and simple approach for a nice and simple app.</div>
+
+<p>We can now resolve Views like this from within our core application DLL code:</p>
+
+<pre class="brush:csharp">
+public ApplicationShellViewModel(IViewFactory viewFactory) {
+    Top = viewFactory.CreateViewFor&lt;FunkyViewModel&gt;();
+    Bottom = viewFactory.CreateViewFor&lt;AwesomeViewModel&gt;();
+}
+public IView Top { get; set; }
+public IView Bottom{ get; set; }
+</pre>
+
+<div class="note"><b>Note:</b> Check out <a href="http://www.codeplex.com/CompositeWPF">Prism / Composite WPF</a> or <a href="http://www.codeplex.com/caliburn">Caliburn</a> for real ways to do view composition. :)</div>
+
+<h2>Final thoughts</h2>
+
+<p>This post has shown a basic example of how to use conventions to resolve Views from ViewModels in situations where you don't want to have hard references to View types. I have no idea if this is a blatant misuse of StructureMap or IoC containers in general (please correct me! :)), but it is working fine for us at the moment. It is especially nice to just name a View and have it auto-magically wireup to its ViewModel. It's not quite as nice for the poor designer, but in our case we're only doing fairly basic UI for which I've found it easier to deal directly with the XAML.</p>
+
+<p>One thing to keep in mind is that our <code>ViewFactory</code> and <code>ApplicationFactory</code> classes reference our container, which means we want to be very careful how widespread their use becomes in the application. Ideally you only want a couple of references to your IoC container in your application, so for us we only have it referenced in the class that handles our startup, and in our application shell (which is playing the role that an application controller or screen conductor might play in a larger app).</p>
+
+<p>Hope this gives you some idea of how easy it is to get some simple conventions going in your code. If I've glossed over anything you'd like to know more about feel free to drop me a line.</p>

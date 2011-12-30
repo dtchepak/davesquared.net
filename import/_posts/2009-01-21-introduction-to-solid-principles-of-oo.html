@@ -1,0 +1,136 @@
+---
+layout: "post"
+title: "An introduction to the SOLID principles of OO design"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5616194819787817713"
+categories: ["dev practices"]
+date: "2009-01-21T21:56:00.0+11:00"
+updated: "2011-02-18T09:40:36.227+11:00"
+---
+
+<p>I would be very hard pressed to go passed Robert &quot;Uncle Bob&quot; Martin's <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">SOLID principles</a> as the single most useful tool for helping me with OO design. Some people seem to have a natural talent for OO design and thinking, and have an innate understanding of these principles without requiring the SOLID formalism. I, on the other hand, find them indispensable.</p>
+
+<p>Unfortunately the names used in the somewhat-cryptic &quot;acronym of acronyms&quot;[1] don't exactly lend themselves to being easily learned (Bob Martin and Scott discussed how this came about on a <a href="http://www.hanselman.com/blog/HanselminutesPodcast145SOLIDPrinciplesWithUncleBobRobertCMartin.aspx">Hanselminutes episode on SOLID</a>, which is well worth a listen). I thought I'd post my interpretation of the principles as a refresher for myself, and as an introduction for anyone trying the learn the terminology.</p>
+
+<p>I should point out I am far from a guru on this stuff, so if there's any misinformation in here please point it out in a comment or email, so I can correct the post and learn me some OO :).</p>
+
+<h2>Single Responsibility Principle</h2>
+
+<blockquote>
+<p><i>&quot;There should never be more than one reason for a class to change.&quot; &mdash; Robert Martin, SRP paper linked from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a></i></p>
+<p>My translation: A class should concentrate on doing one thing</p>
+</blockquote>
+
+<p>The SRP says a class should focus on doing one thing, or have one <i>responsibility</i>. This doesn't mean it should only have one method, but instead all the methods should relate to a single purpose (i.e. should be cohesive).</p>
+
+<p>For example, an <code>Invoice</code> class might have the responsibility of calculating various amounts based on it's data. In that case it probably shouldn't know about how to retrieve this data from a database, or how to format an invoice for print or display.</p>
+
+<p>A class that adheres to the SRP should be easier to change than those with multiple responsibilities. If we have calculation logic and database logic and display logic all mixed up within one class it can be difficult to change one part without breaking others. Mixing responsibilities also makes the class harder to understand, harder to test, and increases the risk of duplicating logic in other parts of the design (decreases cohesion, functionality has no clear place to live).</p>
+
+<p>Violations of the SRP are pretty easy to notice: the class seems to be doing too much, is too big and too complicated. The easiest way to fix this is to split the class.</p>
+
+<p>The main trick in following the SRP is deciding how to define the single responsibility. There may be many ways to dissect a feature into responsibilities, but the ideal way is to use responsibilities that are likely to change independently, hence the official description: &quot;A class should have one, and only one, reason to change&quot;.</p>
+
+<h2>Open Closed Principle</h2>
+<blockquote>
+<p><i>&quot;Software entities (classes, modules, functions, etc.) should be open for extension, but closed for modification.&quot; &mdash; Robert Martin paraphrasing Bertrand Meyer, OCP paper linked from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a></i></p>
+<p>My translation: Change a class' behaviour using inheritance and composition</p>
+</blockquote>
+
+<p>Bob Martin's initial paper on the OCP linked from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a> attributes the idea to Bertrand Meyer, who wrote that classes should be "open for extension, but closed for modification"[2]. The idea is that we can use OO techniques like inheritance and composition to change (or <i>extend</i>) the behaviour of a class, without modifying the class itself.</p>
+
+<p>Say we have an <code>OrderValidation</code> class with one big <code>Validate(Order order)</code> method that contains all rules required to validate an order. If the rules change, we need to change or <code>OrderValidation</code> class, so we are violating the OCP. If the <code>OrderValidation</code> contained a collection of <code>IValidationRule</code> objects that contained the rules, then we could write <code>Validate(Order order)</code> to iterate through those to validate the order. Now if the rules change then we can just create a new <code>IValidationRule</code> and add it to an <code>OrderValidation</code> instance at run time (rather than to the class definition itself).</p>
+
+<p>Following the OCP should make behaviour easier to change, and also help us avoid breaking existing behaviour while making changes. The OCP also gets us to think about the likely areas of change in a class, which helps us choose the right abstractions required for our design.</p>
+
+<p>If you find you need to modify a similar area of code all the time (for example, validation rules) then it's probably time to apply the OCP and abstract away the changing part of the code. Another sign of a potential OCP violation is switching on a type &mdash; if another type is created then we'll have to alter the switch statement. A <a href="http://refactoring.com/catalog/replaceConditionalWithPolymorphism.html">healthy dose of polymorphism</a> is generally the best treatment. :) I generally think of the OCP as an advertisement for the <i>Template Method</i> and <i>Strategy</i> design patterns.</p>
+
+<h2>Liskov Substitution Principle</h2>
+<blockquote>
+<p><i>&quot;Functions that use pointers or references to base classes must be able to use objects of derived classes without knowing it.&quot; &mdash; Robert Martin, LSP paper linked from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a><br/></i></p>
+<p>My translation:  Subclasses should behave nicely when used in place of their base class</p>
+</blockquote>
+
+<p>The LSP sounds deceptively straightforward &mdash; we should be able to substitute an instance of a subclass for its parent class and everything should continue to work. Easy right? Well, actually, no it's not, which is probably why we are often advised to <a href="http://www.artima.com/lejava/articles/designprinciples4.html">favour composition over inheritance</a>.  Ensuring a base class works in any situation the parent does is really hard work, and whenever you use inheritance its a good idea to keep the LSP firmly in mind.</p>
+
+<p>The canonical example of an LSP violation (in fact, the one used in the <a href="http://www.hanselman.com/blog/HanselminutesPodcast145SOLIDPrinciplesWithUncleBobRobertCMartin.aspx">Hanselminutes episode on SOLID</a> mentioned earlier) is the <code>Square</code> IS-A <code>Rectangle</code> relationship. Mathematically a square is a special case of a rectangle with all sides of equal length, but this breaks the LSP when modelled in code. What should <code>SetWidth(int width)</code> do when called on a <code>Square</code>? Should it set the height as well? What if you have a reference to it via its base class, <code>Rectangle</code>? If you have code that expects one behaviour but gets another depending on which subtype it has, you can wind up with some very hard to find bugs.</p>
+
+<p>LSP violations can be easy to miss until you actually hit the condition where your inheritance hierarchy breaks down (I mean, a <a href="http://blog.objectmentor.com/articles/2009/01/16/i-hate-cutesy-phrases">square IS-A rectangle</a>, right?). The best way to reduce violations is to keep very aware of the LSP whenever using inheritance, including considering avoiding the problem using composition where appropriate.</p>
+
+<h2 id="solid_isp">Interface Segregation Principle</h2>
+
+<blockquote>
+<p><i>&quot;Clients should not be forced to depend upon interfaces that they do not use.&quot; &mdash; Robert Martin, ISP paper linked from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a></i></p>
+<p>My translation: Keep interfaces small and cohesive</p>
+</blockquote>
+
+<p>The ISP is about keeping interfaces (both <code>interface</code>, and <code>abstract class</code> types of interfaces<b>*</b>) small and limited only to a very specific need (a single responsibility even :)). If you have a fat interface then you are imposing a huge implementation burden on anyone that wants to adhere to that contract. Worse still is that there is a tendency for class to only provide valid implementations for a small portion of a fat interface, which greatly diminishes the advantages of having an interface at all (note that these partial implementations violate the LSP, as we can no longer treat all subclasses of the interface equally).</p>
+
+<div class="note"><b>*</b> While I originally wrote this in terms of interface code constructs, I've always thought more about the interface in ISP as the public interface for interacting with an object, even if this is just the public methods of a class. This becomes more relevant in dynamic languages where interfaces are implied rather than explicit. In the dynamic languages case, ISP becomes more a statement of SRP: keeping a small interface to expose a single responsibility. [Added 2011-02-18]</div>
+
+<p>The first time I recognised a violation of the ISP was writing a minimal implementation of an ASP.NET <code><a href="http://msdn.microsoft.com/en-us/library/system.web.security.roleprovider.aspx">RoleProvider</a></code>, which required an implementation of the following methods:</p>
+
+<pre>
+public class MyRoleProvider : RoleProvider {
+    public override void Initialize(string name, System.Collections.Specialized.NameValueCollection config) { ... }
+ public override void AddUsersToRoles(string[] usernames, string[] roleNames) { ... }
+ public override string ApplicationName { get { ... } set { ... } }
+ public override void CreateRole(string roleName) { ... }
+ public override bool DeleteRole(string roleName, bool throwOnPopulatedRole) { ... }
+ public override string[] FindUsersInRole(string roleName, string usernameToMatch) { ... }
+ public override string[] GetAllRoles() { ... }
+ public override string[] GetRolesForUser(string username) { ... }
+ public override string[] GetUsersInRole(string roleName) { ... }
+ public override bool IsUserInRole(string username, string roleName) { ... }
+ public override void RemoveUsersFromRoles(string[] usernames, string[] roleNames) { ... }
+ public override bool RoleExists(string roleName) { ... }
+}
+</pre>
+
+<p>In my case I just wanted to use ASP.NET's built in facility for securing pages by role in the <code>web.config</code>, which means I needed to implement <code>GetRolesForUser(...)</code> and <code>Initialize(...)</code>. Can you guess what the other implementations were? That's right, <code>throw new NotImplementedException();</code>. This is very bad &mdash; if we have a <code>RoleProvider</code> instance we have no idea what sub-features it will support. On top of that we also have a lot of useless noise in our class. (If you like the <code>RoleProvider</code>, you might also enjoy the <code><a href="http://msdn.microsoft.com/en-us/library/system.web.security.membershipprovider_members.aspx">MembershipProvider</a></code>.)</p>
+
+<p>The way to fix violations like this is to break down interfaces along the lines of responsibilities and apply the SRP. For the <code>RoleProvider</code> case, even if we just split it into <code>IRolesForUserLookup</code> and <code>IRoleManagement</code> (yuk), that would let us only implement what we need. If we need all the features then we can implement both interfaces, but we should not be forcing clients to fake or throw in implementations that are meaningless to them.</p>
+
+<h2>Dependency Inversion Principle</h2>
+
+<blockquote>
+<p><i>&quot;A. High level modules should not depend upon low level modules. Both should depend upon abstractions.<br/>
+B. Abstractions should not depend upon details. Details should depend upon abstractions.&quot; &mdash; Robert Martin, DIP paper linked from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a></i></p>
+<p>My translation: Use lots of interfaces and abstractions</p>
+</blockquote>
+
+<p>The DIP says that if a class has dependencies on other classes, it should rely on the dependencies' interfaces rather than their concrete types. The idea is that we isolate our class behind a boundary formed by the abstractions it depends upon. If all the details behind those abstractions change then our class is still safe. This helps keep coupling low and makes our design easier to change.</p>
+
+<p>At its simplest, this can just be the difference between referencing an <code>EmployeeFinder</code> class or an <code>IEmployeeFinder</code> interface. The concrete <code>EmployeeFinder</code> class can access a database or a file, but the client class only cares that it meets the <code>IEmployeeFinder</code> contract. Better yet, our client class doesn't have to be tied in any way to the <code>EmployeeFinder</code> class. It could instead use <code>SqlEmployeeFinder</code>, <code>XmlEmployeeFinder</code>, <code>WebServiceEmployeeFinder</code> or <code>MockEmployeeFinder</code>.</p>
+
+<p>Where the DIP starts to become really useful and a bit more profound is in a related concept, <i>Dependency Injection</i>. Dependency Injection is about getting other code to insert the actual dependency instances into our class, so we don't even have the client class <code>new</code>ing up any of the concrete instances. This completely isolates our class and makes change and reuse much easier. (I've covered some introductory stuff in a <a href="http://davesquared.blogspot.com/2008/06/attempting-to-understand-dependency.html">previous ramble on dependency injection</a>).</p>
+
+<p>The other side of the DIP relates to dependencies between high and low level modules in layered applications. For example, a class accessing the database should not depend on a UI form used to display that data. Instead the UI should rely on an abstraction (or abstractions) over the database access class. Traditional application layers (data, logic, ui) seem largely replaced by MVC, <a href="http://jeffreypalermo.com/blog/the-onion-architecture-part-1/">onions</a> and <a href="http://alistair.cockburn.us/Hexagonal+architecture">hexagons</a> these days, so I tend to think about the DIP entirely from the point of view of abstracting dependencies.</p>
+
+<h2>SOLID principles as a whole</h2>
+
+<p>You can probably see that the SOLID principles overlap a lot. For example, the SRP provides a good way of splitting interfaces to follow the ISP. The ISP helps implementers conform to the LSP by making implementations small and cohesive. You may also notice that some of the principles contradict, or at least pull in opposing directions, such as the OCP requiring inheritance while the LSP tends to discourage it[3]. This interplay between the principles can provide a really useful guide while developing your design. I'm believe there are no perfect designs, just trade offs, and the SOLID principles can help you evaluate these and achieve a good balance. The fact that there is some measure of conflict between them also makes it obvious that none of the principles should be applied rigidly or dogmatically. Do you really need a huge interface explosion due while adhering to the OCP and DIP? Maybe, maybe not. But considering your design options in light of the SOLID principles can help you decide.</p>
+
+<p>A lot of SOLID principles seem to fall out fairly naturally if you practice TDD (or BDD). For example, writing an effective unit test for a class is much easier if you follow the DIP and isolate your class from its dependencies. If you are writing the tests first to drive your design, then your class will naturally tend to use the DIP. If you are retro-fitting tests, then you'll likely encounter more difficulties testing, and may end up with  interaction-style tests, re-writing the class to use the DIP, or worse, throwing it in the too hard-to-test basket.</p>
+
+<p>This is what people mean when they say that TDD and &quot;testability&quot; is not about testing, it is about design. Scott Bellware recently published a good post on <a href="http://blog.scottbellware.com/2009/01/good-design-is-easily-learned.html">design, SOLID and testability</a> that goes into this in more detail.</p>
+
+<h2>Conclusion</h2>
+
+<p>This has been a quick introduction to the SOLID principles. Hopefully it will make it easier for people to jump into the <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">gory details of all the principles</a>. Even if you have an innate grasp on these principles, I think it is worth going to the trouble to learn them, if only to help get a common language with which to discuss these principles.</p>
+
+<h2>Recommended reading and listening</h2>
+<ul>
+<li>Robert Martin's original SOLID papers from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a></li>
+<li><a href="http://www.hanselman.com/blog/HanselminutesPodcast145SOLIDPrinciplesWithUncleBobRobertCMartin.aspx">Hanselminutes episode on SOLID</a></li>
+<li>Scott Bellware's post on <a href="http://blog.scottbellware.com/2009/01/good-design-is-easily-learned.html">Good Design is Easily-Learned</a></li>
+<li>Laila Bougria's post on <a href="http://www.noctovis.net/blog/index.php/2009/01/15/design-principles/">Design Principles</a>, including SOLID</li>
+</ul>
+
+<h2>References</h2>
+<p>
+[1] Yammer exchange with <a href="http://www.xerxesb.com/">Xerxes</a>
+<br/>
+[2] Bertrand Meyer, <a href="http://www.amazon.com/Object-Oriented-Software-Construction-Prentice-Hall-International">Object-Oriented Software Construction</a>
+<br/>
+[3] Gene Shadrin, <a href="http://java.sys-con.com/node/84633/print">Three Sources of a Solid Object-Oriented Design</a>, SYS-CON Media Inc.
+</p>

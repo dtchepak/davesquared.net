@@ -1,0 +1,31 @@
+---
+layout: "post"
+title: "Implicitly typed arrays in C# 3.0"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4972900497046159543"
+categories: [".net"]
+date: "2008-03-19T16:57:00.0+11:00"
+updated: "2008-03-19T21:26:07.21+11:00"
+---
+
+<p>Please excuse the short post and general quietness on my blog, but am typing with a newly installed, titanium screw through a tendon and fractured bone of my finger (fixing an &quot;avulsion of the distal phalanx&quot; apparently)*.</p>
+
+<p>ReSharper 4 just found me another little C# 3 feature to save a bit of typing (handy** given my current condition ;-)). First, let's start with a basic array declaration and initialisation:</p>
+
+<pre>Person[] people = new Person[] {new Person("Ann"), new Person("Bill")};</pre>
+
+<p>Now C# has the <a href="http://davesquared.blogspot.com/2008/02/to-var-or-not-to-var.html">new <code>var</code> keyword</a> to get the type from the right hand side of the assignment:</p>
+
+<pre>var people = new Person[] {new Person("Ann"), new Person("Bill")};</pre>
+
+<p>But it also has <a href="http://msdn2.microsoft.com/en-us/library/bb308966.aspx#csharp3.0overview_topic16">implicitly typed arrays</a>***, which means we can write this:</p>
+
+<pre>var people = <b>new[]</b> {new Person("Ann"), new Person("Bill")};</pre>
+
+<p>As with <code>var</code>, the compiler is clever enough to strongly type the array appropriately from its initialisation. All three examples are functionally equivalent.</p>
+
+<p>Sure, only a minor impact on the amount of typing you do, but the main benefit is reducing the noise surrounding your code and making it easier to get the intention of the code. (I'm currently trying to learn Python, and am getting an appreciation for removing unnecessary noise -- I'm even liking the whole &quot;significant whitespace&quot; thang :-) )</p>
+
+<p style="font-size: xx-small; font-style: italic;">
+* Basketball is not a contact sport<br/>
+** Excuse the pun<br/>
+*** This link gives a really good <a href="http://msdn2.microsoft.com/en-us/library/bb308966.aspx">overview of the new C# 3.0 features</a></p>

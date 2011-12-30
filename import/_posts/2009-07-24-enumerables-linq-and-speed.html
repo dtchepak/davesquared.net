@@ -1,0 +1,58 @@
+---
+layout: "post"
+title: "Enumerables, LINQ and speed"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1481725881609806466"
+categories: [".net", "linq"]
+date: "2009-07-24T15:06:00.0+10:00"
+updated: "2009-07-24T22:16:43.165+10:00"
+---
+
+<div class="note"><b>Warning:</b> This post contains an optimisation for a specific case that sacrifices readability in favour of performance, and should not be applied prematurely. Readability trumps performance until you've whacked a profiler on your code and determined it is too slow under realistic usage.</div>
+
+<p><a href="http://www.davesquared.net/2009/03/too-linqy.html">I love LINQ</a>. Especially since trying out Python, I find it a lot easier to think in terms of apply functions over iterators, rather than big loops with nested conditions. This has always worked really well for me. At least, it had done until yesterday, when we were tracking down a performance problem experienced when running through lots of buffers full of lots of data. Let's take a look at two options for adding data to an internal list (this isn't a realistic example, it's just for profiling purposes):</p>
+
+<pre name="code" class="csharp">
+private readonly List&lt;ushort&gt; _buffer = new List&lt;ushort&gt;();
+
+public void Add(ushort[] data, int count) {    
+    for (var i = 0; i &lt; count; i++) {
+        _buffer.Add(data[i]);
+    }
+}
+
+public void AddLinq(ushort[] data, int count) {
+    _buffer.AddRange(data.Take(count));
+}
+</pre>
+
+<div class="note"><b>Note:</b> these two methods aren't <i>exactly</i> the same. The second one won't fail if the <code>data</code> array has less than <code>count</code> elements. We could fix this by updating the condition used in the <code>for</code> of the first method, but the performance difference is negligible and it obscures what we are talking about.</div>
+
+<p>The <code>Add</code> method uses simple array traversal to add the first <code>count</code> elements to our internal <code>_buffer</code> list. The <code>AddLinq</code> method does the same thing, but uses the <code>Enumerable.Take(x)</code> extension method defined in <code>System.Linq</code>.</p>
+
+<p>If you don't think too hard about it you might assume these two have similarish performance. If I call both methods with a 10,000,000 element array and take the first 9,999,900 or so of those, I find the LINQ version takes around 370ms, while the non-LINQ version is around 135ms.</p>
+
+<p>Now if this was in the context of a web page loading or for smaller amounts of data then I don't think it's going to bother anyone, but this is in the context of large amounts of data coming in every 20ms or so, so faster is better and taking almost 3 times as long is definitely a worry. Regardless of whether we care about this additional time, where exactly is it coming from?</p>
+
+<p>Well the <code>Take()</code> extension method most likely uses something like this:</p>
+
+<pre name="code" class="csharp">
+public static IEnumerable&lt;T&gt; Take&lt;T&gt;(this IEnumerable&lt;T&gt; data, int numberOfItemsToTake) {
+    var itemsTaken = 0;
+    foreach (var item in data) {
+        if (itemsTaken &gt;= numberOfItemsToTake) yield break;        
+        itemsTaken++;
+        yield return item;
+    }
+}
+</pre>
+
+<p>If you're not familiar with how <code>yield return</code> works under-the-hood, have a look at Raymond Chen's discussion on the topic (<a href="http://blogs.msdn.com/oldnewthing/archive/2008/08/12/8849519.aspx">Part 1</a>,
+<a href="http://blogs.msdn.com/oldnewthing/archive/2008/08/13/8854601.aspx">Part 2</a>, and 
+<a href="http://blogs.msdn.com/oldnewthing/archive/2008/08/14/8862242.aspx">Part 3</a>), and <a href="http://csharpindepth.com/Articles/Chapter6/IteratorBlockImplementation.aspx">Jon Skeet's article</a>. Basically the compiler generates a class that implements <code>IEnumerable&lt;T&gt;</code> and <code>IEnumerator&lt;T&gt;</code>, and it keeps track of the state of the enumeration between yields from this method. With the overhead of another instance that has it's own internal state machine to maintain, it's never going to be as efficient as using a plain array index for state. Profiling two calls to each method gives the following:
+</p>
+
+<div><img src="http://lh5.ggpht.com/_wEsHWMWy090/Smk_vpkNOCI/AAAAAAAABSM/CB02mz78WEw/s800/AddingWithAndWithoutLinq.png" /></div>
+
+<p>In both cases the actual list insertion of each element is about the same (the <code>Insert</code> and <code>Add</code> calls), around 600ms in total. In the non-LINQ case, this leaves about another 600ms for interating over the list using <code>for</code> and our integer index. In the LINQ case, we have a large amount of time (2,310ms) spent in <code>MoveNext()</code> on our compiler generated iterator (<code>&lt;TakeInterator&gt;d__3a</code>). You'll notice that the slow <code>MoveNext()</code> call delegates to an <code>SZGenericArrayEnumerator&lt;T&gt;</code> which itself is reasonably fast, taking about 800 ms to iterate over the required elements compared with the 600ms of the non-LINQ version. The rest of the overhead is maintain the state machine, jumping between states and checking whether we have taken <code>count</code> number of elements yet. (It's really interesting to step through this stuff with Reflector, try searching for <code>&lt;TakeInterator&gt;</code> with private/internal classes displayed if you want to see what goes on).</p>
+
+<p>We ended up de-LINQing a couple of heavily used bits of code and solving most of the performance issues. Just remember that this is for a very specific scenario, and if you haven't measured it, don't optimise it away. But I think it is useful to have an idea of all the hard work happening under the hood of all that LINQy enumerable goodness.</p>

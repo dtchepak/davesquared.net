@@ -1,0 +1,238 @@
+---
+layout: "post"
+title: "A WPF newbie styles a ListBox"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-9187892755439328268"
+categories: ["wpf", ".net"]
+date: "2010-03-02T23:41:00.0+11:00"
+updated: "2010-03-02T23:46:45.249+11:00"
+---
+
+<p>Hi, I'm Dave, and I'm a WPF newbie. In this post I jump headlong into the exciting world of styling a WPF ListBox, coming face to face with creatures such as templates, styles, brushes and resources.</p>
+
+<p>The aim of this exercise is to display some widgets that the user can select. A widget has both a <code>Name</code> and a <code>Quantity</code>. I've got a <code>WidgetListViewModel</code> with a public <code>ObservableCollection&lt;Widget&gt;</code> property called <code>Widgets</code> that our view will bind to. If you're not familiar with the basics of MVVM, you can get a quick introduction from <a href="http://www.davesquared.net/2010/02/attempt-at-simple-mvvm-with-wpf.html">my attempt at simple MVVM with WPF</a>. </p>
+
+<h2>Simple data-binding</h2>
+
+<p>Let's start with our basic view, <code>WidgetListView.xaml</code>:</p>
+
+<pre>
+&lt;Window x:Class=&quot;DaveSquared.StylingListBox.WidgetListView&quot;
+        xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+        xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;
+        Title=&quot;Widgets&quot; Height=&quot;350&quot; Width=&quot;525&quot;&gt;
+    <b>&lt;ListBox ItemsSource=&quot;{Binding Widgets}&quot;/&gt;</b>
+&lt;/Window&gt;
+</pre>
+
+<p>Here we are setting the <code>ItemsSource</code> of our ListBox to bind to something called <code>Widgets</code>. WPF works out what to do with this by search this control's <code>DataContext</code> for a public property with the same name. If it can't find it, it will check the control's parent, parent's parent etc. until it urns out of parents or finds the property to bind to. In this case I've set the <code>DataContext</code> of our window to our view model in the codebehind, <code>WidgetListView.xaml.cs</code>:</p>
+
+<pre class="brush:csharp">
+public partial class WidgetListView : Window {
+    public WidgetListView(WidgetListViewModel viewModel) {
+        InitializeComponent();
+        DataContext = viewModel;
+    }
+}
+</pre>
+
+<p>As this view model has a <code>Widgets</code> property, the binding resolves correctly and we get a not-so-useful list of type names:</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://1.bp.blogspot.com/_wEsHWMWy090/S40BC-v-brI/AAAAAAAABdw/KWRY7oef8Yk/s1600-h/DefaultBinding.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://1.bp.blogspot.com/_wEsHWMWy090/S40BC-v-brI/AAAAAAAABdw/KWRY7oef8Yk/s320/DefaultBinding.png" width="320" /></a></div>
+
+<p>By default, the binding process will just call <code>ToString()</code> on each object. As my <code>Widget</code> class doesn't implement <code>ToString()</code> we get the default behaviour from <code>Object</code>, which is just the type name. We can fix this by telling our binding to use a specific member for each item. Let's try using the <code>Name</code> property on each widget.</p>
+
+<pre>
+&lt;ListBox ItemsSource=&quot;{Binding Widgets}&quot; <b>DisplayMemberPath=&quot;Name&quot;</b> /&gt;
+</pre>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S40BC9mVccI/AAAAAAAABd0/o4CH-nZKNH8/s1600-h/DisplayMemberPath.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://4.bp.blogspot.com/_wEsHWMWy090/S40BC9mVccI/AAAAAAAABd0/o4CH-nZKNH8/s320/DisplayMemberPath.png" width="320" /></a></div>
+
+<h2>Displaying more information using DataTemplates</h2>
+
+<p>We can now see the name of each widget, but say we also want to display the quantity. One way of doing this is to specify a <code>DataTemplate</code>. We can put this directly in our ListBox using <code>ListBox.ItemTemplate</code> (which we'll see in the final example), but for now let's look at how to do this using a <code>DataType</code>-specific template.</p>
+
+<pre>
+&lt;Window x:Class=&quot;DaveSquared.StylingListBox.WidgetListView&quot;
+        xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+        xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot; 
+        <b>xmlns:local=&quot;clr-namespace:DaveSquared.StylingListBox&quot;</b> 
+        Title=&quot;Widgets&quot; Height=&quot;350&quot; Width=&quot;525&quot;&gt;
+    &lt;Window.Resources&gt;
+        &lt;DataTemplate <b>DataType=&quot;{x:Type local:Widget}&quot;</b>&gt;
+            &lt;Border CornerRadius=&quot;10&quot; BorderBrush=&quot;Black&quot; BorderThickness=&quot;1&quot; Margin=&quot;1&quot;&gt;
+                &lt;StackPanel Orientation=&quot;Horizontal&quot;&gt;
+                    &lt;Label Content=&quot;{Binding Name}&quot; /&gt;
+                    &lt;Label Content=&quot;{Binding Quantity}&quot; /&gt;
+                &lt;/StackPanel&gt;
+            &lt;/Border&gt;
+        &lt;/DataTemplate&gt;
+    &lt;/Window.Resources&gt;
+    &lt;ListBox ItemsSource=&quot;{Binding Widgets}&quot; HorizontalContentAlignment=&quot;Stretch&quot; /&gt;
+&lt;/Window&gt;
+</pre>
+
+<p><a href="http://msdn.microsoft.com/en-us/library/ms750613.aspx">Resources</a> are a way to resuse different elements within WPF. In this case we are adding a <code>DataTemplate</code> to our <code>Window.Resources</code> resource dictionary, so this template can be reused in many places around the window. In this case it isn't too useful, but it does give some separation between the layout of our main UI elements (our ListBox), and the specific rendering used for it.</p>
+
+<p>When we run the application, we see each widget rendered with its name and quantity, surrounded by a cheesy looking border:</p>
+
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://2.bp.blogspot.com/_wEsHWMWy090/S40BDagEI2I/AAAAAAAABd8/D4yXGfdFAtI/s1600-h/StyledDataTemplate.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://2.bp.blogspot.com/_wEsHWMWy090/S40BDagEI2I/AAAAAAAABd8/D4yXGfdFAtI/s320/StyledDataTemplate.png" width="320" /></a></div>
+
+<p>So how does this work? The ListBox doesn't have any specific attributes linking it to our <code>DataTemplate</code>. On the template itself however is a <code>DataType</code> attribute that has a cryptic <code>{x:Type local:Widget}</code> value. This is telling WPF that we want this template to be used whenever rendering a bound object of type <code>Widget</code>. The <code>x:Type</code> string tells WPF the attribute is referring to a type (sort of like XAML's equivalent of <code>typeof</code>). The <code>local:</code> prefix also looks a bit odd. If you check the <code>Window</code> node you'll see an <code>xmlns:local</code> attribute that has a value of <code>&quot;clr-namespace:DaveSquared.StylingListBox&quot;</code>. This is mapping the namespace of my project into XAML, so <code>local:Widget</code> resolves to the <code>DaveSquared.StylingListBox.Widget</code> type.</p>
+
+<p>So each widget ends up getting its border, and two labels arranges horizontally thanks to a <code>StackPanel</code>. We've also had to add a <code>HorizontalContentAlignment=&quot;Stretch&quot;</code> attribute to our listbox, other wise each listbox item would be a different width depending on its name's length. Telling the listbox to stretch its items horizontally makes each item take up the full width of the listbox. We didn't need to worry about this before as we didn't have a border to make the width obvious.</p>
+
+<h2>Adding a touch of style</h2>
+
+<p>There's a few interesting things happening with our current code. First, the highlighting of the selected item does not take any notice of our border, so it just highlights the entire item, which looks a bit strange. The second thing to notice is that we are mixing data-binding specific markup (binding to our name and quantity properties) with more general presentation concerns (putting rounded borders around items). Let's look at fixing the second issue, as it will end up helping us with the first.</p>
+
+<p>Now rounded borders don't have any relation to widgets; we could easily imagine having sprockets or doodads displayed with rounded borders. So let's separate the widget-specific markup from our general item style. Let's see the XAML first, then we'll step through it.</p>
+
+<pre>
+    &lt;Window.Resources&gt;
+        &lt;Style <b>x:Key=&quot;RoundedItem&quot; TargetType=&quot;ListBoxItem&quot;</b>&gt;
+            &lt;Setter <b>Property=&quot;Template&quot;</b>&gt;
+                &lt;Setter.Value&gt;
+                    &lt;ControlTemplate TargetType=&quot;ListBoxItem&quot;&gt;
+                        &lt;Border CornerRadius=&quot;10&quot; BorderBrush=&quot;Black&quot; BorderThickness=&quot;1&quot; Margin=&quot;1&quot;&gt;
+                            <b>&lt;ContentPresenter /&gt;</b>
+                        &lt;/Border&gt;
+                    &lt;/ControlTemplate&gt;
+                &lt;/Setter.Value&gt;
+            &lt;/Setter&gt;
+        &lt;/Style&gt;
+        &lt;DataTemplate DataType=&quot;{x:Type local:Widget}&quot;&gt;
+            &lt;StackPanel Orientation=&quot;Horizontal&quot;&gt;
+                &lt;Label Content=&quot;{Binding Name}&quot; /&gt;
+                &lt;Label Content=&quot;{Binding Quantity}&quot; /&gt;
+            &lt;/StackPanel&gt;
+        &lt;/DataTemplate&gt;
+    &lt;/Window.Resources&gt;
+    &lt;ListBox ItemsSource=&quot;{Binding Widgets}&quot; <b>ItemContainerStyle=&quot;{StaticResource RoundedItem}&quot;</b> HorizontalContentAlignment=&quot;Stretch&quot; /&gt;
+</pre>
+
+<p>Here we've moved the non-binding specific markup from our <code>DataTemplate</code> into a <code>Style</code>. We've given it a key so we can refer to it by the string &quot;RoundedItem&quot;, and set a target type so it can be applied to any <code>ListBoxItem</code>. If we don't set a target type, then we won't be able to access any <code>ListBoxItem</code> specific properties.</p>
+
+<div class="note"><b>Aside:</b> We don't have to do the whole <code>{x:Type}</code> thing to refer to ListBoxItem. I'm not sure why, but it is probably something to do with it being a built-in WPF type. Maybe the type converter automatically searches built-in types.</div>
+
+<p>Our <code>RoundedItem</code> style is going to set the <code>Template</code> property of the styled ListboxItem to be the <code>ControlTemplate</code> we specify, which is just our cheesy rounded border. Inside the border element is a <code>&lt;ContentPresenter /&gt;</code> node. This is going to render our item with whatever template is applied to the contents. In our case, this is our existing <code>DataTemplate</code>, which now just contains the widget-specific binding markup. The style is being applied to the ListBoxItem container, whereas the template is being applied to the bound widget. They are linked by the <code>ContentPresenter</code> element in the style.</p>
+
+<p>To apply this we just add a <code>ItemContainerStyle=&quot;{StaticResource RoundedItem}&quot;</code> attribute to our ListBox. (Note: <code>ListBox.Style</code> will apply to the listbox itself, whereas <code>ListBox.ItemContainerStyle</code> is the style used for each ListBoxItem.) The <code>{StaticResource}</code> value tells WPF to try and find the named resource in its various resource dictionaries (similar to how <code>DataContext</code> is searched for binding). WPF also has a <code>{DynamicResource}</code> which is used for resources that can change, and so need to be reevaluated throughout the life of the control. As our resources for this example are static we won't need that here.</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://3.bp.blogspot.com/_wEsHWMWy090/S40BDRgGmgI/AAAAAAAABeA/5t1uk1WIXIk/s1600-h/ContentTemplate.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://3.bp.blogspot.com/_wEsHWMWy090/S40BDRgGmgI/AAAAAAAABeA/5t1uk1WIXIk/s320/ContentTemplate.png" width="320" /></a></div>
+
+<p>Our app looks the same until we try to select an item and find that it does not get hightlighted. This is because we've overriden the ListBoxItem template that previously did this for us. Luckily we are now in a good position to not only restore the highlighting, but also fix it so it only highlights within the border of the item.</p>
+
+<h2>Triggers</h2>
+
+<p>To reinstate the highlighting, we can add a trigger to our <code>ControlTemplate</code> in our <code>RoundedItem</code> style to update our item when a particular property changes.</p>
+
+<pre>
+&lt;ControlTemplate TargetType=&quot;ListBoxItem&quot;&gt;
+    &lt;Border <b>Name=&quot;ItemBorder&quot;</b> CornerRadius=&quot;10&quot; BorderBrush=&quot;Black&quot; BorderThickness=&quot;1&quot; Margin=&quot;1&quot; Background=&quot;Transparent&quot;&gt;
+        &lt;ContentPresenter /&gt;
+    &lt;/Border&gt;
+    &lt;ControlTemplate.Triggers&gt;
+        <b>&lt;Trigger Property=&quot;IsSelected&quot; Value=&quot;True&quot;&gt;
+            &lt;Setter TargetName=&quot;ItemBorder&quot; Property=&quot;Background&quot; Value=&quot;LightBlue&quot; /&gt;
+        &lt;/Trigger&gt;</b>
+    &lt;/ControlTemplate.Triggers&gt;
+&lt;/ControlTemplate&gt;
+</pre>
+
+<p>Here we're telling our template that when the <code>IsSelected</code> property of our <code>ListBoxItem</code> is true, we want the background of our border element set to light blue. Notice we've given the border element a name (&quot;ItemBorder&quot;) so that we can refer to it in our trigger's <code>Setter</code>. We also need to specify a starting background (in this case I've set it to transparent), otherwise it won't change back properly when the item is unselected (it needs to have an initial value to revert to).</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://2.bp.blogspot.com/_wEsHWMWy090/S40BY9kME3I/AAAAAAAABeE/CArI7BRkNIA/s1600-h/ContentTemplateWithSelected.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://2.bp.blogspot.com/_wEsHWMWy090/S40BY9kME3I/AAAAAAAABeE/CArI7BRkNIA/s320/ContentTemplateWithSelected.png" width="320" /></a></div>
+
+<h2>MultiTriggers</h2>
+
+<p>But we don't have to stop there. Let's also change the background when an item is hovered over. Now this one is a bit trickier, as we don't want to change the background of a selected item that is hovered over, only of unselected items (otherwise the selected item will appear to lose its selection). The answer is a <code>MultiTrigger</code>:</p>
+
+<pre>
+&lt;ControlTemplate.Triggers&gt;
+    &lt;Trigger Property=&quot;IsSelected&quot; Value=&quot;True&quot;&gt;
+        &lt;Setter TargetName=&quot;ItemBorder&quot; Property=&quot;Background&quot; Value=&quot;LightBlue&quot; /&gt;
+    &lt;/Trigger&gt;
+    &lt;MultiTrigger&gt;
+        &lt;MultiTrigger.Conditions&gt;
+            &lt;Condition Property=&quot;IsMouseOver&quot; Value=&quot;True&quot; /&gt;
+            &lt;Condition Property=&quot;IsSelected&quot; Value=&quot;False&quot; /&gt;
+        &lt;/MultiTrigger.Conditions&gt;
+        &lt;Setter TargetName=&quot;ItemBorder&quot; Property=&quot;Background&quot; Value=&quot;Azure&quot; /&gt;
+    &lt;/MultiTrigger&gt;
+&lt;/ControlTemplate.Triggers&gt;
+</pre>
+
+<p>Here we've set two conditions necessary for the multitrigger to be applied, IsMouseOver must be true, and IsSelected must be false. If these conditions are satisfied then we'll set the background to azure, and get this effect:</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S40BY-i7w3I/AAAAAAAABeI/8oAekEztpyA/s1600-h/ContentTemplateSelectedAndHover.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://4.bp.blogspot.com/_wEsHWMWy090/S40BY-i7w3I/AAAAAAAABeI/8oAekEztpyA/s320/ContentTemplateSelectedAndHover.png" width="320" /></a></div>
+
+<h2 id="March2010_WpfListBox_LastSection">Tidying up</h2>
+
+<p>I mentioned earlier that resources enabled us to share styles and templates across controls, windows or even applications. We can even create and load resource dictionaries to provide different themes for applications. Let's move some of the more general pieces of markup into our application dictionary. To do this, we'll open our <code>App.xaml</code> (or whatever <code>Application</code> class we have) and drop our <code>RoundedItem</code> style in there.</p>
+
+<pre>
+&lt;Application x:Class=&quot;DaveSquared.StylingListBox.App&quot;
+             xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+             xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;
+             &gt;
+    &lt;Application.Resources&gt;
+        <b>&lt;SolidColorBrush x:Key=&quot;ItemBrush&quot; Color=&quot;Transparent&quot; /&gt;
+        &lt;SolidColorBrush x:Key=&quot;SelectedItemBrush&quot; Color=&quot;LightBlue&quot; /&gt;
+        &lt;SolidColorBrush x:Key=&quot;HoverItemBrush&quot; Color=&quot;Azure&quot; /&gt; </b>
+        &lt;Style x:Key=&quot;RoundedItem&quot; TargetType=&quot;ListBoxItem&quot;&gt;
+            &lt;Setter Property=&quot;Template&quot;&gt;
+                &lt;Setter.Value&gt;
+                    &lt;ControlTemplate TargetType=&quot;ListBoxItem&quot;&gt;
+                        &lt;Border Name=&quot;ItemBorder&quot; CornerRadius=&quot;10&quot; BorderBrush=&quot;Black&quot; BorderThickness=&quot;1&quot; Margin=&quot;1&quot; <b>Background=&quot;{StaticResource ItemBrush}&quot;</b>&gt;
+                            &lt;ContentPresenter /&gt;
+                        &lt;/Border&gt;
+                        &lt;ControlTemplate.Triggers&gt;
+                            &lt;Trigger Property=&quot;IsSelected&quot; Value=&quot;True&quot;&gt;
+                                &lt;Setter TargetName=&quot;ItemBorder&quot; Property=&quot;Background&quot; <b>Value=&quot;{StaticResource SelectedItemBrush}&quot;</b> /&gt;
+                            &lt;/Trigger&gt;
+                            &lt;MultiTrigger&gt;
+                                &lt;MultiTrigger.Conditions&gt;
+                                    &lt;Condition Property=&quot;IsMouseOver&quot; Value=&quot;True&quot; /&gt;
+                                    &lt;Condition Property=&quot;IsSelected&quot; Value=&quot;False&quot; /&gt;
+                                &lt;/MultiTrigger.Conditions&gt;
+                                &lt;Setter TargetName=&quot;ItemBorder&quot; Property=&quot;Background&quot; <b>Value=&quot;{StaticResource HoverItemBrush}&quot;</b> /&gt;
+                            &lt;/MultiTrigger&gt;
+                        &lt;/ControlTemplate.Triggers&gt;
+                    &lt;/ControlTemplate&gt;
+                &lt;/Setter.Value&gt;
+            &lt;/Setter&gt;
+        &lt;/Style&gt;
+    &lt;/Application.Resources&gt;
+&lt;/Application&gt;
+</pre>
+
+<p>Here we've also pulled out the brushes we're using to paint our border backgrounds. This will allow use to use common colours for selected and hovered-over screen elements. This means we can get a much lighter view:</p>
+
+<pre>
+&lt;Window x:Class=&quot;DaveSquared.StylingListBox.WidgetListView&quot;
+        xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;
+        xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;
+        Title=&quot;Widgets&quot; Height=&quot;350&quot; Width=&quot;525&quot;&gt;
+    &lt;ListBox ItemsSource=&quot;{Binding Widgets}&quot; ItemContainerStyle=&quot;{StaticResource RoundedItem}&quot; HorizontalContentAlignment=&quot;Stretch&quot;&gt;
+        <b>&lt;ListBox.ItemTemplate&gt;</b>
+            &lt;DataTemplate&gt;
+                &lt;StackPanel Orientation=&quot;Horizontal&quot;&gt;
+                    &lt;Label Content=&quot;{Binding Name}&quot; /&gt;
+                    &lt;Label Content=&quot;{Binding Quantity}&quot; /&gt;
+                &lt;/StackPanel&gt;
+            &lt;/DataTemplate&gt;
+        <b>&lt;/ListBox.ItemTemplate&gt;</b>
+    &lt;/ListBox&gt;
+&lt;/Window&gt;
+</pre>
+
+<p>As I mentioned towards the beginning of this post, we can also stick our <code>DataTemplate</code> directly in the listbox using the <code>ListBox.ItemTemplate</code>. We've done so here to get rid of our specific Window resources, and we no longer need to directly specify the target type of the template. I probably should have done this to begin with, but at least we got to see how target types work. :)</p>
+
+<p>Now you can do <a href="http://bea.stollnitz.com/blog/?p=40">much more</a> with this stuff, but at least we've covered some of the key elements we need to apply styles and templates to our WPF controls. Hope this helps any fellow WPF newbies out there. Comments and corrections welcomed. </p>

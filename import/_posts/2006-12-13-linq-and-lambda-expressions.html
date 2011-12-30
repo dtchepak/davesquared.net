@@ -1,0 +1,23 @@
+---
+layout: "post"
+title: "LINQ, Lambda expressions and maths"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6554501991627403768"
+categories: ["imho", ".net", "linq"]
+date: "2006-12-13T10:52:00.0+11:00"
+updated: "2007-10-16T21:24:29.714+10:00"
+---
+
+<p>One of the features that enables <a href="http://msdn.microsoft.com/data/ref/linq/">LINQ </a>to work are the implementation of <a href="http://www.panopticoncentral.net/archive/2006/12/08/18587.aspx">Lambda expressions</a>. Lambda expressions are basically another way of representing a function, and are used in LINQ to pass function pointers/delegates around without the verbosity of declaring function blocks. For example: </p>
+<pre>public List GetFirstAiders() {
+  List employees = getEmployees();
+  return employees.FindAll(IsFirstAider);
+}
+public bool IsFirstAider(Employee employee) {
+  return employee.IsFirstAider;
+}
+</pre> <p>Using lambda expressions this becomes: </p>
+<pre>public List GetFirstAiders() {
+  List employees = getEmployees();
+  return employees.FindAll(e =&gt; e.IsFirstAider);
+}
+</pre> <p>The <span style="font-size:85%;"><span style="font-family:courier new;">(e =&gt; e.IsFirstAider)</span></span> is the lambda expression that represents the old <span style="font-size:85%;"><span style="font-family:courier new;">bool IsFirstAider(Employee)</span></span> method. The types used in the function expressed are not explicitly mentioned, but are instead implied by the List method signature.</p> <p>Anyway, the initial point of this post was to mention that Wikipedia has information on the mathematical background of <a href="http://en.wikipedia.org/wiki/Lambda_expression">lambda calculus</a>. </p>

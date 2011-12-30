@@ -1,0 +1,27 @@
+---
+layout: "post"
+title: "Coalescing delegates"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-7947613417901951507"
+categories: [".net"]
+date: "2007-10-03T14:31:00.0+10:00"
+updated: "2008-05-01T09:04:07.736+10:00"
+---
+
+<p>Did you know the <a href="http://msdn2.microsoft.com/en-us/library/ms173224(VS.80).aspx">coalesce operator</a> (<code>??</code>) works for delegates? I had never really thought about it, but it does and you can use it to create confusing passages of code like this one... :)</p><pre>delegate String ConvertToString(LookupEntity entity);
+String defaultStringConversion(LookupEntity entity) { return "default"; }
+
+String loadAndDisplay(Guid id, ConvertToString converter) {
+  LookupEntity entity = db.LoadEntity(id);
+  <strong>return (converter ?? defaultStringConversion)(entity);</strong>
+}
+
+[Test]
+public void TestLoadAndDisplay() {
+  Guid id = Guid.Empty;
+  ConvertToString customConversion = delegate { return "custom"; };
+  Assert.That(loadAndDisplay(id, defaultStringConversion), Is.EqualTo("default"));
+  Assert.That(loadAndDisplay(id, customConversion), Is.EqualTo("custom"));
+  <strong>Assert.That(loadAndDisplay(id, null), Is.EqualTo("default"));</strong>
+}
+</pre>
+<p>In this contrived example we are using it to provide a default&nbsp;delegate function if none is specified in the call to <code>loadAndDisplay</code>. I'm not <em>necessarily</em> recommending this, I just found it interesting :)</p>

@@ -1,0 +1,30 @@
+---
+layout: "post"
+title: "Getting SubSonic talking to Oracle"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8669027206606287771"
+categories: ["tools", "orm", ".net"]
+date: "2007-11-01T16:07:00.0+11:00"
+updated: "2008-05-01T09:04:07.731+10:00"
+---
+
+<p>I wasn't sure how well SubSonic would play with Oracle, but it turns out that it was very easy to get the basics working. First, I <a href="http://www.blechie.com/wtilton/archive/2007/06/06/11.aspx">setup a data access class and the SubSonic basics</a> like VS external tools etc.</p> <p>Instead of the configuration suggested in the above link, my App.config looked like this:</p><pre>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;configuration&gt;
+  &lt;configSections&gt;
+    &lt;section name="SubSonicService" type="SubSonic.SubSonicSection, SubSonic" requirePermission="false"/&gt;
+  &lt;/configSections&gt;
+  &lt;connectionStrings&gt;
+    &lt;clear/&gt;
+    &lt;add name="<strong>MyAppsConnectionString</strong>" providerName="Oracle.DataAccess"
+      connectionString="Data Source=<strong>MyOracleServer</strong>;User Id=<strong>MyUserId</strong>;Password=<strong>MyPassword</strong>;Integrated Security=no;" /&gt;
+  &lt;/connectionStrings&gt;
+  &lt;SubSonicService defaultProvider="MyApp"&gt;
+    &lt;providers&gt;
+      &lt;clear/&gt;
+      &lt;add name="<strong>MyApp</strong>" type="SubSonic.OracleDataProvider, SubSonic"
+        connectionStringName="<strong>MyAppsConnectionString</strong>"  generatedNamespace="<strong>MyApp.DataAccess</strong>" /&gt;
+    &lt;/providers&gt;
+  &lt;/SubSonicService&gt;
+&lt;/configuration&gt;
+</pre>
+<p>The emphasised bits will vary for you obviously. If you need connection string help check <a href="http://www.connectionstrings.com/?carrier=oracle">ConnectionStrings.com</a> for your Oracle provider. I am using <a href="http://www.oracle.com/technology/pub/articles/cook_dotnet.html">Oracle Data Provider for .NET</a>, so your <code>providerName</code> may vary if you are using a different one.</p>
+<p>It was then just a matter of running <code>Sonic.exe generate /out Generated</code> via the external tool configured earlier (or manually running it) from the project directory, and out pops your data access layer.</p>

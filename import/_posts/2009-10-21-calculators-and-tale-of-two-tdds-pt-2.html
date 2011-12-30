@@ -1,0 +1,294 @@
+---
+layout: "post"
+title: "Calculators and a tale of two TDDs - Pt 2: BDD-style"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1393735784467500884"
+categories: [".net", "+Calculator TDD", "tdd"]
+date: "2009-10-21T13:38:00.0+11:00"
+updated: "2010-09-29T11:15:05.724+10:00"
+---
+
+<p>This is my second attempt at <a href="http://osherove.com/tdd-kata-1/">Roy Osherove's String Calculator kata</a>. You can read the details at the original site, but the overall gist is a calculator that has an <code>Add()</code> method. This method takes a string input, adds the numbers in the string together, then returns the result. </p>
+
+<p>My <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">first attempt at the problem</a> was using a traditional TDD approach. For this attempt I'll be using a variation of Behavioural Driven Development (BDD) as described to me by <a href="http://blog.jpboodhoo.com/">JP Boodhoo</a> at <a href="http://www.davesquared.net/2009/08/nothin-but-net-sydney-2009-day-4.html">NBDN</a>. We'll pick up from the point where I have created a new solution containing a single C# project called CalculatorKata.</p>
+
+<p>As this is likely to be quite different to what you've seen before (at least, it was for me), I'll take a bit of time to describe the details of how it works, so this instalment will be longer than the last.</p>
+
+<h2>Test infrastructure</h2>
+
+<p>To support writing tests in the style I want I'll create a little bit of test infrastructure:</p>
+
+<pre class="brush:csharp">
+[TestFixture]
+public abstract class ConcernFor&lt;T&gt; {
+    protected T sut;
+
+    [SetUp]
+    public void SetUp() {
+        Context();
+        sut = CreateSubjectUnderTest();
+        Because();
+    }
+
+    protected virtual void Context() {}
+    protected abstract T CreateSubjectUnderTest();
+    protected virtual void Because() {}
+}
+</pre>
+
+<p>This will be a base class for our tests, or specifications if you prefer. Before each test runs our unit testing framework will setup a context, create the subject under test (SUT), then execute the <code>Because()</code> method. This means we'll create our dependencies in <code>Context()</code>, create a subject under test that uses those depedencies, then call the <code>sut</code> in the <code>Because()</code> method. Our test itself will then assert that the right thing happened.</p>
+
+<p>This is a fairly clumsy and simplistic (although reasonably understandable) version of the approach used in JP's <a href="http://blog.jpboodhoo.com/developwithpassionbdd.aspx">developwithpassion.bdd</a> library.</p> 
+
+<h2>Designing the <code>Add()</code> method</h2>
+
+<p>Let's start top-down. How's our <code>Calculator.Add()</code> method going to work? We'll start writing a specification in <code>CalculatorSpecs.cs</code>:</p>
+
+<pre class="brush:csharp">
+public class CalculatorSpecs {
+    public class When_given_a_string_to_add : ConcernFor&lt;Calculator&gt; {
+        [Test]
+        public void Should_return_the_result_of_adding_together_all_numbers_in_the_string() {
+            Assert.That(result, Is.EqualTo(sum));
+        }
+    }
+}
+</pre>
+
+<p>At an abstract level this states what I want to happen. When the calculator is given a string to add it should return the sum of all the numbers in that string. The implementation of that assertion is that the <code>result</code> we get is equal to the correct <code>sum</code>. We'll setup the specific instances of these variables later.</p>
+
+<p>Why does this scenario occur? Because the <code>Add()</code> method was called with a given <code>expression</code>. Let's add that to our specification.</p>
+
+<pre class="brush:csharp">
+protected override void Because() {
+ result = sut.Add(expression);
+}
+</pre>
+
+<h2>Building up a context for this to work</h2>
+
+<p>How are we going to get from a string <code>expression</code> to our <code>sum</code> integer? We've written the assertion and the action triggering off this scenario (the <code>Because()</code>), so now we've got to design a context that allows this to happen. Our test title gives us a bit of a hint as to what we need to do: we need to add together all the numbers in the string. Which implies we need to get the numbers out of the string, then sum them. Two responsibilities. So let's push each responsibility out into another object so we don't have to worry about it yet.</p>
+
+<p>First, let's get something that will get some numbers out of our expression:</p>
+
+<pre class="brush:csharp">
+INumberParser numberParser;
+/* ... snip ... */
+protected override void Context() {
+    numberParser = MockRepository.GenerateStub&lt;INumberParser&gt;();
+    numberParser.Stub(x =&gt; x.GetNumbers(expression)).Return(numbers);
+}
+</pre>
+
+<p>This has required our design to adopt an <code>INumberParser</code> with a <code>GetNumbers()</code> method on it. It is going to return some numbers from an expression. What expression? What numbers? Let's make some up:</p>
+
+<pre class="brush:csharp">
+INumberParser numberParser;
+/* ... snip ... */
+protected override void Context() {
+    numberParser = MockRepository.GenerateStub&lt;INumberParser&gt;();
+    expression = "(some numbers)";
+    var numbers = new[] {1, 2, 3, 4};
+
+    numberParser.Stub(x =&gt; x.GetNumbers(expression)).Return(numbers);
+}
+</pre>
+
+<div class="note">You may prefer to have our expression set to something like <code>"1,2,3,4"</code> so it matches the content of our <code>numbers</code> variable. Comes down to personal preference, but I prefer not to be prejudging exactly how our <code>GetNumbers</code> method is going to work. By putting in garbage then anyone reading this test will know that they have to look at the <code>INumberParser</code> implementation to see exactly how the numbers are getting parsed. Otherwise the parsing requirements could change and then this test would be giving misleading information.</div>
+
+<p>Then we'll need something to add these numbers, right?</p>
+
+<pre cclass="brush:csharp">
+INumberParser numberParser;
+IAdder adder;
+/* ... snip ... */
+protected override void Context() {
+    numberParser = MockRepository.GenerateStub&lt;INumberParser&gt;();
+    adder = MockRepository.GenerateStub&lt;IAdder&gt;();
+    expression = "(some numbers)";
+    var numbers = new[] {1, 2, 3, 4};
+
+    numberParser.Stub(x =&gt; x.GetNumbers(expression)).Return(numbers);
+    adder.Stub(x =&gt; x.Add(numbers)).Return(sum);
+}
+</pre>
+
+<p>This has given us an <code>IAdder</code> interface with an <code>Add()</code> method on it that can sum numbers, as well as a variable name that sounds like a type of snake. When our adder is told to add the numbers we want to return a sum. It doesn't really matter what sum, we're just going to assume that it does its job properly. We haven't initialised our <code>sum</code> variable yet, so let's put in any old thing.</p>
+
+<pre cclass="brush:csharp">
+protected override void Context() {
+ numberParser = MockRepository.GenerateStub&lt;INumberParser&gt;();
+ adder = MockRepository.GenerateStub&lt;IAdder&gt;();
+    expression = "(some numbers)";
+ var numbers = new[] {1, 2, 3, 4};
+ sum = 42;
+
+ numberParser.Stub(x =&gt; x.GetNumbers(expression)).Return(numbers);
+ adder.Stub(x =&gt; x.Add(numbers)).Return(sum);
+}
+</pre>
+
+<p>All that's left now is to create our subject under test.</p>
+
+<pre class="brush:csharp">
+protected override Calculator CreateSubjectUnderTest() {
+ return new Calculator(numberParser, adder);
+}
+</pre>
+
+<h2>Huh?</h2>
+
+<p>So what are we doing here? First, we've stated what our class does: when given a string it should add together all the numbers in that string. If we drill down into our context we can see how our class will accomplish this monumental feat. It will use a <code>INumberParser</code> to get numbers from our <code>expression</code>, and then use a <code>IAdder</code> to add those numbers.</p>
+
+<p>So what is <code>Calculator</code>'s single responsibility? It is just coordinating its two dependencies. This level of abstraction has just flowed fairly naturally from this way of thinking about and decomposing the problem while writing our test. If you're anything like me this will all look a little foreign, but I've found this style of TDD very addictive.</p>
+
+<p>Those of you that have done mocking before may notice my favourite little side-effect of writing contexts like this: we have references to all the little pieces of data flowing through our class under test. We won't need to resort to any fancy <code>Arg&lt;int&gt;.Matches(...)</code> stuff, we just tell or mock/stub/substitute/test double exactly what to expect and what to return.</p>
+
+<p>In case you are worried that this seems like a lot of work, it took me about 2 minutes to get this out.</p>
+
+<h2>Passing our specification</h2>
+
+<p>To pass this we switch to <code>Calculator.cs</code>. Our implementation will mirror the context we set up while writing the test:</p>
+
+<pre class="brush:csharp">
+public class Calculator {
+    private readonly INumberParser _numberParser;
+    private readonly IAdder _adder;
+
+    public Calculator(INumberParser numberParser, IAdder adder) {
+        _numberParser = numberParser;
+        _adder = adder;
+    }
+
+    public int Add(string expression) {
+        var numbers = _numberParser.GetNumbers(expression);
+        return _adder.Add(numbers);
+    }
+}
+</pre>
+
+<p>This passes, and, as I can't see any refactoring to do, I think we're done. Because our class only has a single responsibility (coordinating a couple of dependencies), there aren't a whole lot of scenarios to set up, nor a whole lot of tests to write.</p>
+
+<h2>Driving out our <code>IAdder</code> implementation</h2>
+
+<p>We now have to continuing driving out the bits and pieces that the calculator needs to work. We have an <code>INumberParser</code> and <code>IAdder</code> that need implementations. <code>IAdder</code> sounds pretty straight forward, so let's knock that out of the way.</p>
+
+<pre class="brush:csharp">
+//AdderSpecs.cs
+public class AdderSpecs {
+    public class When_adding_numbers : ConcernFor&lt;Adder&gt; {
+        private int result;
+        private int sum;
+        private IEnumerable&lt;int&gt; numbers;
+
+        [Test]
+        public void Should_return_the_sum_of_the_numbers() {
+            Assert.That(result, Is.EqualTo(sum));
+        }
+
+        protected override void Because() {
+            result = sut.Add(numbers);
+        }
+
+        protected override void Context() {
+            numbers = new[] {1, 2, 3, 4};
+            sum = 10;
+        }
+
+        protected override Adder CreateSubjectUnderTest() {
+            return new Adder();    
+        }
+    }
+}
+
+//Adder.cs
+public class Adder : IAdder {
+    public int Add(IEnumerable&lt;int&gt; numbers) {
+        return numbers.Sum();
+    }
+}
+</pre>
+
+<h2>Creating a number parser</h2>
+
+<p>Finally, we need to tackle the <code>INumberParser</code> implementation. This one was driven out a requirement at a time, similar to the approach taken for my <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">first attempt at the problem</a>. First I added handling for the empty string case, then a string containing a single number, then multiple numbers separated by commas etc.</p>
+
+<pre class="brush:csharp">
+public class NumberParserSpecs {
+    public abstract class Concern : ConcernFor&lt;NumberParser&gt; {
+        protected string numberString;
+        protected IEnumerable&lt;int&gt; result;
+
+        protected override void Because() {
+            result = sut.GetNumbers(numberString);
+        }
+
+        protected override NumberParser CreateSubjectUnderTest() {
+            return new NumberParser();
+        }
+    }
+
+    public class When_parsing_an_empty_string : Concern {
+
+        [Test]
+        public void Should_return_no_numbers() {
+            Assert.That(result, Is.Empty);
+        }
+
+        protected override void Context() {
+            numberString = &quot;&quot;;
+        }
+    }
+
+    public class When_parsing_a_string_containing_a_single_number : Concern {
+        [Test]
+        public void Should_return_the_number() {
+            Assert.That(result, Is.EquivalentTo(new[] {1}));
+        }
+
+        protected override void Context() {
+            numberString = &quot;1&quot;;
+        }
+    }
+
+    public class When_parsing_a_string_with_multiple_numbers_separated_by_commas : Concern {
+        [Test]
+        public void Should_return_all_the_numbers() {
+            Assert.That(result, Is.EquivalentTo(new[] {1,2,3,4,5}));
+        }
+
+        protected override void Context() {
+            numberString = &quot;1,2,3,4,5&quot;;
+        }
+    }
+
+    public class When_parsing_a_string_with_multiple_numbers_separated_by_newlines : Concern {
+        [Test]
+        public void Should_return_all_the_numbers() {
+            Assert.That(result, Is.EquivalentTo(new[] { 1, 2, 3, 4, 5 }));
+        }
+
+        protected override void Context() {
+            numberString = &quot;1\n2\n3\n4\n5&quot;;
+        }
+    }
+}
+</pre>
+
+<p>The main difference between this and the previous approach is that we are only testing the number parsing here, in isolation of the addition. This should hopefully give us more flexibility in changing the parsing later.</p>
+
+<pre class="brush:csharp">
+public class NumberParser : INumberParser {
+    private static readonly char[] Delimiters = new[] {',', '\n'};
+
+    public IEnumerable&lt;int&gt; GetNumbers(string expression) {
+        if (expression == &quot;&quot;) return new int[0];
+        return expression.Split(Delimiters).Select(x =&gt; int.Parse(x));
+    }
+}
+</pre>
+
+<p>We still have two responsibilities here: splitting the expression and converting each part into an integer. That's a potential refactoring for us, but I'm happy enough with this for now.</p>
+
+<h2>What's left?</h2>
+
+<p>The remaining feature we have to implement is allowing a custom delimiter to be specified by beginning the expression with "//". This caused me a bit of trouble in the <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">first instalment</a>, so we'll tackle this in the <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-3.html">next part of this series</a> so we can look at it in a bit more depth.</p>

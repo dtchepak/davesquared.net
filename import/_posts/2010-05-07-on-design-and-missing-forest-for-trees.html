@@ -1,0 +1,18 @@
+---
+layout: "post"
+title: "On design and missing the forest for the trees"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-1907761458555815329"
+categories: ["dev practices"]
+date: "2010-05-07T21:53:00.0+10:00"
+updated: "2010-05-07T21:54:31.292+10:00"
+---
+
+<p>Looking at discreet units of code is an awesome way of limiting complexity to the immediate problem at hand, and of optimising your design for solving that problem at that level of abstraction. That's one of the reasons TDD with unit tests is so useful. However focusing purely on the details of the design can mean missing the bigger picture.</p>
+
+<p>One thing I noticed while watching <a href="http://devlicio.us/blogs/rob_eisenberg">Rob Eisenberg's</a> excellent MIX 2010 presentation, <a href="http://live.visitmix.com/MIX10/Sessions/EX15">"Build your own MVVM framework"</a>, was that Rob removed some fairly fundamental areas of duplication I hadn't even considered. Things like using conventions for automatically data-binding view controls to properties and commands on their view models, rather than repeatedly wiring-up property changed events and duplicating view model property names in XAML bindings. </p>
+
+<p>My team have just finished our first WPF application, and we focussed on test driving out all our view models and making sure the micro-level design was ok and fairly duplication free. This near-sightedness meant we never really considered the duplication occurring at a macro level, and so we missed a great opportunity to drastically simplify our code. (To be clear, I started out the project and established the initial conventions before the remainder of the team got to work on it, so missing this was my fault, not the team's.)</p>
+
+<p>In addition to helping us stay <a href="http://en.wikipedia.org/wiki/Don't_repeat_yourself">DRY</a>, I'm also fairly certain having more focus on the macro-level translates into the more effective application of design patterns at a micro-level. It's a case of <a href="http://en.wikipedia.org/wiki/Think_Globally,_Act_Locally">thinking globally, acting locally</a>. Design patterns are all about context, so the more context you give yourself the better chance you have of choosing a good shape for the unit in which you are working. </p>
+
+<p>That's not to say that micro-level design isn't extremely important. After all, abstracting a complex system into small, manageable pieces is the whole reason OO exists.  It's just a reminder that the larger context in which you're working is also important.</p>

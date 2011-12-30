@@ -1,0 +1,60 @@
+---
+layout: "post"
+title: "Example of deploying web apps using MSBuild"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6484774925838183738"
+categories: ["deployment", ".net"]
+date: "2007-08-21T10:35:00.0+10:00"
+updated: "2008-05-01T09:04:07.747+10:00"
+---
+
+<p>Here is a sample MSBuild script that will deploy two web apps from Sample.sln to localhost. It is very nasty, but worked ok for me.</p> <p>First, we create our XML .build file and&nbsp;import <a href="http://davesquared.blogspot.com/2007/08/msbuild-task-library-links.html">SDCTasks</a> for our IIS operations. The remaining code snippets go in the &lt;Project /&gt; node.</p><pre>&lt;Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"&gt;
+  &lt;Import Project="$(MSBuildExtensionsPath)\SDCTasks\Microsoft.Sdc.Common.tasks"/&gt; 
+  ...
+&lt;/Project&gt;</pre>
+<p>Next we declare and define a DeploymentPath, and also set the solution file (SLN) we are going to be building. I have then defined two WebProject items. This is used for <a href="http://www.sedodream.com/PermaLink,guid,5f1e0445-ce3d-4052-ba80-42fd19512d42.aspx">batching</a>, which is the MSBuild way of repeating a single task with different inputs each time. Each WebProject item includes the name of the IIS web that will be created, as well as the SourceFolder that contains the ASPX files and web /bin after building the SLN (which by default builds to a PrecompiledWeb directory). All these variable names are arbitrary -- the only&nbsp;native MSBuild&nbsp;nodes are PropertyGroup and&nbsp;ItemGroup.</p><pre>  &lt;PropertyGroup&gt;
+    &lt;DeploymentPath&gt;C:\InetPub\wwwroot&lt;/DeploymentPath&gt;    
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;ProjectReferences Include="Sample.sln" /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;WebProject Include="MyWebService"&gt;
+      &lt;WebName&gt;Sample_MyWebService&lt;/WebName&gt;
+      &lt;SourceFolder&gt;$(MSBuildProjectDirectory)\PrecompiledWeb\Sample.MyWebService&lt;/SourceFolder&gt;      
+    &lt;/WebProject&gt;
+    &lt;WebProject Include="MyWebSite"&gt;
+      &lt;WebName&gt;Sample_MyWebSite&lt;/WebName&gt;
+     &lt;SourceFolder&gt;$(MSBuildProjectDirectory)\PrecompiledWeb\Sample.MyWebSite&lt;/SourceFolder&gt;      
+    &lt;/WebProject&gt;
+  &lt;/ItemGroup&gt;
+</pre>
+<p>The next step is defining the build target. This delegates the build/compilation step to msbuild itself (rather than explicitly calling the CSC compiler which can also be done), by calling msbuild on the SLN file we defined in the ProjectReferences variable.</p><pre>  &lt;Target Name="Build"&gt;
+    &lt;MSBuild Projects="@(ProjectReferences)" Targets="Build" /&gt;
+  &lt;/Target&gt;</pre>
+<p>Next we have the deployment step. This replaces the web.config in the compiled app with a web.config.local file we have (so you can change configuration for deployment), does a basic file copy to move the files to the deployment path, then creates a virtual directory and web application at the deployment path to allow the ASPX files to execute. </p><pre>  &lt;Target Name="Deploy"&gt;
+    &lt;!-- Replace web configs in build directory with deployment configuration --&gt;
+    &lt;Delete Files="%(WebProject.SourceFolder)\Web.Config" /&gt;
+    &lt;Copy
+      SourceFiles="%(WebProject.SourceFolder)\Web.Config.local"
+      DestinationFiles="%(WebProject.SourceFolder)\Web.Config" /&gt;
+    &lt;!-- Copy webs from build to deployment--&gt;
+    &lt;Folder.Copy
+    Source="%(WebProject.SourceFolder)"
+    Destination="$(DeploymentPath)\%(WebProject.WebName)" /&gt;
+    &lt;!-- Create Webs on Localhost --&gt;
+    &lt;Web.WebSite.CreateVirtualDirectory
+        VirtualDirectoryName="%(WebProject.WebName)"
+        Path="$(DeploymentPath)\%(WebProject.WebName)"
+        AppCreate="true" /&gt;
+  &lt;/Target&gt;
+</pre>
+<p>Note the %(WebProject.property) style references. These are the batches I mentioned earlier, which means that tasks containing %(..) within attributes will repeat for each WebProject ItemGroup defined. This just saves us from duplicating the Folder.Copy task for each web in the SLN (for example), which can be helpful if you are deploying several web applications in the one deployment step.</p>
+<p>For good measure we can also clean up after ourselves.</p><pre>  &lt;Target Name="Clean"&gt;
+    &lt;Web.WebSite.DeleteVirtualDirectory VirtualDirectoryName="%(WebProject.WebName)" /&gt;
+    &lt;RemoveDir Directories="$(DeploymentPath)\%(WebProject.WebName)" /&gt;
+    &lt;RemoveDir Directories="$(MSBuildProjectDirectory)\PrecompiledWeb" /&gt;
+  &lt;/Target&gt;
+</pre>
+<p>You can execute this from the command prompt:</p><pre>msbuild sample.build /target:clean,build,deploy</pre>
+<p>This was mainly done for a proof-of-concept, and after running it I had my two web apps deployed and running on localhost as expected (er, hoped). You can obviously do a lot more useful stuff than this, like checking out from source control first, creating remote webs, virtual directories and application pools, running unit tests, and varying deployment options based on command line arguments. The main drawback of this approach is that you do not get a nice, self-contained package/installer for the deployment, and as such you will need direct network access to the deployment server as well as the relevant permissions.</p>
+<p>Now to try similar stuff using <a href="http://davesquared.blogspot.com/2007/08/automating-releases-with-wix-and.html">WiX</a>...</p>

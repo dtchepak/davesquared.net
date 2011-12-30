@@ -1,0 +1,23 @@
+---
+layout: "post"
+title: "Guard against SQL injection in dynamic PL/SQL"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8302106242466837724"
+categories: ["database"]
+date: "2007-09-25T12:23:00.0+10:00"
+updated: "2007-09-25T12:23:45.388+10:00"
+---
+
+<p>I am slowly coming to terms with Oracle again, after a decade or so of using SQL Server exclusively. One way to guard again SQL injection in SQL Server is to use <a href="http://blogs.msdn.com/raulga/archive/2007/01/04/dynamic-sql-sql-injection.aspx">parameterisation and sp_executesql</a>.</p> <p>From <a href="http://blogs.msdn.com/raulga/archive/2007/01/04/dynamic-sql-sql-injection.aspx">Raul Garcia's example</a>:</p><pre>  declare @cmd nvarchar(max)
+  declare @parameters nvarchar(max)
+  set @cmd = N'SELECT * FROM sys.database_principals WHERE name = @name'
+  set @parameters = '@name sysname'
+  EXEC sp_executesql @cmd, @parameters, @name = @name </pre>
+<p>To do this <a title="parameterisation in Oracle" href="http://download.oracle.com/docs/cd/B28359_01/appdev.111/b28370/dynamic.htm#BJEDAHEE">parameterisation in Oracle</a> (I am using 10g) you can&nbsp;use <a href="http://download.oracle.com/docs/cd/B28359_01/appdev.111/b28370/dynamic.htm#BJEDAHEE">bind arguments</a>, as per this code snippet:</p><pre>  l_username := 'dav';
+  OPEN l_cursor FOR
+    'SELECT *
+     FROM myTable t
+     WHERE 
+       t.created_by LIKE <strong>:username</strong> || ''%'''
+     USING <strong>l_username</strong>; 
+<em>  -- fetch from, then close cursor --</em></pre>
+<p>Here <code>:username</code> is bound to the value in <code>l_username</code> via the <code>USING</code> clause,&nbsp;so no tricky <code>'''; DROP TABLE myTable; --'</code> style nonsense here, thanks very much :).</p>

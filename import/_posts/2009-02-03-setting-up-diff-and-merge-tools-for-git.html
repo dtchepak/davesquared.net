@@ -1,0 +1,150 @@
+---
+layout: "post"
+title: "Setting up diff and merge tools for Git on Windows"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-506003894564689820"
+categories: ["git"]
+date: "2009-02-03T23:23:00.05+11:00"
+updated: "2010-03-26T10:38:18.314+11:00"
+---
+
+<div class="note"><b>UPDATE!!! </b> I'm now using an <a href="http://www.davesquared.net/2010/03/easier-way-to-set-up-diff-and-merge.html">easier way of configuring diff and merge tools</a>. If you don't mind using KDiff3 then you might want to check that out first. If you want flexibility in which tools you use and how they're used, then read on. <i>-- DT, 26 Mar 2010</i></div>
+
+<p>I finally got tired of reading diff outputs from git on the command line, and decided to hook up a visual diff and merge tool. After piecing together hints from various posts around ye olde intraweb I've now got somethings that works. I am using <a href="http://code.google.com/p/msysgit/">Git on MSys</a> to get Git working on Windows via a PowerShell command line, but a similar setup might work via Cygwin or via the <code>cmd.exe</code> command line.</p>
+
+<h2>Setting up a diff tool</h2>
+
+<div class="note"><b>Update 2009-05-20:</b> This approach stopped working for me when I upgraded to Windows 7 and Git 1.6.3. I had to <a href="http://www.davesquared.net/2009/05/setting-up-git-difftool-on-windows.html">switch to using <code>git difftool</code> instead</a>.</div>
+
+<p>The easiest way I found to do this was to create a shell script wrapper for your diff tool of choice. To make things easy on me I put the script, <code>git-diff-wrapper.sh</code> in <code>C:\Program Files\Git\cmd</code>, which is in my <code>Path</code> environment variable. The file contents looks like this:</p>
+
+<pre>
+#!/bin/sh
+
+# diff is called by git with 7 parameters:
+#  path old-file old-hex old-mode new-file new-hex new-mode
+<b>&quot;C:/Program Files/SourceGear/DiffMerge/DiffMerge.exe&quot; &quot;$2&quot; &quot;$5&quot; | cat</b>
+
+#&quot;C:/Program Files/WinMerge/WinMergeU.exe&quot; &quot;$2&quot; &quot;$5&quot; | cat
+#&quot;C:/Program Files/KDiff3/kdiff3.exe&quot; &quot;$2&quot; &quot;$5&quot; | cat
+</pre>
+
+<p>The basic format of this is stolen directly from <a href="http://code.google.com/p/msysgit/issues/detail?id=106">this post</a> on the Msysgit site. Provided your diff tool can be called from the command line, you'll be able to set it up to work with Git using this template. In this case I've used it to setup a call to <a href="http://www.sourcegear.com/diffmerge/">Sourcefear's DiffMerge</a>, a nice free (as in beer) diff and merge tool. </p>
+
+<p>You'll also see I've commented out calls to <a href="http://winmerge.org/">WinMerge</a> and <a href="http://kdiff3.sourceforge.net/">KDiff3</a>, which are both free as in beer and speech. I ended up settling on DiffMerge because it is purdy (unlike KDiff3 -- sorry), and also does 3-way merges (unlike WinMerge, which was my previous diff tool of choice).</p>
+
+<p>The next step is telling Git about your wrapper. In your home directory (<code>C:\Users\(username)</code> or the corresponding Documents and Settings equivalent) Git will normally have created a <code>.gitconfig</code> file. If not then go ahead and create one. You'll need to have the following section in there:</p>
+
+<pre>
+[diff]
+ external = C:/Program Files/git/cmd/git-diff-wrapper.sh
+</pre>
+
+<p>We can now use <code>git diff</code> and it will fire up our diff tool of choice.</p>
+
+<h2>Setting up a merge tool</h2>
+<p>I had more trouble getting a merge tool working, largely because putting references to paths like <code>C:/Program Files/...</code> in <code>.gitconfig</code> seems to bork when used here. Again I ended up using the wrapper approach, creating <code>git-merge-diffmerge-wrapper.sh</code> at <code>C:\Program Files\Git\cmd</code> to call DiffMerge. This file ended up looking like this:</p>
+
+<pre>
+#!/bin/sh
+
+# Passing the following parameters to mergetool:
+#  local base remote merge_result
+
+"C:/Program Files/SourceGear/DiffMerge/DiffMerge.exe" "$1" "$2" "$3" --result="$4" --title1="Mine" --title2="Merging to: $4" --title3="Theirs"
+</pre>
+
+<p>I unashamedly stole this from <a href="http://www.therightstuff.de/2009/01/28/Setting-Up-SourceGear-DiffMerge-With-Git.aspx">Alexander Groß's post on getting DiffMerge running on Cygwin-based Git</a> (with slight modifications, any faults are mine :)). We can then wire this up in <code>.gitconfig</code> again:</p>
+
+<pre>
+[merge]
+    tool = diffmerge
+
+[mergetool &quot;diffmerge&quot;]
+ cmd = git-merge-diffmerge-wrapper.sh &quot;$PWD/$LOCAL&quot; &quot;$PWD/$BASE&quot; &quot;$PWD/$REMOTE&quot; &quot;$PWD/$MERGED&quot; 
+    trustExitCode = false
+ keepBackup = false
+ 
+[mergetool &quot;kdiff3&quot;]
+    path = C:/Program Files/KDiff3/kdiff3.exe
+    keepBackup = false
+    trustExitCode = false
+</pre>
+
+<p>Now remember that <code>C:\Program Files\Git\cmd</code> is on my <code>PATH</code>, so I can set the command to call <code>git-merge-diffmerge-wrapper.sh</code> without fully qualifying the path. The details on the arguments are available from the <a href="http://www.kernel.org/pub/software/scm/git/docs/git-mergetool.html">git-mergetool(1) man page</a>. I've also left in a KDiff3 version that seems to work too (Git has some built in support for KDiff3 I think, which is why you can get away with only specifying the path).</p>
+
+<h2>Time for a test drive</h2>
+<p>Let's make sure everything's in working order. I'll open up a PowerShell window and let's see how we go (you'll have to excuse me for using old DOS commands instead of fancy PowerShell ones, I've only just switched to PS after running into various issues with the <code>cmd.exe</code> command line).</p>
+
+<pre>
+PS&gt; mkdir HelloWorld
+PS&gt; cd HelloWorld
+PS&gt; git init
+  Initialized empty Git repository in C:/Development/Git/HelloWorld/.git/
+PS&gt; echo Hello World! &gt; hello.txt
+PS&gt; git add hello.txt
+PS&gt; git commit -m &quot;Initial commit&quot;
+  [master (root-commit)]: created 2a2cf34: &quot;Initial commit&quot;
+   1 files changed, 0 insertions(+), 0 deletions(-)
+   create mode 100644 hello.txt
+PS&gt; git checkout -b helloGit
+  Switched to a new branch &quot;helloGit&quot;
+PS&gt; echo Hello Git! &gt; hello.txt
+PS&gt; git add hello.txt
+PS&gt; git commit -m &quot;Update from helloGit branch&quot;
+  [helloGit]: created e71437b: &quot;Update from helloGit branch&quot;
+   1 files changed, 0 insertions(+), 0 deletions(-)
+PS&gt; git checkout master
+  Switched to branch &quot;master&quot;
+PS&gt; echo Hello World! Hello indeed! &gt; hello.txt
+PS&gt; git add hello.txt
+PS&gt; git commit -m &quot;Update from master&quot;
+  [master]: created 5dee19d: &quot;Update from master&quot;
+   1 files changed, 0 insertions(+), 0 deletions(-)
+PS&gt; git merge helloGit
+  warning: Cannot merge binary files: HEAD:hello.txt vs. helloGit:hello.txt
+
+  Auto-merging hello.txt
+  CONFLICT (content): Merge conflict in hello.txt
+  Automatic merge failed; fix conflicts and then commit the result.
+</pre>
+
+<div class="note">Because I've used <code>echo</code> to stream data into <code>hello.txt</code> the files have ended up in binary mode. Let's ignore that as it is just to get an easy demo going. The important thing is we now have a merge conflict to resolve.</div>
+
+<p>If we now type in <code>git mergetool</code> Git ask's us if we'd like to run our merge tool. We can hit enter and up pops DiffMerge. If you wanted KDiff3, we could have called <code>git mergetool -t kdiff3</code>, or any other merge tool in our <code>.gitconfig</code> (by default the tool specified in the <code>merge.tool</code> config option is used).</p>
+
+<pre>
+PS&gt; git mergetool
+Merging the files: hello.txt
+
+Normal merge conflict for 'hello.txt':
+  {local}: modified
+  {remote}: modified
+Hit return to start merge resolution tool (diffmerge):
+
+</pre>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://picasaweb.google.com/lh/photo/7I08AQm42qGhkAfGm36b8g?authkey=XWXzeleCcGk&feat=embedwebsite"><img src="http://lh3.ggpht.com/_wEsHWMWy090/SYg3YF8-huI/AAAAAAAAA7A/UPOkNLHPSaU/s800/diffMerge-3way.png" /></a></div>
+
+<p>Resolve the merge conflict however you like and then try this:</p>
+
+<pre>
+PS&gt; echo Wow, it worked! &gt; hello.txt
+PS&gt; git diff
+</pre>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://picasaweb.google.com/lh/photo/Por6nx-Houtmfc3ILIE_dw?authkey=XWXzeleCcGk&feat=embedwebsite"><img src="http://lh5.ggpht.com/_wEsHWMWy090/SYg3ZSorfYI/AAAAAAAAA7I/-_oWC0BkRRE/s800/diffMerge-diff.png" /></a>
+</div>
+
+<p>Hooray, we have our diff tool working! We can also run commands like <code>git diff HEAD~ HEAD</code> and <code>git diff helloGit master</code> and get the output via our diff tool.</p>
+
+<h2>Conclusion</h2>
+<p>This setup earns the coveted <a href="http://www.codinghorror.com/blog/archives/000818.html">Works on My Machine</a> certification, but even if that's the only place it works then hopefully it still gives you enough information to configure your Windows diff and merge tools for use with Git.</p>
+
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://www.codinghorror.com/blog/archives/000818.html" style="margin-left: 1em; margin-right: 1em;"><img src="http://lh4.ggpht.com/_wEsHWMWy090/SYg42J2XdHI/AAAAAAAAA7Q/hHGvPBogwWY/s800/works-on-my-machine-starburst.png" /></a></div>
+
+<p>If you hunt down the relevant command line options you should be able to get pretty much any tool working: <a href="http://cbilson.blogspot.com/2008/10/using-beyond-compare-as-git-mergetool.html">Beyond Compare</a>, <a href="http://blog.logicalrand.com/2008/9/9/use-p4merge-or-diffmerge-with-git-mergetool-on-os-x">p4merge</a>, <a href="http://palaso.org/archives/52">TortoiseMerge</a> etc.</p>
+
+<p>Hope this helps.</p>

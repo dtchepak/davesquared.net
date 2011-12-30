@@ -1,0 +1,111 @@
+---
+layout: "post"
+title: "An Rx newbie observes property changes"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-6170294978191947195"
+categories: ["rx", ".net"]
+date: "2011-05-21T00:08:00.0+10:00"
+updated: "2011-05-22T00:19:21.206+10:00"
+---
+
+<p>I recently started taking some tentative steps into <a href="http://msdn.microsoft.com/en-us/data/gg577609">Reactive Extensions (Rx)</a> (yes, I realise I'm way behind on this). The case I started off with was observing a property, and performing an action only when it changed to specific values.</p>
+
+<pre class="brush: csharp">
+public interface IProperty&lt;T&gt; {
+    T Value { get; set; }
+    event Action ValueChanged;
+}
+</pre>
+
+
+<p>The traditional way of doing this in .NET is to subscribe to events:</p>
+
+<pre class="brush: csharp">
+    [Test]
+    public void WithEvents() {
+        _property.ValueChanged += OnValueChanged;
+
+        _property.Value = 5;
+        _property.Value = 10;
+        _property.Value = 15;
+        _property.Value = 2;
+
+        _property.ValueChanged -= OnValueChanged;
+        Assert.That(_propertyValues.ToArray(), Is.EqualTo(new[] { 10, 15 }));
+    }
+
+    private void OnValueChanged() {
+        var value = _property.Value;
+        if (value &gt;= 10) {
+            _propertyValues.Add(value);
+        }
+    }
+</pre>
+
+
+<p>Here we subscribe to the <code>ValueChanged</code> event. Every time the event fires our <code>OnValueChanged()</code> method will be called, which will check if the property value meets our condition, and if so then add it to <code>_propertyValues</code> (a list of <code>int</code>).</p>
+
+<p>The other alternative is to change from looking at this situation as the procedure of responding to each event by looking up the <code>Value</code>, to looking at the changes as a collection of <code>Values</code> produced by the events. This is where Rx comes in. (At least this is my newbie interpretation; please correct me in the comments.)</p>
+
+<h2>Everything I know about Rx in under 200 words</h2>
+
+<p>Rx seems to revolve around 2 main interfaces (that I believe shipped with .NET4, and are also available from Rx for .NET 3.5). The first is <code>IObserver&lt;T&gt;</code>, which has <code>OnNext&lt;T&gt;(T item)</code>, <code>OnError(Exception error)</code> and <code>OnCompleted()</code>. This interface is the <a href="http://headinthebox.posterous.com/subjectobserver-is-dual-to-iterator">dual of the iterator interface</a> (<code>IEnumerator&lt;T&gt;</code>), which just means that rather than iterating over a collection, we get each member of the collection pushed to us.</p>
+
+<p>The other interface is <code>IObservable&lt;T&gt;</code>, which just has a <code>Subscribe&lt;T&gt;(IObserver&lt;T&gt; observer)</code> method that returns an <code>IDisposable</code>. This lets us register an observer to start receiving pushed items, and dispose of the observable to clean up subscriptions.</p>
+
+<p>Rx itself is a whole heap of supporting implementations and extension methods to help us do incredibly cool things with those two interfaces<b>*</b>. Rather than looking at these incredibly cool things, let's look at our previous example instead, partly because the cool things are covered in many places, and partly because this example is adapted from a real problem I had to solve, so I know it's something we might be able to use in day-to-day development. :)</p>
+
+<div class="note"><b>*</b> For a real (i.e. factual :)) explanation, try <a href="http://leecampbell.blogspot.com/2010/08/reactive-extensions-for-net.html">Lee Campbell's Rx series</a>.</div>
+
+<h2>Observing the values of our changing property</h2>
+
+<p>I initially stuffed up my effort to get this working using Rx by creating a terribly naive implementation, but thanks to <a href="http://stackoverflow.com/questions/6056004/using-net-rx-to-observe-property-changed-with-action-events/6057664#6057664">a very helpful StackOverflow answer</a> from <a href="http://weblogs.asp.net/sweinstein/">Scott Weinstein</a> it's now looking pretty neat.</p>
+
+<p>The first thing we need to do is create an <code>IObservable&lt;T&gt;</code> over our property value. Rx has built-in methods to do this from events, but only when they follow the standard event handler signature (whereas ours is declared as <code>event Action</code>). Instead we can use <code>Observable.Create&lt;T&gt;()</code> to help us. (We could do this in-line where we want to use it, but I've wrapped it in an reusable method because I've got lots of properties where this will come in handy.)</p>
+
+<pre class="brush: csharp">
+    public static class ObservableEx {
+        public static IObservable&lt;T&gt; FromEvent&lt;T&gt;(Func&lt;T&gt; selector, Action&lt;Action&gt; subscribe, Action&lt;Action&gt; unsubscribe) {
+            return Observable.Create&lt;T&gt;(obs => {
+                Action pushNext = () => obs.OnNext(selector());
+                subscribe(pushNext);
+                return () =&gt; unsubscribe(pushNext);
+            });
+        }
+    }
+</pre>
+
+<p>This looks a little more confusing than it actually is. <code>Observable.Create&lt;T&gt;()</code> takes a delegate which itself takes an <code>IObserver&lt;T&gt;</code> and returns an action that disposes of our observable. In the body of that delegate we put the logic necessary to push values to the observer. This is the subscription logic for any observer that subscribes to our observable.</p>
+
+<div class="note"><b>Aside:</b> If we want to push the initial state of the value to observers when they subscribe, we can add an invocation of `pushNext()` after `subscribe(pushNext)`. This will ensure our collection always has a starting value.</div>
+
+<p>In this case we push whatever value is returned by our <code>selector</code>, and subscribe to the required event so we push whenever that event is raised. When our observable is disposed we unsubscribe. And here's how we use it:</p>
+
+<pre class="brush: csharp">
+    [Test]
+    public void WithObservable() {
+        ObservableEx.FromEvent(
+                () =&gt; _property.Value, 
+                action =&gt; _property.ValueChanged += action, 
+                action =&gt; _property.ValueChanged -= action)
+            .Where(x =&gt; x &gt;= 10)
+            .Subscribe(_propertyValues.Add);
+
+        _property.Value = 5;
+        _property.Value = 10;
+        _property.Value = 15;
+        _property.Value = 2;
+
+        Assert.That(_propertyValues.ToArray(), Is.EqualTo(new[] { 10, 15 }));
+    }
+</pre>
+
+
+<p>This is the same test as before but rewritten to use observables. We create our observable over our property value based on its <code>ValueChanged</code> events using our extension method. We then filter this collection of values using a standard, LINQy <code>Where</code> clause. Finally we put our logic for handling occurrences of this particular observation by calling <code>Subscribe</code> and giving it a callback to execute; in this case our logic to add the value to <code>_propertyValues</code>.</p>
+
+<p>Compared with the previous approach, we have consolidated event subscriptions, unsubscriptions, filtering the values and the logic of handling the values we're interested in to a single observable declaration. Having all this related information together is great, but being able to declare our intention in the code rather than the procedure we need to implement it is, IMO, awesome. Not to mention how nice it is to have our event subscription cleaned up for us when our observable goes out of scope. :)</p>
+
+<div class="note"><b>Note:</b> Whenever I've showed this to people the first thing they've asked is 'how can I test this?' Normally we try and test behaviour rather than implementation, so in the case I tried this for I didn't need to modify any tests; I just replaced event subscriptions with the observable creation and they all passed. That said, Rx has a package available to support testing, or you could mock the interfaces if, <a href="http://www.davesquared.net/2011/04/dont-mock-types-you-dont-own.html">despite my warnings</a>, you still think it's a good idea. ;)</div>
+
+<p>This may seem like a silly example, so let's look at a more realistic case where the same code could come in handy. Say we want to run some diagnostics whenever a device gets connected. We could observe the device's connection state, filter it to just look at <code>Connected</code> values, then run the required diagnostics code when we get this value. Better yet, we can also combine observables, so we could subscribe to notifications only when the device is connected, its driver has reported it is ready to use, and the software is running in diagnostics mode. This would make for messy event handling code, but be quite readable as code combining and filtering observables.</p>
+
+<p>I'm definitely keen to play around with this more, and hope I've managed to get those of you that have been putting it off (like me) interested enough in it to do the same. :)</p>

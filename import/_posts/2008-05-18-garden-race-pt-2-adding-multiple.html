@@ -1,0 +1,389 @@
+---
+layout: "post"
+title: "Garden Race Pt 2: Adding multiple players"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2202457914204588821"
+categories: ["agile", "+Garden Race", ".net", "tdd"]
+date: "2008-05-18T23:43:00.0+10:00"
+updated: "2009-03-15T22:18:50.682+11:00"
+---
+
+<p><i>This post is <a href="http://davesquared.blogspot.com/2008/05/garden-race-series.html">part of a series</a> exploring the (very) basics of iterative development using the example of a simple <a href="http://en.wikipedia.org/wiki/Snakes_and_ladders">Snakes and Ladders</a>-like game. Links to each post in the series will be added to the <a href="http://davesquared.blogspot.com/2008/05/garden-race-series.html">index page</a>.</i></p>
+
+<p>Um, ok, so the customers (firstborn and I) weren't overly impressed with the demo from <a href="http://davesquared.blogspot.com/2008/05/garden-race-pt-1-snakes-ladders-and.html">part 1</a>. It did help illustrate the most pressing deficiencies though:</p>
+
+<ul>
+<li>Doesn't support multiple players</li>
+<li>Doesn't have anything even remotely resembling snakes or ladders, let alone fairies</li>
+<li>No gui</li>
+</ul>
+
+<p>Our story list currently looks like this:</p>
+
+<ol>
+<li><strike>A player can roll the die, and then move that many spaces along the board.</strike></li>
+<li>A player that ends his or her turn on a "feature square" (a square containing a creature or obstacle), will be moved to the square connected with that feature.</li>
+<li>There can be 1-4 players, and each player has their turn in sequence.</li>
+<li><strike>A player that reaches the final square wins the game.</strike></li>
+</ol>
+
+<p>There are no GUI stories currently defined, but we'll need <i>something</i> resembling a GUI eventually. I am tempted to start working on some GUI stories, because I don't want to get too far through the code and then find that it won't play nice with a graphical interface. It is really the main point of this software after all. On the other hand, the <code>Game</code> class is still very basic, so maybe it would be a good idea to knock over one of the original stories on our list. Story 2 seems like it could tie in with the GUI pretty strongly -- the view will have to show the player's move, then perform some kind of animation in the <i>event</i> that the player lands on a feature square. How about Story 3? Pretty basic, and essential to the game. At least that way firstborn and I can race each other to the end of the command line demo :)</p>
+
+<p>I'll just check with the customers... be right back.</p>
+
+<p>Ok, customer is asleep, so I'll take that as &quot;that's fine Dad&quot; :)</p>
+
+<p>Quick aside, normally we would estimate &quot;points&quot; or some other unit of how much effort each story would take, and how many units could be done in an iteration, then have the customer prioritise the stories for this iteration.</p>
+
+<h2>Our test list</h2>
+
+<p>What tests could we write for multiple players?</p>
+
+<ol>
+<li>Should be able to set the number of players for a new game</li>
+<li>For a new, 2 player game, both player's should be off-the-board (square 0)</li>
+<li>After first player's roll, current player should be player 2</li>
+<li>After first player's roll, current player's position should be off-the-board (square 0)</li>
+<li>First player rolls a 3, second player rolls a 2, then current player should be player 1 on square 3.</li>
+</ol>
+
+<p>Frankly, I don't really like how these look. Implementation details keep coming to mind, and I want to ignore them and focus on <i>what</i> I want to achieve (not <i>how</i> I want to achieve it). Let's start with these anyway and we'll see how it goes.</p>
+
+<h2>Starting iteration 2</h2>
+<p>Running all our tests shows we are all green, and all good to go. The first test on the list looks easy -- set the number of players in the game. Let's do that one.</p>
+
+<pre>//From GameSpec.cs
+[Fact]
+public void Should_be_able_to_create_2_player_game() {
+ var twoPlayerGame = new Game(10, 2);
+ Assert.Equal(2, twoPlayerGame.NumberOfPlayers);
+}
+//From Game.cs
+public int NumberOfPlayers { get { return numberOfPlayers; } }
+public Game(int boardSize) {
+ this.boardSize = boardSize;
+}
+public Game(int boardSize, int numberOfPlayers) {
+ this.boardSize = boardSize;
+ this.numberOfPlayers = numberOfPlayers;
+}</pre>
+  
+<p>What about the previous constructor that just takes the <code>boardSize</code>? Well that should probably just start a new one player game I guess. Let's write a test for how we think it should work.</p>
+
+<pre>[Fact]
+public void New_game_should_have_1_player_by_default() {
+ var onePlayerGame = new Game(10);
+ Assert.Equal(1, onePlayerGame.NumberOfPlayers);
+}</pre>
+
+<p>This fails because the number of players initialises to zero.</p>
+
+<pre>
+public Game(int boardSize) {
+ this.boardSize = boardSize;
+ this.numberOfPlayers = 1;
+}</pre>
+
+<p>Fixed. Now let's look at test 2, checking the position of each player for a new game.</p>
+
+<pre>//From GameSpec.cs:
+[Fact]
+public void New_game_should_start_all_players_off_the_board() {
+ var newThreePlayerGame = new Game(10, 3);
+ var players = new[] {1, 2, 3};
+ foreach (var player in players) {
+  Assert.Equal(0, newThreePlayerGame.GetSquareFor(player));   
+ }            
+}
+
+//From Game.cs:
+public int GetSquareFor(int player) {
+ return 0;
+}</pre>
+
+<p>An obviously deficient implementation like this <code>GetSquareFor()</code> method suggests we need to writes some more tests to flesh out a better one.</p>  
+  
+<pre>[Fact]
+public void Positions_should_be_correct_after_first_two_players_roll() {
+ var threePlayerGame = new Game(10, 3);
+ const int firstRoll = 3;
+ const int secondRoll = 5;
+ 
+ threePlayerGame.Roll(firstRoll);
+ threePlayerGame.Roll(secondRoll);
+ 
+ Assert.Equal(firstRoll, threePlayerGame.GetSquareFor(1));
+ Assert.Equal(secondRoll, threePlayerGame.GetSquareFor(2));
+ Assert.Equal(0, threePlayerGame.GetSquareFor(3));
+}</pre> 
+
+<p>Now we are potentially looking at a bigger step. We need <code>Roll()</code> to affect only the position of the current player. We don't have the concept of a current player. We'll also probably need an array or similar structure to store each player's position. <code>Roll()</code> will then store update the position of the current player, and change the current player to the next player. The <code>CurrentSquare</code> implementation will probably need to change to refer to the current player too. And then we'll have to add code to change the position in the event the player lands on a feature square! Argh!</p>
+
+<h2>Stop worrying! Try baby steps...</h2>
+
+<p>Let's back up a bit. I'm fairly confident we can write up the code above, but it will only be covered by one test and we are touching a lot of the <code>Game</code> class without direct guidance from the tests. We still have this test on our test list: "<i>After first player's roll, current player should be player 2</i>". This deals with the concept of the current player without requiring addition position arrays. It should only affect the <code>Roll()</code> implementation. Let's skip our last test by updating the attribute to <code>[Fact(Skip="Too big a step for now")]</code> (I could delete the test and rewrite it if we need it, but it did illustrate our need to deal with the current player concept, so I'll leave it for now). I started off coding our new test with two separate assertions:</p>
+
+<pre>var newTwoPlayerGame = new Game(10, 2);
+Assert.Equal(1, newTwoPlayerGame.CurrentPlayer);
+newTwoPlayerGame.Roll(2);
+Assert.Equal(2, newTwoPlayerGame.CurrentPlayer);</pre>
+
+<p>The split asserts are ugly, and we can split this into two more specific tests. Here's the passing code, which was written one step at a time (not shown is chaining the <code>Game(int)</code> constructor to <code>Game(int, int)</code>, so everything gets initialised properly in either case. Check the download at the end for the finished code):</p>
+
+<pre>//From GameSpec.cs:
+[Fact]
+public void Current_player_for_new_game_should_be_player_1() {
+ var newTwoPlayerGame = new Game(10, 2);
+ <b>Assert.Equal(1, newTwoPlayerGame.CurrentPlayer);</b>
+}
+[Fact]
+public void After_first_players_roll_it_should_be_the_second_players_turn() {
+ var newTwoPlayerGame = new Game(10, 2);
+ newTwoPlayerGame.Roll(2);
+ <b>Assert.Equal(2, newTwoPlayerGame.CurrentPlayer);</b>
+}
+//From Game.cs:
+<b>public int CurrentPlayer { get; private set; }</b>
+public Game(int boardSize, int numberOfPlayers) {
+ this.boardSize = boardSize;
+ this.numberOfPlayers = numberOfPlayers;
+ this.playerPositions = new int[numberOfPlayers];
+ <b>this.CurrentPlayer = 1;</b>
+}
+public void Roll(int dieValue) {
+ CurrentSquare += dieValue;
+ <b>CurrentPlayer++;</b>
+}</pre>
+
+<p>Before we go back to the test we skipped, I'd like to flesh out more of the <code>CurrentPlayer</code> property. Fifth test on our list was &quot;<i>First player rolls a 3, second player rolls a 2, then current player should be player 1 on square 3</i>&quot;. Let's do a simpler version and just verify that this scenario ends up with the correct <code>CurrentPlayer</code>.</p>
+
+<pre>//In GameSpec.cs:
+[Fact]
+public void After_all_players_have_had_a_turn_it_should_be_first_players_turn_again() {
+ var newThreePlayerGame = new Game(10, 3);
+ newThreePlayerGame.Roll(1);
+ newThreePlayerGame.Roll(1);
+ newThreePlayerGame.Roll(1);
+ Assert.Equal(1, newThreePlayerGame.CurrentPlayer);
+}
+//In Game.cs:
+public void Roll(int dieValue) {
+ CurrentSquare += dieValue;
+ CurrentPlayer++;
+ <b>if (CurrentPlayer > NumberOfPlayers) CurrentPlayer = 1;</b>
+}
+</pre>
+
+<h2>A quick refactor from the green bar</h2>
+<p>We now have a green bar (well, yellow if you count the skipped test I guess). Time to take a look for potential refactoring opportunities. I've been a bit slack about this up to now as I haven't noticed anything obvious while coding and haven't explicitly stopped to think about refactoring. I have a bad habit of doing this -- I do design work while writing the code to pass the test, rather than deferring it to the refactoring stage. This can lead me to generalising to early or changing the design without getting clear direction from the tests and passing implementation. Note to self: premature generalisation is one of the many roots of all evil :)</p>
+
+<p>In this case we've done the Right Thing<sup>TM</sup> and written simple code to pass the test, then looked at refactoring based on what the current implementation needs, rather than what we <i>think</i> it will need. The code within <code>Roll()</code> contains the logic for selecting the next player as well as for updating the current square. Let's <a href="http://www.refactoring.com/catalog/extractMethod.html">Extract Method</a> to make this more obvious.</p>
+
+<pre>public void Roll(int dieValue) {
+ CurrentSquare += dieValue;
+ <b>nextPlayer();</b>
+}
+private void nextPlayer() {
+ CurrentPlayer++;
+ if (CurrentPlayer > NumberOfPlayers) CurrentPlayer = 1;
+}</pre>
+
+<p>This is purely a matter of taste. I find it reflects the intention more. If you don't, then leave it un-refactored. :-) Either way, key lesson here (for me, you probably know it already :)) is to defer design stuff until the production code shows a clear need, or until a test is too hard to write. Either way, design from the green bar whenever possible.</p>
+
+<h2>Time to face the music...</h2>
+
+<p>We probably shouldn't put it off any longer. Let's re-enable the test we skipped earlier:</p>
+
+<pre>//In GameSpec.cs:
+[Fact]
+public void Positions_should_be_correct_after_first_two_players_roll() {
+ var threePlayerGame = new Game(10, 3);
+ const int firstRoll = 3;
+ const int secondRoll = 5;
+ 
+ threePlayerGame.Roll(firstRoll);
+ threePlayerGame.Roll(secondRoll);
+ 
+ Assert.Equal(firstRoll, threePlayerGame.GetSquareFor(1));
+ Assert.Equal(secondRoll, threePlayerGame.GetSquareFor(2));
+ Assert.Equal(0, threePlayerGame.GetSquareFor(3));
+}</pre>
+
+<p>This give the following assertion failure:</p>
+<pre>TestCase 'DaveSquared.GardenRace.Tests.GameSpec.Positions_should_be_correct_after_first_two_players_roll'
+failed: Assert.Equal() Failure
+Expected: 3
+Actual:   0</pre>
+
+<p>This is failing because our implementation for <code>GetSquareFor(...)</code> stinks -- it's just returning 0. My fault, not yours. Let's get back to the green bar as soon as possible, then we'll worry about getting the design right. My original guess for passing this test was that we would need an array of player positions, and <code>Roll()</code> would just update the position for the current player. We have a current player concept in the code now, so let's chuck in an array and see how it goes:</p>
+
+<pre>//Bits and pieces from Game.cs:
+public class Game {
+    //...
+ private readonly int[] playerPositions;
+ //...
+ public Game(int boardSize, int numberOfPlayers) {
+  this.boardSize = boardSize;
+  this.numberOfPlayers = numberOfPlayers;
+  <b>this.playerPositions = new int[numberOfPlayers];</b>
+  this.CurrentPlayer = 1;
+ }
+ public void Roll(int dieValue) {
+  CurrentSquare += dieValue;
+  <b>playerPositions[CurrentPlayer - 1] = CurrentSquare;</b>
+  nextPlayer();
+ }
+ //...
+ public int GetSquareFor(int player) {
+  <b>return playerPositions[player - 1];</b>
+ }
+}</pre>
+
+<p>Running this fails with a new message:</p>
+
+<pre>TestCase 'DaveSquared.GardenRace.Tests.GameSpec.Positions_should_be_correct_after_first_two_players_roll'
+failed: Assert.Equal() Failure
+Expected: 5
+Actual:   8</pre>
+
+<p>It is failing on our second assertion, <code>Assert.Equal(secondRoll, threePlayerGame.GetSquareFor(2));</code>. This gives us a good hint as to what's happening -- our first and second rolls of 3 and 5 are both being added to the same array index. Hold on, that's only half the story. Let's have a closer look at this:</p>
+
+<pre>public void Roll(int dieValue) {
+ <b>CurrentSquare += dieValue;</b>
+ playerPositions[CurrentPlayer - 1] = <b>CurrentSquare;</b>
+ nextPlayer();
+}</pre>
+
+<p>Brilliant Dave. What a fantastic coder I am :) I'm still adding all rolls to <code>CurrentSquare</code>, then assigning that to the current player position. In this case, <code>CurrentSquare</code> is 3+5=8 which fails our test. Why didn't you point this out? Luckily I had my tests to do it in your absence :) We'll fix it right now:</p>
+
+<pre>public void Roll(int dieValue) {
+ CurrentSquare += dieValue;
+ <b>playerPositions[CurrentPlayer - 1] += dieValue;</b>
+ nextPlayer();
+}</pre>
+
+<p>Tests pass. My own ineptitude aside, this test that was initially giving us troubles has been trivial to solve. We now have a green bar, so let's refactor. First obvious bit of duplication is the two square increments in the <code>Roll()</code> method. Let's update <code>CurrentSquare</code> to use our <code>GetSquareFor(int player)</code> method:</p>
+
+<pre>
+public int CurrentSquare { 
+ get { <b>return GetSquareFor(CurrentPlayer);</b> } 
+}
+//...
+public void Roll(int dieValue) {
+ playerPositions[CurrentPlayer - 1] += dieValue;
+ nextPlayer();
+}</pre>
+
+<p><code>CurrentSquare</code> is no longer a getter/setter, but is a convenient shorthand for <code>GetSquareFor(int player)</code>. Our <code>Roll()</code> method is fairly clear. We could make it a little bit clearer by extracting a <code>moveCurrentPlayer(int squares)</code> method, but would also mean more indirection. I'll make you a deal, if we end up with a few <code>playerPositions[CurrentPlayer - 1]</code> style array indexes (the -1 is pretty ugly), then we do something about it. For now it is probably ok.</p>
+
+<p>Looking at <code>Game</code> from the perspective of the <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">S.O.L.I.D. principles</a>, I think the main one we have to be wary of is violating the <a href="http://en.wikipedia.org/wiki/Single_responsibility_principle">Single Responsibility Principle (SRP)</a>. Current <code>Game</code> is responsible for:</p>
+
+<ul>
+<li>Number of squares on the board</li>
+<li>Number of players</li>
+<li>Keeping track of whose turn it is</li>
+<li>Keeping track of each player's position</li>
+<li>Knowing when the game has finished</li>
+</ul>
+
+<p>Are these cohesive enough to count under the banner of one responsibility? I'm not sure, but I can't currently think of a better abstraction (feel free to leave comments :-)). For now let's stay conscious of this and we'll revisit it if it starts becoming a problem.</p>
+
+<h2>We're done? No we're not!</h2>
+<p>So are we done for our multiple players story? After running a larger test it appears so. However, after updating the demo we see some strange behaviour. An extract of from the demo code and the output are shown below:</p>
+
+<pre>//From main() in Program.cs:
+const int numberOfSquares = 20;
+const int numberOfPlayers = 2;
+//...
+Console.WriteLine(&quot;Creating a new game with &quot; + numberOfSquares + &quot; squares and &quot; + numberOfPlayers + &quot; players.&quot;);
+var game = new Game(numberOfSquares, numberOfPlayers);
+Console.WriteLine(&quot;Press any key to roll the die.&quot;);
+while (!game.IsFinished) {
+ Console.ReadKey(interceptKey);
+ var dieRoll = GetDieValue();
+ <b>game.Roll(dieRoll);</b>
+ var currentState = (game.IsFinished) ? &quot;You won the game!&quot; : &quot;Now on square &quot; + game.CurrentSquare;
+ Console.WriteLine(&quot;Player &quot; + game.CurrentPlayer + &quot; rolled a &quot; + dieRoll + &quot;. &quot; + currentState);
+}
+//...</pre>
+
+<pre>Creating a new game with 20 squares and 2 players.
+Press any key to roll the die.
+<b>Player 2 rolled a 1. Now on square 0</b>
+Player 1 rolled a 3. Now on square 1
+Player 2 rolled a 2. Now on square 3
+...snip...
+Player 2 rolled a 2. Now on square 18
+Player 1 rolled a 2. Now on square 14
+Player 2 rolled a 3. You won the game!</pre>
+
+<p>Why does player 2 have the first go? And why do they roll a 1 and yet are on square 0? The reason is highlighted in the code snippet above -- the <code>Roll()</code> method updates the Game so that it is the next player's turn. When the demo gets to writing out the current player's position and state, it is actually writing the details for the next player who is about to have their turn.</p>
+
+<p>I believe this is a form of <i>temporal coupling</i>, or coupling in time. The <code>CurrentSquare</code> and <code>CurrentPlayer</code> methods depend on whether they are called before or after <code>Roll</code>. There is almost certainly going to be a problem with <code>IsFinished</code> as well, as that depends on the <code>CurrentPlayer</code> too.</p>
+
+<p>I've been worried about this for a little while actually, especially when thinking about how the GUI will probably want to animate the initial move, then an additional move up or down the snake/ladder/critter type thing. It looks like we'll either have to trigger events from <code>Roll</code>, or break it up and have some kind of coordinator object.</p>
+
+<p>I am quietly confident that we can change our design to support this when we get some tests around the &quot;feature square&quot; or GUI stories, and that these tests will drive us toward a decent design and implementation. Again, let's stay conscious of this coupling and work around it in our demo code. Remember that our demo code is not production code, so we are being a little less precious with it. Next iteration we'll make sure we write tests to cover this and drive a nicer design.</p>
+
+<p>Here's the new main loop in the demo code:</p>
+
+<pre>
+while (!game.IsFinished) {
+ var currentPlayer = game.CurrentPlayer;
+ Console.ReadKey(interceptKey);
+ var dieRoll = GetDieValue();
+ game.Roll(dieRoll);
+ var currentState = (<b>game.IsFinished</b>) ? &quot;You won the game!&quot; : &quot;Now on square &quot; + game.GetSquareFor(currentPlayer);
+ Console.WriteLine(&quot;Player &quot; + currentPlayer + &quot; rolled a &quot; + dieRoll + &quot;. &quot; + currentState);
+}
+</pre>
+
+<pre>Creating a new game with 20 squares and 2 players.
+Press any key to roll the die.
+Player 1 rolled a 5. Now on square 5
+Player 2 rolled a 3. Now on square 3
+(...snip...)
+Player 2 rolled a 1. Now on square 10
+Player 1 rolled a 5. <b>Now on square 23</b>
+Player 2 rolled a 5. You won the game!
+</pre>
+
+<p>As predicted, our <code>IsFinished</code> property is having problems because of the coupling issue. We'll fix this, then we're done.</p>
+
+<h2>Test-first debugging</h2>
+
+<p>Let's write a test to expose the bug with the <code>IsFinished</code> implementation:</p>
+
+<pre>[Fact]
+public void Game_should_finish_as_soon_as_any_player_reaches_the_end() {
+ var threePlayerGame = new Game(5, 3);
+ threePlayerGame.Roll(1);
+ threePlayerGame.Roll(6);
+ Assert.True(threePlayerGame.IsFinished);
+}</pre>
+
+<p>This fails. At the time the assertion is evaluated player 2 has finished, but the current player is player 3, who is yet to finish. This should be straight-forward to pass from here:</p>
+
+<pre>public bool IsFinished {
+ get {
+   return <b>playerPositions.Any(square => square >= boardSize)</b>;
+ }
+}</pre>
+
+<p>All the tests now pass. We've now removed the temporal coupling between <code>Roll</code> and <code>IsFinished</code>, and our demo now works as expected:</p>
+
+<pre>Creating a new game with 20 squares and 2 players.
+Press any key to roll the die.
+Player 1 rolled a 1. Now on square 1
+Player 2 rolled a 1. Now on square 1
+(...snip...)
+Player 1 rolled a 2. Now on square 17
+Player 2 rolled a 2. Now on square 15
+Player 1 rolled a 3. You won the game!
+
+Press a key to exit.
+</pre>
+
+<h2>That's a wrap!</h2>
+<p>Not sure if this looks like a lot of work to you, but it actually represents only a couple of minutes of coding time, and a couple of minutes of thinking time (plus lots of time to write it all down in excruciating detail :-)). Point is that each iteration so far has been really quick despite (or because of?) involving lots of small steps.</p>
+
+<p>You can browse or checkout the final code for this iteration from <a href="http://code.google.com/p/davesquared/source/browse/DaveSquared.GardenRace/tags/part2">here</a>. Thanks for making it this far! :)</p>

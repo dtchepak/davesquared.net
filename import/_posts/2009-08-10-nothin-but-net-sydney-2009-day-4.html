@@ -1,0 +1,57 @@
+---
+layout: "post"
+title: "Nothin' but .NET, Sydney 2009: Day 4"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-108814968591529710"
+categories: ["+nbdn"]
+date: "2009-08-10T23:23:00.0+10:00"
+updated: "2009-08-26T13:04:48.86+10:00"
+---
+
+<p>Day 4 of <a href="http://www.jpboodhoo.com/training.oo">Nothin' but .NET</a> started before 9am and finished after 2:45am (including eating breakfast and dinner in the conference room while still discussing stuff).</p>
+
+<h2>The day's activities</h2>
+<p>We started out talking about IoC containers, and their role in controlling object creation, lifecycle, autowiring dependencies, and also in dynamic interception for AOP (using Reflection.Emit, RealProxy from System.Runtime.Remoting.Proxies, Dynamic Proxy etc). Then it was up to us to implement a simple container. The class started off trying to convert the poor man's dependency injection approach we had used to quickly hack everything together. <a href="http://www.xerxesb.com/">Xerx</a> made a great suggestion that we could simply use <code>Func&lt;object&gt;</code> delegates as factory methods, and just map requested types to those methods.</p>
+
+<p>Once we had configured all the mappings using our container and removed all the no arg constructors we had used for poor man's DI, the next challenge was to drive out a fluent interface for application startup. Here I had my first and only success of the week, where I actually managed to test drive out a few classes without doing my normal trick of becoming hopelessly stuck. JP needed to make a few changes to it but it seemed like I ended up fairly close to a reasonable design. I finally felt like I might be making some progress.</p>
+
+<p>We were going to end the day by chatting about and implementing the domain and the service layers, but we started to lose some attendees due to illness and exhaustion, so we decided to defer the domain stuff until the morning (or, technically, later that morning). We did end up having a quick chat about service layer styles as described in <a href="http://martinfowler.com/books.html#eaa">Martin Fowler's PoEA</a>, and contrasted the <a href="http://martinfowler.com/eaaCatalog/transactionScript.html">Transaction Script</a> approach (i.e. a big ol' procedural method or script) to keeping a thin service layer over a domain. A couple of us worked 'til the end of class implementing some of the front controller stuff we had skipped from earlier in the course.</p>
+
+<p>In contrast to previous days, after Day 4 I felt like I was finally on track to becoming a better developer. (Spoiler alert: it wasn't to last :-\)</p>
+
+<h2>Writing tests</h2>
+
+<p>I continued to build on the testing concepts I had started uncovering on previous days, although I still struggled to apply all them. I covered a lot about trying the &quot;simplest thing that makes sense&quot; instead of the &quot;simplest thing that works&quot; in my summary of <a href="http://www.davesquared.net/2009/08/nothin-but-net-sydney-2009-day-3.html">Day 3</a>, and this continued to be an important theme for Day 4.</p>
+
+<p>I finally started to get an appreciation of the impact which each part of a test definition has on design. The scenario name, test case name and assertion became the fundamental behaviour and purpose for the SUT's existence. The &quot;because&quot; block showed why the SUT was exhibiting this behaviour (a call to a particular method). The context/setup was then used to drive the design of the SUT's collaborators and dependencies and dole out their responsibilities, as required for the SUT to do its job. This then helped us get down to the next level of abstraction.</p>
+
+<p>JP seemed to use the SUT's dependencies, as setup in the test definition, as axes by which the overall design could be varied. By decomposing the problem the SUT is trying to solve into sub-responsibilities, then pushing these responsibilities down into dependencies, the SUT stayed very clean, small and simple. Finding the right abstraction for these responsibilities (in particular, programming to the API you would <i>like</i> them to have) made it easier to design these dependencies once they became the SUT. Any pain, duplication or smells detected while writing tests became a clear sign that we needed to look for a different abstraction around the SUT's dependencies. For example, instead of injecting in a dependency with a required behaviour, we might need to inject a factory or other dependency that would figure out the behaviour needed and return the relevant dependency.</p>
+
+<p>I quizzed JP to try and find out the process he used to make all these design decisions which he seemed to effortlessly drive out while writing the tests. A lot of it seemed to come down to the context he has built up over the years by experience, and (somewhat unfortunately for me) down to an amazing talent for spotting and thinking in abstractions. Still, here is the best approximation of his approach that I could come up with:</p>
+
+<ol id="aug2009_nbdn_day4_writingtestssteps">
+<li>What responsibility does this SUT have? This becomes the scenario name.</li>
+<li>Decompose this into sub-responsibilities. If the SUT is responsible for running a command, then it cannot also be responsible for creating or locating that command. This becomes a responsibility of the next level down the abstraction chain.</li>
+<li>Identify collaborators/dependencies required so we can push these other responsibilities to them, rather than burdening the SUT with doing too much. If the other responsibility is creating a command, we might make a design decision to use a factory to do this.</li>
+<li>How should the SUT react under this scenario? The description of this becomes the test title. JP often used long, descriptive titles loaded with design implications. For example, the SUT  &quot;should call the run method on the command returned by the command factory&quot;. This became a broad overview of the design intention and design decisions made, with the details fleshed out in later steps.</li>
+<li>How do I assert this? Write the test case body in one logical assertion, as simply as possible. It should reflect the fundamental purpose of the SUT's existence.</li>
+<li>Why does this happen? Write the &quot;because&quot; block, which is basically the method call that triggers the behaviour.</li>
+<li>Work out the context/test setup. Setup the collaborators. During this time you'll be making design decisions about the responsibilities and behaviours of the dependencies.</li>
+</ol>
+
+<h2>Today's tidbits</h2>
+
+<p>Here's a quick round up of some other miscellaneous things I picked up on Day 4:</p>
+
+<ul>
+<li>I need to write more code. Lots of code. Tonnes of code! Anything to get some practice in and get more context for my design decisions. Try tackling the same problem with completely different techniques. Try functional style. Try not using dependencies. Try different patterns. Try writing tests differently. Try having no tests. Regardless of the result it will help grow your context on which to base future design decisions.</li>
+<li>Top down design is incredibly powerful for driving down from the required behaviour to the lowest levels of abstraction. Because test-driving each SUT in turn drives out the design of its dependencies, JP ended up with the problem broken down into incredibly simple abstractions. I'm not sure how you could come up with that using bottom-up design, as then your tests don't really give you any feedback on what the design of the higher level code should be.</li>
+<li>Three essential abilities for OO design: problem decomposition, finding abstractions, and segregation of responsibilities. I have no idea how to learn the first two, but <a href="http://en.wikipedia.org/wiki/GRASP_%28Object_Oriented_Design%29">GRASP</a> can probably help with the third.</li>
+<li>Using dependencies as axes to vary the design of the SUT.</li>
+<li>Keep to one logical assertion per test.</li>
+<li>Test context/SetUp can hold design decisions and indirect assertions (e.g. stubbing a return value which is used in the test assertion is a design decision).</li>
+<li>JP said not to think too far ahead, because "it will kill you". Keep at the current level of abstraction, and break the problem down. Don't think "what if?", think "what now?".</li>
+<li>Concentrate on writing tests around the &quot;happy&quot; path. This helps to focus on the SUT's single responsibility, and defer exception handling etc. to different levels of abstraction.</li>
+<li>Focus on outside-in testing using dependency injection. By passing dependencies in we can assert their state or calls made to them by the SUT, therefore making previously untestable internal state testable.</li>
+<li>Static gateways may need direct access to Service Locator (IOC, or abstraction over our container).</li>
+<li>Orchestrator pattern, an object that takes care of the sequence of operations in a pipeline.</li>
+</ul>

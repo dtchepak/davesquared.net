@@ -1,0 +1,63 @@
+---
+layout: "post"
+title: "Why can't I access static members from instances using C#?"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2087604472079286552"
+categories: [".net"]
+date: "2008-07-28T13:58:00.01+10:00"
+updated: "2008-07-28T15:45:27.288+10:00"
+---
+
+<p>Unlike Java, C# does not let you access <code>static</code> members via an instance reference. For example, C# does not let you do this:</p>
+
+<pre>
+public class A {
+  public static String Hello() { return "Hello"; }
+}
+
+[Test]
+public void Call_static_from_instance() {
+  A a = new A();
+  Assert.AreEqual("Hello", <b>a.Hello()</b>); //<b>&lt;&lt;&lt; error CS0176</b>
+  /* error CS0176: Member 'A.Hello()' cannot be accessed with an instance reference... */
+}
+</pre>
+
+<p>At first glance this seems an unreasonable restriction. The compiler knows that <code>Hello()</code> is static, and failing the lack of an identical instance method, this should be right to call. This might be true for this simple example, but what should the following case do? (This one obviously won't compile either.)</p>
+
+<pre>
+public class A {
+  public static String Hello() { return "Hello"; }
+}
+public class B : A {
+  public String Hello() { return "Hi"; }
+}
+
+[Test]
+public void Call_static_from_instance_with_inheritance() {
+  A b = new B();
+  b.Hello(); //Calling via ref to A? Call static A or instance B?
+  b = null;
+  b.Hello(); //Call static based on type A? We don't have a B anymore!
+}
+</pre>
+
+<p>Now imagine adding this (remember, Java is virtual by default, and you can &quot;override&quot; statics):</p>
+<pre>
+public class C : B {
+  public static String Hello() { return "Howdy"; }
+}
+</pre>
+
+<p>So what initially sounds reasonable actually gets hairy pretty quickly. While you could come up with rules as to how each case should behave, it would be near impossible to make these rules obvious to programmer's that don't study the language spec every night before bed. <a href="http://www.jot.fm/issues/issue_2002_11/article4/">Dominik Gruntz published a great explanation</a> of this issue (search for &quot;6 STATIC MEMBERS&quot;), and the reasons behind some other C# departures from Java conventions.</p>
+
+<p>Most of the times I come across something like this that initially seems simple I find that digging into it shows a well-considered approach taken by <a href="http://en.wikipedia.org/wiki/Anders_Heljsberg">Anders</a> and the language design team (compare C# generics to the Java implementation for example). Even if you disagree with some of the decisions, such as <a href="http://www.artima.com/intv/nonvirtual.html">non-virtual by default</a>, at least a lot of thought has gone into trying to make things behave sensibly across a broad range of scenarios. It's a fine line between <a href="http://www.thefreedictionary.com/mollycoddling">mollycoddling</a> developers and being a rope closet.</p>
+
+<h2>What about extension methods?</h2>
+
+<p>As an aside, it's interesting to think about this issue in the context of <a href="http://msdn.microsoft.com/en-us/library/ms364047(VS.80).aspx#cs3spec_topic3">C# 3.0 extension methods</a>. They appear to let you call static methods from an instance (although in reality they compile to standard static calls).</p>
+
+<p>A lot of problems are avoided by forcing them to be declared within a static class (which can't inherit or be inherited from, nor can they be instantiated, avoiding the tangle from the example above). But to really understand how they behave in different circumstances you still need to mentally translate them as the compiler does (i.e. from <code>s.SomeExt(args)</code> to <code>MyExtensions.SomeExt(s, args)</code>) and know the resolution rules (including precedence given to instance methods). Which is probably why <a href="http://msdn.microsoft.com/en-us/library/ms364047(VS.80).aspx#cs3spec_topic3">the spec</a> has this disclaimer:</p>
+
+<blockquote>
+&quot;Extension methods are less discoverable and more limited in functionality than instance methods. For those reasons, it is recommended that extension methods be used sparingly and only in situations where instance methods are not feasible or possible.&quot;
+</blockquote>

@@ -1,0 +1,95 @@
+---
+layout: "post"
+title: "Getting both item and index during C# enumerations"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-393433192689478503"
+categories: [".net", "python"]
+date: "2008-08-30T23:55:00.0+10:00"
+updated: "2008-10-03T15:30:47.149+10:00"
+---
+
+<p>I recently got an <a href="http://davesquared.blogspot.com/2008/01/python-like-range-implementation-in-c.html?showComment=1220059620000#c3630230372213218148">interesting comment</a> on an older post of mine about implementing a <a href="http://davesquared.blogspot.com/2008/01/python-like-range-implementation-in-c.html">Python-like range() function in C#</a>. The commenter posed a solution to the slight feeling of disappointment experienced when you have a <code>foreach</code> loop and then realise you need to access the loop index, forcing a conversion to a <code>for</code> loop or manually incrementing a counter. The solution ended up with a syntax like this:</p>
+
+<pre>
+//From <a href="http://davesquared.blogspot.com/2008/01/python-like-range-implementation-in-c.html?showComment=1220059620000#c3630230372213218148">this comment</a>:
+int[] a = new int[] { 1, 2, 3, 4, 5 };
+foreach (int i in Range.Array(a)) {
+  // do something with i or a[i]
+}
+</pre>
+
+<p>Great concept! :) Let's take it a step further by drawing some more inspiration from Python. Here's a Python list comprehension that uses the <code>enumerate()</code> function to loop over tuples of both index and item:</p>
+
+<pre>
+&gt;&gt;&gt; sampleList = ['a','b','c','d']
+&gt;&gt;&gt; [(index,item) for index, item in enumerate(sampleList)]
+[(0, 'a'), (1, 'b'), (2, 'c'), (3, 'd')]
+</pre>
+
+<p>Or in a more C#-like format:</p>
+
+<pre>
+&gt;&gt;&gt; for index, value in enumerate(sampleList):
+     print(index, value)
+ 
+(0, 'a')
+(1, 'b')
+(2, 'c')
+(3, 'd')
+</pre>
+
+<p>Let's see how this could work in C#. As usual, I'll start with a test:</p>
+
+<pre>
+[Fact]
+public void Can_enumerate_index_and_item() {
+ String[] strings = {&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;};
+ int expectedIndex = 0;
+ <b>foreach (var tuple in Enumerate.Over(strings)) {</b>
+  Assert.Equal(expectedIndex, tuple.Index);
+  Assert.Equal(strings[tuple.Index], tuple.Item);
+  expectedIndex++;
+ }           
+}
+</pre>
+
+<p>To pass this we'll need a simple <code>Tuple</code> class (<a href="http://blogs.msdn.com/jaredpar/archive/tags/Tuple/default.aspx">better versions available</a>) and an <code>Enumerate</code> class (not entirely happy with the names, but we're just mucking around here). I'm going to violate <a href="http://en.wikipedia.org/wiki/YAGNI">YAGNI</a> guidelines here and not restrict us to just arrays of Strings.</p>
+
+<pre>
+public class Tuple&lt;T&gt; {
+ public int Index { get; private set; }
+ public T Item { get; private set; }
+
+ public Tuple(int index, T item) {
+  Index = index;
+  Item = item;
+ }
+}
+
+public class Enumerate {
+ public static IEnumerable&lt;Tuple&lt;T&gt;&gt; Over&lt;T&gt;(IEnumerable&lt;T&gt; items) {
+  int index = 0;
+  foreach (T item in items) {
+   yield return new Tuple&lt;T&gt;(index++, item);
+  }  
+ }
+}
+</pre>
+
+<div class="note"><b>Note added 2008-10-03:</b> As a colleague of mine pointed out, this is a bit evil as it is implying <code>foreach</code> will return items in the same order as indexed. This isn't actually guaranteed at all, so you might get cases where the returned index isn't the actual index of an item.</div>
+
+<p>The original test passes (along with a couple of others omitted for brevity), and we can now write a C# version of the Python <code>enumerate()</code> sample at the start of this post:</p>
+
+<pre>
+String[] strings = { &quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot; };            
+foreach (var tuple in Enumerate.Over(strings)) {
+ Console.WriteLine(tuple.Index + &quot;, &quot; + tuple.Item);
+}
+/* Outputs:
+0, a
+1, b
+2, c
+3, d
+*/
+</pre>
+
+<p>I'm fairly sure there's a better (LINQ-y?) way of doing this, but this is all my Googling and I can come up with right now. :)</p>

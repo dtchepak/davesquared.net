@@ -1,0 +1,25 @@
+---
+layout: "post"
+title: "SharePoint aware workflow activities"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-8011441994125876836"
+categories: ["sharepoint", ".net"]
+date: "2007-07-10T12:45:00.0+10:00"
+updated: "2007-07-10T13:10:40.381+10:00"
+---
+
+<p>When <a href="http://davesquared.blogspot.com/2007/07/custom-sharepoint-designer-actions.html">creating a custom workflow activity for MOSS 2007 in VS 2005</a>, it would be great to be able to get the current SharePoint web or site that the workflow is attached to. <code>SPContext.Current</code> will not work, as it is <code>null</code> within an activity. If only we could get some sort of context for the workflow...</p> <p>Enter <code><a href="http://msdn2.microsoft.com/en-us/library/microsoft.sharepoint.workflowactions.workflowcontext.aspx">WorkflowContext</a></code> (in <code>Microsoft.SharePoint.WorkflowActions</code> namespace, in the DLL of the same name). Unfortunately this is not trivial to access via code -- you need to pass it as a parameter to your activity and put in the necessary plumbing code to store it. First you need to setup a <code>DependencyProperty</code> and related property in your activity.</p><pre>public static DependencyProperty __ContextProperty = 
+  DependencyProperty.Register("__Context", typeof(WorkflowContext), typeof(MyCustomActivity));
+
+[ValidationOption(ValidationOption.Required)]
+public WorkflowContext __Context {
+  get { 
+    return (WorkflowContext) base.GetValue(__ContextProperty);
+  }
+  set { base.SetValue(__ContextProperty, value); }
+}
+</pre>
+<p>You then need to pass the parameter in through the <a href="http://mosschampions.com/blogs/moss/archive/2006/12/14/How-to-not-modify-WSS.Actions-.aspx">relevant .ACTIONS file</a>:</p><pre>&lt;Parameter Direction="In"
+  Type="Microsoft.SharePoint.WorkflowActions.WorkflowContext, Microsoft.SharePoint.WorkflowActions" 
+  Name="__Context" /&gt;
+</pre>
+<p>You can then use the <code>__Context</code> to access the SharePoint site and web associated with this workflow activity. You can do similar things with the <a title="current SharePoint&amp;nbsp;list and list item id" href="http://mosschampions.com/blogs/moss/archive/2006/11/19/Custom-SharePoint-aware-Workflow-Activities.aspx">current SharePoint list and list item id</a>.&nbsp;Thanks <a href="http://forums.microsoft.com/MSDN/ShowPost.aspx?PostID=1736037&amp;SiteID=1">to</a> <a title="these" href="http://mosschampions.com/blogs/moss/archive/2006/11/19/Custom-SharePoint-aware-Workflow-Activities.aspx">these</a>&nbsp;<a href="http://blogs.informationhub.com/jnadrowski/archive/2007/01/03/8114.aspx">posts</a> for the information!</p>

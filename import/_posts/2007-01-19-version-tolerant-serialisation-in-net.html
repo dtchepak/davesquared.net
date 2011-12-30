@@ -1,0 +1,13 @@
+---
+layout: "post"
+title: "Version Tolerant Serialisation in .NET"
+blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-3267443069103135100"
+categories: [".net"]
+date: "2007-01-19T14:02:00.0+11:00"
+updated: "2007-10-04T14:39:28.837+10:00"
+---
+
+<p>.NET 2.0 introduced <a href='http://msdn2.microsoft.com/en-us/library/ms229752.aspx'>Version Tolerant Serialisation</a>. This allows a <code>Serializable</code> class to have fields marked with an <code>OptionalFieldAttribute</code>. This means you can change the class by adding optional fields (or removing optional fields) and still deserialise data from the previous class versions.</p>
+<p>I have a <a href='http://www.martinfowler.com/eaaCatalog/dataTransferObject.html'>Data Transfer Object</a> class that is only used to pass query criteria to a data access class. The idea is that by serialising the object we can let users can save their queries, but I was worried that changes to the class would render previously saved queries unusable. As every field is nullable (users only define a subset of the available criteria) I have been able to mark them all as optional. This means we can add and remove fields and still recreate the object from a previously serialised version. Fields dropped from the previous version will be ignored (they presumably no longer have meaning if they are dropped), and newly-added fields will get their default value. </p>
+
+<p>There is at least one situation it won't handle: changing the type of a field will break the deserialisation. We'll just have to catch that and let the user know their query no longer works, possibly while begging forgiveness :-).</p>
