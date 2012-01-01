@@ -23,11 +23,11 @@ updated: "2010-10-24T23:47:52.872+11:00"
 
 <h2>Liquid templates</h2>
 
-<p>Jekyll uses <a href="http://www.liquidmarkup.org/">Liquid</a> (and <a href="http://github.com/mojombo/jekyll/wiki/liquid-extensions">Liquid Extensions</a>) for templates. In the Jekyll <code>_layouts</code> files you can put in markup like <code>{{ page.content }}</code> and <code>{% for post in site.categories.help reversed %}, {% endfor %}</code> and these will be expanded as required in the generated site.</p>
+<p>Jekyll uses <a href="http://www.liquidmarkup.org/">Liquid</a> (and <a href="http://github.com/mojombo/jekyll/wiki/liquid-extensions">Liquid Extensions</a>) for templates. In the Jekyll <code>_layouts</code> files you can put in markup like <code>&#123;&#123; page.content &#125;&#125;</code> and <code>&#123;% for post in site.categories.help reversed %&#125;, &#123;% endfor %&#125;</code> and these will be expanded as required in the generated site.</p>
 
 <p>What's really neat is that, in addition to the <a href="http://github.com/tobi/liquid/wiki/liquid-for-designers">large range of built in tags and templates</a>, it is also frightfully easy to create your own in Ruby. You just put them into a <code>_plugins</code> directory and Jekyll will automatically pick them up and apply them when generating your site.</p>
 
-<p>For NSubstitute we wanted to easily include code samples formated using <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a>, so we created an <code>{% examplecode %}</code> tag:</p>
+<p>For NSubstitute we wanted to easily include code samples formated using <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a>, so we created an <code>&#123;% examplecode %&#125;</code> tag:</p>
 
 
 <pre class="brush: ruby">
@@ -47,7 +47,7 @@ end
 Liquid::Template.register_tag('examplecode', Jekyll::ExampleCodeBlock)
 </pre>
 
-<p>Any code samples wrapped in <code>{% examplecode %}, {% endexamplecode %}</code> tags will be automatically escaped (<code>h(code)</code> is built in to Liquid to do this) and will be wrapped in an element that includes the <code>class="brush: csharp"</code> that SyntaxHighlighter needs to do its job.</p>
+<p>Any code samples wrapped in <code>&#123;% examplecode %&#125;, &#123;% endexamplecode %&#125;</code> tags will be automatically escaped (<code>h(code)</code> is built in to Liquid to do this) and will be wrapped in an element that includes the <code>class="brush: csharp"</code> that SyntaxHighlighter needs to do its job.</p>
 
 <div class="note"><b>Note:</b> Jekyll has built in support for syntax-highlighting using <a href="http://pygments.org/">Pygments</a>. Pygments is awesome too, but for a number of reasons (mainly ease of setup) we chose to use SyntaxHighlighter instead.</div>
 
@@ -57,11 +57,11 @@ Liquid::Template.register_tag('examplecode', Jekyll::ExampleCodeBlock)
 
 <h3>Writing runnable code samples</h3>
 
-<p>I've already mentioned we included code samples, written in Markdown, and designated with <code>{% examplecode %}</code> Liquid blocks. This would make it pretty easy to parse out these blocks and get them into a C# file so we could compile them, as we could just grab the text between the blocks without HTML decoding. The idea was we'd wrap each example in an NUnit test and make sure they both compile and any assertions passed.</p>
+<p>I've already mentioned we included code samples, written in Markdown, and designated with <code>&#123;% examplecode %&#125;</code> Liquid blocks. This would make it pretty easy to parse out these blocks and get them into a C# file so we could compile them, as we could just grab the text between the blocks without HTML decoding. The idea was we'd wrap each example in an NUnit test and make sure they both compile and any assertions passed.</p>
 
-<p>But what about supporting code that may be required, but that we didn't necessarily want the reader to be bothered with? We may not want to repeat setup code for every example on a page, that would just add a lot of noise to the examples. So just as for our <code>{% examplecode %}</code> tag, we created a <code>{% requiredcode %}</code> tag that wouldn't render its contents to the final page, but could still be parsed out into our C# files.</p>
+<p>But what about supporting code that may be required, but that we didn't necessarily want the reader to be bothered with? We may not want to repeat setup code for every example on a page, that would just add a lot of noise to the examples. So just as for our <code>&#123;% examplecode %&#125;</code> tag, we created a <code>&#123;% requiredcode %&#125;</code> tag that wouldn't render its contents to the final page, but could still be parsed out into our C# files.</p>
 
-<p>The last hurdle was how to handle code-blocks that included class or interface definitions. These couldn't just go into an NUnit test method as the C# compiler isn't too fond of class definitions going into a method body. So we needed our parser to check if <code>{% examplecode %}</code> contained a class or interface definition, and it it did, then just dump it in the C# file without wrapping it in a <code>[Test]</code> method.</p>
+<p>The last hurdle was how to handle code-blocks that included class or interface definitions. These couldn't just go into an NUnit test method as the C# compiler isn't too fond of class definitions going into a method body. So we needed our parser to check if <code>&#123;% examplecode %&#125;</code> contained a class or interface definition, and it it did, then just dump it in the C# file without wrapping it in a <code>[Test]</code> method.</p>
 
 <h3>Code samples to code files to tested DLL</h3>
 
