@@ -7,11 +7,11 @@ date: "2009-05-20T10:56:00.0+10:00"
 updated: "2010-03-26T10:39:17.173+11:00"
 ---
 
-<div class="note"><b>UPDATE!!! </b> I'm now using an <a href="http://www.davesquared.net/2010/03/easier-way-to-set-up-diff-and-merge.html">easier way of configuring diff and merge tools</a>. If you don't mind using KDiff3 then you might want to check that out first. If you want flexibility in which tools you use and how they're used, then read on. <i>-- DT, 26 Mar 2010</i></div>
+<div class="note"><b>UPDATE!!! </b> I'm now using an <a href="http://davesquared.net/2010/03/easier-way-to-set-up-diff-and-merge.html">easier way of configuring diff and merge tools</a>. If you don't mind using KDiff3 then you might want to check that out first. If you want flexibility in which tools you use and how they're used, then read on. <i>-- DT, 26 Mar 2010</i></div>
 
-<p>After installing Windows 7 I had trouble getting <a href="http://www.davesquared.net/2009/02/setting-up-diff-and-merge-tools-for-git.html"><code>git diff</code> to work properly with diffmerge</a>. In fact, any external tool I tried to define would hang PowerShell once it exited. Unfortunately in the time I had to look at it I couldn't figure out if this was due to a new version of PowerShell with Windows 7, the new version of <a href="http://code.google.com/p/msysgit/">MSys Git</a> I had installed, or something strange after switching to x64 architecture. What I did have time for was to find a workaround using <code>git difftool</code>, which is a new command added to Git as of version 1.6.3.</p>
+<p>After installing Windows 7 I had trouble getting <a href="http://davesquared.net/2009/02/setting-up-diff-and-merge-tools-for-git.html"><code>git diff</code> to work properly with diffmerge</a>. In fact, any external tool I tried to define would hang PowerShell once it exited. Unfortunately in the time I had to look at it I couldn't figure out if this was due to a new version of PowerShell with Windows 7, the new version of <a href="http://code.google.com/p/msysgit/">MSys Git</a> I had installed, or something strange after switching to x64 architecture. What I did have time for was to find a workaround using <code>git difftool</code>, which is a new command added to Git as of version 1.6.3.</p>
 
-<p>The workaround is essential just a tweak of <a href="http://www.davesquared.net/2009/02/setting-up-diff-and-merge-tools-for-git.html">the steps we used previously to get <code>git diff</code> working</a>, so its probably easiest to have a quick skim through that before going through this.</p>
+<p>The workaround is essential just a tweak of <a href="http://davesquared.net/2009/02/setting-up-diff-and-merge-tools-for-git.html">the steps we used previously to get <code>git diff</code> working</a>, so its probably easiest to have a quick skim through that before going through this.</p>
 
 <h2>Configuration tweaks</h2>
 <p>First alteration to the previous approach was to create a difftool wrapper for Diffmerge. I called this <code>git-diff-diffmerge-wrapper.sh</code> and put it in my <code>Git/cmd</code> directory (which is also on my PATH).</p>
@@ -34,7 +34,7 @@ updated: "2010-03-26T10:39:17.173+11:00"
 # ... snipping rest of .gitconfig ... # 
 </pre>
 
-<p>I've left the external tool commented out (prefixed by #). This syntax is more in line with the way the we configured the <code>git mergetool</code> <a href="http://www.davesquared.net/2009/02/setting-up-diff-and-merge-tools-for-git.html">last time</a>.</p>
+<p>I've left the external tool commented out (prefixed by #). This syntax is more in line with the way the we configured the <code>git mergetool</code> <a href="http://davesquared.net/2009/02/setting-up-diff-and-merge-tools-for-git.html">last time</a>.</p>
 
 <h2>Using <code>git difftool</code></h2>
 

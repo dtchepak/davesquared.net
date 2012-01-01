@@ -7,7 +7,7 @@ date: "2008-04-21T16:48:00.0+10:00"
 updated: "2008-05-01T09:04:07.716+10:00"
 ---
 
-<p>I am currently trying to write some integration tests for a WCF service. The service itself calls a controller that uses <a href="http://davesquared.blogspot.com/2008/04/getting-current-identity-in-wcf.html"><code>ServiceSecurityContext.Current.PrimaryIdentity</code></a> to get the current user, then checks what the user can do. For the purpose of my integration tests, I wanted to hard code the current user, and then expect certain results back for that user.</p>
+<p>I am currently trying to write some integration tests for a WCF service. The service itself calls a controller that uses <a href="http://davesquared.net/2008/04/getting-current-identity-in-wcf.html"><code>ServiceSecurityContext.Current.PrimaryIdentity</code></a> to get the current user, then checks what the user can do. For the purpose of my integration tests, I wanted to hard code the current user, and then expect certain results back for that user.</p>
 
 <p>Now the username lookup is nicely abstracted behind an identity provider interface, so I would ideally just use a dependency injection tool to replace the identity lookup with something that suits my tests. For a number of reasons this wasn't possible, so instead I had to override the WCF authentication process to always return the required user.</p>
 

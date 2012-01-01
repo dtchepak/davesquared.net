@@ -36,7 +36,7 @@ greeter.say_hello
 #=&gt; Howdy World!
 </pre>
 
-<div class="note"><b>Note: </b> It is just as easy to redefine this method on all instances of <code>Greeter</code> by opening up the class as <a href="http://www.davesquared.net/2010/11/replacing-ruby-instance-method-with.html?showComment=1289659978198#c4877835427233880947">Derick points out in the comments</a>. In this case I just want to replace the method on the specific <code>greeter</code> instance, not on all instances of the <code>Greeter</code> class.</div>
+<div class="note"><b>Note: </b> It is just as easy to redefine this method on all instances of <code>Greeter</code> by opening up the class as <a href="http://davesquared.net/2010/11/replacing-ruby-instance-method-with.html?showComment=1289659978198#c4877835427233880947">Derick points out in the comments</a>. In this case I just want to replace the method on the specific <code>greeter</code> instance, not on all instances of the <code>Greeter</code> class.</div>
 
 <p>Now say that rather than hard-coding a greeting in our re-defined method, we want to reference a local variable instead (useful for replacing methods for unit tests).</p>
 
@@ -103,4 +103,4 @@ greeter.say_hello
     <li>Dhananjay Nene's <a href="http://codeblog.dhananjaynene.com/2010/01/dynamically-adding-methods-with-metaprogramming-ruby-and-python/">examples of metaprogramming for both Ruby and Python</a></li>
 </ul>
 
-<p><a href="http://www.davesquared.net/2010/11/continuing-adventures-in-adding-methods.html">Next post</a> we'll look at a hack to make this a bit easier.</p>
+<p><a href="http://davesquared.net/2010/11/continuing-adventures-in-adding-methods.html">Next post</a> we'll look at a hack to make this a bit easier.</p>

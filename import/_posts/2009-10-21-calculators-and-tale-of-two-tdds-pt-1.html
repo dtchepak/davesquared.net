@@ -190,7 +190,7 @@ public class Calculator {
 
 <h2>Where did I go wrong?</h2>
 
-<p>Well, first up I missed the cue for a bigger refactoring. My tests weren't really screaming out a nice direction for me to go though. If you know your <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">SOLID principles</a> you'll have noticed right away that I am violating the Single Responsibility Principle (SRP). My class is doing lots of things: interpretting custom delimiters specified in a string, parsing numbers from the string, and adding the numbers.</p>
+<p>Well, first up I missed the cue for a bigger refactoring. My tests weren't really screaming out a nice direction for me to go though. If you know your <a href="http://davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">SOLID principles</a> you'll have noticed right away that I am violating the Single Responsibility Principle (SRP). My class is doing lots of things: interpretting custom delimiters specified in a string, parsing numbers from the string, and adding the numbers.</p>
 
 <p>Later on I went through and factored out a <code>NumberParser</code> class which took care of all the delimiter stuff and returning the numbers in the string, but that class still needed to be broken down further as well. Then I also needed to update the tests, so the calculator tests only test that it adds the numbers that come back from a mock <code>NumberParser</code>, and then adjust most of the current tests to test that the number parser is doing the parsing properly. Sure, I could leave the current tests as integration tests and forget about each unit, but I've this approach has given me troubles in the past.</p>
 
@@ -198,4 +198,4 @@ public class Calculator {
 
 <p>I'd love to get your thoughts on this. Anyone that wants to give the first part of the kata a try I'd love to read a blog post or have a chat with you and see how things ended up for you.</p>
 
-<p><a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">Next up</a> I'll try a different flavour of TDD on the same problem.</p>
+<p><a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">Next up</a> I'll try a different flavour of TDD on the same problem.</p>

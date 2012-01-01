@@ -11,7 +11,7 @@ updated: "2011-11-22T22:36:01.136+11:00"
 
 <h2>Don't mock types you don't own</h2>
 
-<p>I've <a href="http://www.davesquared.net/2011/04/dont-mock-types-you-dont-own.html">written about this before</a>, and I still think it is good advice. Test down to your lowest level of abstraction, then integration / contract / acceptance test over the boundary. By mocking a type you don't own that dependency starts bleeding in to your code and pushing your own abstractions in potentially unhelpful ways. You're also not really testing much; unless you also have good contract tests then checking you've called a specific external method is not going to tell you much about whether your code does what it needs to.</p>
+<p>I've <a href="http://davesquared.net/2011/04/dont-mock-types-you-dont-own.html">written about this before</a>, and I still think it is good advice. Test down to your lowest level of abstraction, then integration / contract / acceptance test over the boundary. By mocking a type you don't own that dependency starts bleeding in to your code and pushing your own abstractions in potentially unhelpful ways. You're also not really testing much; unless you also have good contract tests then checking you've called a specific external method is not going to tell you much about whether your code does what it needs to.</p>
 
 <p>Contrived example: say I was faking out <code>Math.Round()</code> (let's pretend it's an instance method or you are using a framework that can mock statics via the profiler API):</p>
 
@@ -75,7 +75,7 @@ public void Should_turn_the_widget() {
 
 <h2>Beware over-abstraction</h2>
 
-<p>It is quite easy to churn out layers of useless abstractions when using mock frameworks. Abstractions have a cost. Feedback from tests is great, but pay close attention to SOLID and the rules of simple design and call out to meaningful abstractions, rather than putting in a dependency just for testing. I wrote some <a href="http://www.davesquared.net/2011/06/abstraction-and-oo.html">guidelines on abstractions</a> a while back that I don't entirely disagree with yet.</p>
+<p>It is quite easy to churn out layers of useless abstractions when using mock frameworks. Abstractions have a cost. Feedback from tests is great, but pay close attention to SOLID and the rules of simple design and call out to meaningful abstractions, rather than putting in a dependency just for testing. I wrote some <a href="http://davesquared.net/2011/06/abstraction-and-oo.html">guidelines on abstractions</a> a while back that I don't entirely disagree with yet.</p>
 
 <h2>Some unanswered questions</h2>
 

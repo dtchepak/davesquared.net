@@ -9,7 +9,7 @@ updated: "2009-10-22T10:56:24.537+11:00"
 
 <p>This is the wrap up of my second attempt at <a href="http://osherove.com/tdd-kata-1/">Roy Osherove's String Calculator kata</a>. You can read the details at the original site, but the overall gist is a calculator that has an <code>Add()</code> method. This method takes a string input, adds the numbers in the string together, then returns the result. </p>
 
-<p>In <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">Part 1</a> of this series we looked at using a traditional TDD approach to the calculator kata. In <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">Part 2</a> we attempted to use a variation of Behavioural Driven Development (BDD) . In this part we'll finish off our BDD example. So far our implementation handles empty strings, single numbers, and numbers delimited by a comma and/or a newline.</p>
+<p>In <a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">Part 1</a> of this series we looked at using a traditional TDD approach to the calculator kata. In <a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">Part 2</a> we attempted to use a variation of Behavioural Driven Development (BDD) . In this part we'll finish off our BDD example. So far our implementation handles empty strings, single numbers, and numbers delimited by a comma and/or a newline.</p>
 
 <p>To accomplish this, we have a <code>Calculator</code> class that uses an <code>INumberParser</code> to parse numbers from the string, and then an <code>IAdder</code> to calculate the sum of these numbers.</p>
 

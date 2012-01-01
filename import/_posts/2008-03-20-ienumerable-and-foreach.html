@@ -17,7 +17,7 @@ updated: "2008-07-17T08:04:54.09+10:00"
   }
 }</pre>
 
-<div class="note"><b>Update 2008-07-17</b>: An <a href="http://davesquared.blogspot.com/2008/03/ienumerable-and-foreach.html?showComment=1216228560000#c7276864086280257817">anonymous commenter</a> left a great point about returning <code>source</code> after finishing the iteration instead of using a void method. This breaks the standard signature used by the <code>Array</code> and <code>List&lt;T&gt;</code> classes, but fits in nicely with the general approach used in the <code>System.Linq.Enumerable</code> extension methods, and lets you do LINQy method chaining.</div>
+<div class="note"><b>Update 2008-07-17</b>: An <a href="http://davesquared.net/2008/03/ienumerable-and-foreach.html?showComment=1216228560000#c7276864086280257817">anonymous commenter</a> left a great point about returning <code>source</code> after finishing the iteration instead of using a void method. This breaks the standard signature used by the <code>Array</code> and <code>List&lt;T&gt;</code> classes, but fits in nicely with the general approach used in the <code>System.Linq.Enumerable</code> extension methods, and lets you do LINQy method chaining.</div>
 
 <p>For some reason, when I'm in LINQy mode, my natural reaction is to try <code>ForEach()</code> over <code>foreach</code>, and I'm always a bit surprised when it doesn't work for <code>IEnumerable&lt;T&gt;</code>:</p>
 <pre>

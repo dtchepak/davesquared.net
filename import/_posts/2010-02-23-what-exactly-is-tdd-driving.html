@@ -13,13 +13,13 @@ updated: "2010-12-24T23:25:59.181+11:00"
 
 <p>And so, in a valiant effort to avoid blaming my own lack of competence, I've started to challenge one of the fundamental tenants of classical<b>*</b> TDD: what if TDD does not really drive design?</p>
 
-<div class="note"><b>*</b> By <a href="http://www.martinfowler.com/articles/mocksArentStubs.html#ClassicalAndMockistTesting">classical TDD</a>, I am referring to the case-by-case build up of the unit under test, potentially building the system bottom up, and in constrast to mockist TDD, BDD, and to a lesser extent <a href="http://www.davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based</a> TDD. This was how I got my introduction to TDD, and is the style I normally see for introductory training, articles and posts.</div>
+<div class="note"><b>*</b> By <a href="http://www.martinfowler.com/articles/mocksArentStubs.html#ClassicalAndMockistTesting">classical TDD</a>, I am referring to the case-by-case build up of the unit under test, potentially building the system bottom up, and in constrast to mockist TDD, BDD, and to a lesser extent <a href="http://davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based</a> TDD. This was how I got my introduction to TDD, and is the style I normally see for introductory training, articles and posts.</div>
 
 <p><b>Warning:</b> this post is taking a fairly whacky idea and running with it far beyond what is reasonable. The purpose of this is to challenge myself to argue against a long-held belief of mine. It is a rant, so please take it with a grain of salt. :)</p>
 
 <h2>Driving what?</h2>
 
-<p>Most examples of classical TDD I've seen use what I refer to as <a href="http://www.davesquared.net/2009/11/favour-test-driving-logic-over-data.html">testing data</a>. That is, each test case provides one data point. The code written to pass the first test deals exclusively with that data point. Subsequent tests are passed by dealing with the next data point, in addition to the previous data points. After each test the code is refactored to reduce duplication.</p>
+<p>Most examples of classical TDD I've seen use what I refer to as <a href="http://davesquared.net/2009/11/favour-test-driving-logic-over-data.html">testing data</a>. That is, each test case provides one data point. The code written to pass the first test deals exclusively with that data point. Subsequent tests are passed by dealing with the next data point, in addition to the previous data points. After each test the code is refactored to reduce duplication.</p>
 
 <p>An example of this could be test-driving a stack implementation using cases like "new stack should have zero items", "pushing one item should give count of one", "pushing two items should give count of two", "pushing one then popping one should give count of zero" etc. The reason I refer to this as "testing data" is because the tests are feeding the code different instances of data, rather than dealing with the general logic that differentiates the data. For example, we could check the logic that whenever an item is pushed onto the stack, the count is incremented (not the best example, but it shows the difference in approaches).</p>
 
@@ -57,7 +57,7 @@ updated: "2010-12-24T23:25:59.181+11:00"
 
 <p>So what options do we have for test driving design? Well, for our tests to give us feedback on our design we'll need them to focus on that aspect rather than the implementation and data. That means isolating the class under test from dependencies and defining the results of collaborating with them, be it in terms of state or behaviour.</p>
 
-<p>One way I've found to do this is using the steps I picked up from <a href="http://www.davesquared.net/2009/08/nothin-but-net-sydney-2009-day-4.html">JP's Nothin' but .NET course</a>. This approach focuses on writing tests that assert the result of exercising the class under test's single responsibility in a particular context, where the context is just the configuration of class' collaborators. The context becomes the test fixture setup.</p>
+<p>One way I've found to do this is using the steps I picked up from <a href="http://davesquared.net/2009/08/nothin-but-net-sydney-2009-day-4.html">JP's Nothin' but .NET course</a>. This approach focuses on writing tests that assert the result of exercising the class under test's single responsibility in a particular context, where the context is just the configuration of class' collaborators. The context becomes the test fixture setup.</p>
 
 <p>Here much of the design of the collaborators (and the abstractions required to solve the problem at hand) is driven through the context. The implementation of the class under test is tested with regard for this context, and eliminates generating a whole raft of data-based tests in favour or specifying and testing the step in the algorithm this class plays.</p>
 
@@ -65,9 +65,9 @@ updated: "2010-12-24T23:25:59.181+11:00"
 
 <p>Having the collaborations defined in the context/setup also helps ease refactoring. We can introduce new or change existing abstractions and collaborators by tweaking the context, leaving the actual test, responsibility and assertion unchanced (alleviating some of the problems faced extracting classes that I mentioned earlier).</p>
 
-<p>I've tried to write up an example of this approach by <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">tackling the StringCalculator kata</a>. Of course, the problem with writing up bloggable examples like this is they end up hopelessly over-engineered for their size and complexity, but hopefully with some imagination you can see how scaling this to more complex problems provides a way of driving a neatly abstracted design (in some cases insanely abstracted ;)).</p>
+<p>I've tried to write up an example of this approach by <a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">tackling the StringCalculator kata</a>. Of course, the problem with writing up bloggable examples like this is they end up hopelessly over-engineered for their size and complexity, but hopefully with some imagination you can see how scaling this to more complex problems provides a way of driving a neatly abstracted design (in some cases insanely abstracted ;)).</p>
 
-<p>Another approach that is a bit less extreme and compromises between testing design and implementation is what I refer to as <a href="http://www.davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based testing</a>. This puts more emphasis on context than classical TDD, but also tends to favour more test cases per scenario than my interpretation of "BooDhoo-D". :)</p>
+<p>Another approach that is a bit less extreme and compromises between testing design and implementation is what I refer to as <a href="http://davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based testing</a>. This puts more emphasis on context than classical TDD, but also tends to favour more test cases per scenario than my interpretation of "BooDhoo-D". :)</p>
 
 <h2>When driving implementation is appropriate</h2>
 

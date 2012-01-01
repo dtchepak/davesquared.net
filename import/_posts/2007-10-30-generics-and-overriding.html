@@ -36,7 +36,7 @@ public void TestGenericOverriding() {
 </strong>  Assert.That(overrider.DoSomething((ICollection) someCollection), Is.EqualTo("ICollection"));
 }
 </pre>
-<p>The test shows that to call a specific overload of the generic method, your parameters need to match the signature exactly, in this case <code>ICollection</code>, otherwise the generic method will catch it instead. This is due to the <a href="http://davesquared.blogspot.com/2007/11/double-dispatch.html">single dispatching mechanism in C#</a>.</p>
+<p>The test shows that to call a specific overload of the generic method, your parameters need to match the signature exactly, in this case <code>ICollection</code>, otherwise the generic method will catch it instead. This is due to the <a href="http://davesquared.net/2007/11/double-dispatch.html">single dispatching mechanism in C#</a>.</p>
 <p>You can see this binding if you open up the compiled code with IL DASM. The <code>ArrayList</code> binds to the generic method&nbsp;(!!0), whereas the <code>ICollection</code> reference picks up the expected method.</p><pre>IL_0028:  callvirt   instance string Workshop.UnitTests.GenericOverrider::DoSomething&lt;class [mscorlib]System.Collections.ArrayList&gt;(!!0)
 ...
 IL_003f:  callvirt   instance string Workshop.UnitTests.GenericOverrider::DoSomething(class [mscorlib]System.Collections.ICollection)

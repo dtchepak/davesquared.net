@@ -9,7 +9,7 @@ updated: "2009-07-24T22:16:43.165+10:00"
 
 <div class="note"><b>Warning:</b> This post contains an optimisation for a specific case that sacrifices readability in favour of performance, and should not be applied prematurely. Readability trumps performance until you've whacked a profiler on your code and determined it is too slow under realistic usage.</div>
 
-<p><a href="http://www.davesquared.net/2009/03/too-linqy.html">I love LINQ</a>. Especially since trying out Python, I find it a lot easier to think in terms of apply functions over iterators, rather than big loops with nested conditions. This has always worked really well for me. At least, it had done until yesterday, when we were tracking down a performance problem experienced when running through lots of buffers full of lots of data. Let's take a look at two options for adding data to an internal list (this isn't a realistic example, it's just for profiling purposes):</p>
+<p><a href="http://davesquared.net/2009/03/too-linqy.html">I love LINQ</a>. Especially since trying out Python, I find it a lot easier to think in terms of apply functions over iterators, rather than big loops with nested conditions. This has always worked really well for me. At least, it had done until yesterday, when we were tracking down a performance problem experienced when running through lots of buffers full of lots of data. Let's take a look at two options for adding data to an internal list (this isn't a realistic example, it's just for profiling purposes):</p>
 
 <pre name="code" class="csharp">
 private readonly List&lt;ushort&gt; _buffer = new List&lt;ushort&gt;();

@@ -9,9 +9,9 @@ updated: "2008-05-01T09:04:07.723+10:00"
 
 <p><em>This post is part of a small series on .NET ORM tools. You
 can find the rest of them <a href=
-"http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html">
+"http://davesquared.net/2007/12/messing-around-with-various-orms.html">
 here</a>.</em></p>
-<p>After getting a surprise <a href="http://www.dotnetkicks.com/">kick</a>, I got a <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-various-orms.html#c112272158096300077">suggestion from Josh</a> to take a look at the <a href="http://www.castleproject.org/activerecord/index.html">Castle ActiveRecord project</a>. So here goes, using Castle 1.0 RC3.</p>
+<p>After getting a surprise <a href="http://www.dotnetkicks.com/">kick</a>, I got a <a href="http://davesquared.net/2007/12/messing-around-with-various-orms.html#c112272158096300077">suggestion from Josh</a> to take a look at the <a href="http://www.castleproject.org/activerecord/index.html">Castle ActiveRecord project</a>. So here goes, using Castle 1.0 RC3.</p>
 <h2>Scene refresher</h2>
 <p>I have a table of suppliers, and a table of states (or
 provinces, territories, prefectures etc.). Both suppliers and
@@ -85,7 +85,7 @@ public class Supplier : ActiveRecordBase&lt;Supplier&gt; {
 }
 </pre>
 
-<p>ActiveRecord uses attributes to specify the mapping between entities and the database. This saves some of the work I went through producing mapping files for the <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">NHibernate example</a>, although as ActiveRecord is built on NHibernate, I am really just specifying the same information in a different form and letting ActiveRecord fill in the blanks.</p>
+<p>ActiveRecord uses attributes to specify the mapping between entities and the database. This saves some of the work I went through producing mapping files for the <a href="http://davesquared.net/2007/12/messing-around-with-nhibernate.html">NHibernate example</a>, although as ActiveRecord is built on NHibernate, I am really just specifying the same information in a different form and letting ActiveRecord fill in the blanks.</p>
 <p>I just needed to specify a <code>[PrimaryKey]</code> for each entity, add an <code>[ActiveRecord]</code> attribute on the class and a <code>[Property]</code> attribute on persistent properties, and then map the <code>Supplier.StatesServiced</code>collection to the many-to-many relationship in the database using <code>[HasAndBelongsToMany]</code>. Besides the attributes, the entities need to inherit from <code>ActiveRecordBase&lt;T&gt;</code>, which gives the entity all the ActiveRecord-smarts, but also ties it to this persistence mechanism.</p>
 <h2>Populating the database</h2>
 <p>As per my previous posts, I'll use a test fixture to run the

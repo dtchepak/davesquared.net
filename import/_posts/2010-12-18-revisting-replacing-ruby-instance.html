@@ -7,12 +7,12 @@ date: "2010-12-18T01:29:00.0+11:00"
 updated: "2010-12-18T13:34:40.133+11:00"
 ---
 
-<p>Last month I looked at <a href="http://www.davesquared.net/2010/11/replacing-ruby-instance-method-with.html">how to replace a Ruby method of a single object instance with a closure</a>, before <a href="http://www.davesquared.net/2010/11/continuing-adventures-in-adding-methods.html">defining a module that could make this easier</a>. Since then I've learnt another option which I thought I'd share as it helped me get a greater appreciation for Ruby modules.</p>
+<p>Last month I looked at <a href="http://davesquared.net/2010/11/replacing-ruby-instance-method-with.html">how to replace a Ruby method of a single object instance with a closure</a>, before <a href="http://davesquared.net/2010/11/continuing-adventures-in-adding-methods.html">defining a module that could make this easier</a>. Since then I've learnt another option which I thought I'd share as it helped me get a greater appreciation for Ruby modules.</p>
 
 <div class="note"><b>Note:</b> I am a Ruby n00bie, so take all this with a suitable amount of salt. If this (or the previous posts) violate Ruby conventions, or there is an idiomatic way of solving this, please let me know.</div>
 
 <h2>Quick recap</h2>
-<p>The problem is fully described in the <a href="http://www.davesquared.net/2010/11/replacing-ruby-instance-method-with.html">original post</a>, but it basically starts with this class:</p>
+<p>The problem is fully described in the <a href="http://davesquared.net/2010/11/replacing-ruby-instance-method-with.html">original post</a>, but it basically starts with this class:</p>
 
 <pre class="brush:ruby">
 class Greeter
@@ -73,6 +73,6 @@ another_greeter.say_hello
 #=&gt; Hello World!
 </pre>
 
-<p>I think I still prefer the <a href="http://www.davesquared.net/2010/11/continuing-adventures-in-adding-methods.html"><code>Meta</code> module approach</a>, but this way has the advantage of sticking closely to standard Ruby constructs and manages to avoid metaclasses.</p>
+<p>I think I still prefer the <a href="http://davesquared.net/2010/11/continuing-adventures-in-adding-methods.html"><code>Meta</code> module approach</a>, but this way has the advantage of sticking closely to standard Ruby constructs and manages to avoid metaclasses.</p>
 
 <p>What was most helpful to me out of this as a Ruby n00bie is the understanding that we can work using class scope within a module (avoiding metaclass shenanigans), then apply that scope selectively by including the module in a class, or by extending an instance with the module.</p>

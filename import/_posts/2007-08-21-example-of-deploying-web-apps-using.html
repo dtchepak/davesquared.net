@@ -7,7 +7,7 @@ date: "2007-08-21T10:35:00.0+10:00"
 updated: "2008-05-01T09:04:07.747+10:00"
 ---
 
-<p>Here is a sample MSBuild script that will deploy two web apps from Sample.sln to localhost. It is very nasty, but worked ok for me.</p> <p>First, we create our XML .build file and&nbsp;import <a href="http://davesquared.blogspot.com/2007/08/msbuild-task-library-links.html">SDCTasks</a> for our IIS operations. The remaining code snippets go in the &lt;Project /&gt; node.</p><pre>&lt;Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"&gt;
+<p>Here is a sample MSBuild script that will deploy two web apps from Sample.sln to localhost. It is very nasty, but worked ok for me.</p> <p>First, we create our XML .build file and&nbsp;import <a href="http://davesquared.net/2007/08/msbuild-task-library-links.html">SDCTasks</a> for our IIS operations. The remaining code snippets go in the &lt;Project /&gt; node.</p><pre>&lt;Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"&gt;
   &lt;Import Project="$(MSBuildExtensionsPath)\SDCTasks\Microsoft.Sdc.Common.tasks"/&gt; 
   ...
 &lt;/Project&gt;</pre>
@@ -57,4 +57,4 @@ updated: "2008-05-01T09:04:07.747+10:00"
 </pre>
 <p>You can execute this from the command prompt:</p><pre>msbuild sample.build /target:clean,build,deploy</pre>
 <p>This was mainly done for a proof-of-concept, and after running it I had my two web apps deployed and running on localhost as expected (er, hoped). You can obviously do a lot more useful stuff than this, like checking out from source control first, creating remote webs, virtual directories and application pools, running unit tests, and varying deployment options based on command line arguments. The main drawback of this approach is that you do not get a nice, self-contained package/installer for the deployment, and as such you will need direct network access to the deployment server as well as the relevant permissions.</p>
-<p>Now to try similar stuff using <a href="http://davesquared.blogspot.com/2007/08/automating-releases-with-wix-and.html">WiX</a>...</p>
+<p>Now to try similar stuff using <a href="http://davesquared.net/2007/08/automating-releases-with-wix-and.html">WiX</a>...</p>

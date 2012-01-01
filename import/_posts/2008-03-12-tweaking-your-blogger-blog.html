@@ -11,7 +11,7 @@ updated: "2008-05-01T09:04:07.719+10:00"
 <p><strong>Warning: back up your template before making any changes to it!!!</strong> As with all my content, all tweaks here are completely without warranty, and may destroy your blog and/or the universe as we know it. You have been warned. :-)</p> 
 <h2>Tracking visits</h2> 
 <p>There are lots of statistics providers out there. I use <a href="http://www.google.com/analytics">Google Analytics</a>. It is easy to setup. Once you have signed up you will be given a snippet of JavaScript code to include on all pages you want tracked on your site. For basic Blogger blogs like mine, this just means editing your template and pasting the tracking code just before the closing <code>&lt;/body&gt;</code> tag.</p> 
-<p>The Analytics terms of use also require you to include an easily accessible <a href="http://davesquared.blogspot.com/2007/07/privacy-policy.html">Privacy Policy</a> on your site. I did this by creating a new post called "Privacy Policy", and adding an HTML footer to my blog (Dashboard -&gt; Layout -&gt; Page Elements) to include a link to the policy.</p> 
+<p>The Analytics terms of use also require you to include an easily accessible <a href="http://davesquared.net/2007/07/privacy-policy.html">Privacy Policy</a> on your site. I did this by creating a new post called "Privacy Policy", and adding an HTML footer to my blog (Dashboard -&gt; Layout -&gt; Page Elements) to include a link to the policy.</p> 
 <h2>Tracking feed readers</h2>  
 <p>Sign up to <a href="http://www.feedburner.com">Feedburner</a> and you can track how many people subscribe to your RSS/ATOM feed. It can also do some tricks around formatting your feed. You can then re-point you Blogger feed to your new feed address: Dashboard -&gt; Settings -&gt; Site Feed and enter the feed address in the <em>Post Feed Redirect URL</em> field. Also a good idea to throw a purdy feed icon and subscribe link on one of your sidebar widgets.</p>
 <h2>Sensible search engine indexing</h2>
@@ -30,11 +30,11 @@ updated: "2008-05-01T09:04:07.719+10:00"
 <p>The first META tag tells robots not to include archive pages in their index, but to follow all links on the page (which go to the full post at its permanent address). The next is optional, and does a similar thing for index pages of your blog.</p>
 <p>Since Googlebot has made a few rounds with the new META tags, I have a much easier time finding my own content, and as a side benefit have noticed a lot more visitors coming from search engines (some of whom I've even been able to help!).</p>
 <h2>Adding pages to your blog</h2> 
-<p>Unlike Wordpress et al. Blogger doesn't provide additional pages for your site (well, not if you aren't using the FTP option). If I need to add pages I tend to write a new post with an appropriate title and use its permalink (see <a href="http://davesquared.blogspot.com/2007/07/privacy-policy.html">Privacy Policy</a> or <a href="http://davesquared.blogspot.com/2008/01/search.html">Search Results</a>). Downside is that these go out on your feed :( (although you can work around this by changing the post's date to a long time ago, or a galaxy far, far away). Lucky for me I don't have any readers :).</p>
+<p>Unlike Wordpress et al. Blogger doesn't provide additional pages for your site (well, not if you aren't using the FTP option). If I need to add pages I tend to write a new post with an appropriate title and use its permalink (see <a href="http://davesquared.net/2007/07/privacy-policy.html">Privacy Policy</a> or <a href="http://davesquared.net/2008/01/search.html">Search Results</a>). Downside is that these go out on your feed :( (although you can work around this by changing the post's date to a long time ago, or a galaxy far, far away). Lucky for me I don't have any readers :).</p>
 <h2>Custom search results</h2>
 <p>Now that I've got my blog well indexed with my shiny new META tags, and know how to add pages to my blog, I want to add a search page that is a bit more advanced than the out-of-the-box Blogger search (which is still good, but doesn't abbreviate post content by default, and also makes finding older posts difficult).</p>
-<p>My approach was to use a <a href="http://www.google.com/coop/cse/">Google Customer Search Engine (CSE)</a>. I created one just for my blog, and added <code>davesquared.blogspot.com/*/*/*.html</code> as the only site and URL pattern for which results would be returned (this pattern will depend on your permalink format -- it works for mine!).</p>
-<p>CSE provides a custom, Google-hosted search page for your search engine, but also provides some neat ways of embedding the search results within your site, including a nifty AJAX popup (see the <em>Code</em> link on your search engine's Control Panel). I found the nifty AJAX popup annoying, and ideally wanted something that should work everywhere, so instead I decided to put the search box in a widget on my sidebar, and have it post back to a <a href="http://davesquared.blogspot.com/2008/01/search.html">Search Results</a> page I created (see previous tweak on adding pages).</p>
+<p>My approach was to use a <a href="http://www.google.com/coop/cse/">Google Customer Search Engine (CSE)</a>. I created one just for my blog, and added <code>davesquared.net/*/*/*.html</code> as the only site and URL pattern for which results would be returned (this pattern will depend on your permalink format -- it works for mine!).</p>
+<p>CSE provides a custom, Google-hosted search page for your search engine, but also provides some neat ways of embedding the search results within your site, including a nifty AJAX popup (see the <em>Code</em> link on your search engine's Control Panel). I found the nifty AJAX popup annoying, and ideally wanted something that should work everywhere, so instead I decided to put the search box in a widget on my sidebar, and have it post back to a <a href="http://davesquared.net/2008/01/search.html">Search Results</a> page I created (see previous tweak on adding pages).</p>
 <p>First to create the search input I added an HTML/JS Page Element to my sidebar, then added a slightly modified version of the code Google provides to host results on a non-Google page using an IFRAME. The modifications are to try and support browsers with javascript turned off, or without javascript support.</p>
 <pre>
 &lt;!-- Google CSE Search Box Begins  --&gt;
@@ -48,13 +48,13 @@ updated: "2008-05-01T09:04:07.719+10:00"
 &lt;script type=&quot;text/javascript&quot;&gt;
 function <b>davesquared_submitSearchBoxWidget()</b> {
   var searchBox = document.getElementById(&quot;searchbox_<b>(your_unique_search_engine_code)</b>&quot;);
-  searchBox.action = &quot;<b>http://davesquared.blogspot.com/2008/01/search.html</b>&quot;;
+  searchBox.action = &quot;<b>http://davesquared.net/2008/01/search.html</b>&quot;;
   searchBox.cof.value=&quot;FORID:11&quot;;
 }
 &lt;/script&gt;
 </pre>
 <p>You need to change the <b>(your_unique_search_engine_code)</b> to the one provided by the CSE code sample (it looks something like 12312983712387129:asdfjkh23jh). You also need to change the <code>searchBox.action</code> line in the JS function to point to your own page for hosting the results. I've left mine in as a sample. Finally, you might want to change the JS function names so they don't say davesquared :-). The idea behind this is that if JS isn't enabled, a normal post request will be to the Google-hosted version of the search engine. It isn't nicely integrated with your site, but at least it works for non-JS toting users. If JS is enabled, it will update the search box to post to the results page on your own site.</p>
-<p>Lastly, you need to add a bit of code to your search results page (http://davesquared.blogspot.com/2008/01/search.html for me). Again, you can get this code from your custom search engine's control panel.</p>
+<p>Lastly, you need to add a bit of code to your search results page (http://davesquared.net/2008/01/search.html for me). Again, you can get this code from your custom search engine's control panel.</p>
 <pre>
 &lt;!-- Google Search Result Snippet Begins --&gt;
 &lt;div id=&quot;results_<b>(your_unique_search_engine_code)</b>&quot;&gt;&lt;/div&gt;
@@ -140,7 +140,7 @@ dd.comment-by-author {
 <h2>Previous posts</h2> 
 <p>Here's a couple of previous posts that relate to Blogger tweaks:</p>
 <ul> 
-<li><a href="http://davesquared.blogspot.com/2006/12/label-cloud-in-blogger-beta.html">Tag/label cloud</a></li> 
-<li><a href="http://davesquared.blogspot.com/2007/08/excluding-your-own-visits-from.html">Excluding your own visits with a dynamic IP from Google Analytics statistics</a></li> 
+<li><a href="http://davesquared.net/2006/12/label-cloud-in-blogger-beta.html">Tag/label cloud</a></li> 
+<li><a href="http://davesquared.net/2007/08/excluding-your-own-visits-from.html">Excluding your own visits with a dynamic IP from Google Analytics statistics</a></li> 
 </ul>  
 <p>Hope this helps!</p>

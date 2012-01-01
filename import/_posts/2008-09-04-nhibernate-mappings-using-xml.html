@@ -12,7 +12,7 @@ updated: "2008-09-04T23:42:33.296+10:00"
 <p>That said, there are alternatives hand coding the <code>.hbm.xml</code> mapping files. I thought I'd cover a few of the options here: NHibernate Mapping Attributes, and Fluent NHibernate.</p>
 
 <h2>Getting started</h2> 
-<p>I decided to reuse the extra-simple scenario from my <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">ORM roundup</a> posts. I have a table of suppliers, and a table of states (or provinces, territories, prefectures etc.). Both suppliers and states have names, which are stored as strings/varchars, and IDs, which are stored as Guids/uniqueidentifiers. Each supplier can service many states. So we have a simple many-to-many relationship between the two main entities. It looks a bit like this:</p> 
+<p>I decided to reuse the extra-simple scenario from my <a href="http://davesquared.net/2007/12/messing-around-with-nhibernate.html">ORM roundup</a> posts. I have a table of suppliers, and a table of states (or provinces, territories, prefectures etc.). Both suppliers and states have names, which are stored as strings/varchars, and IDs, which are stored as Guids/uniqueidentifiers. Each supplier can service many states. So we have a simple many-to-many relationship between the two main entities. It looks a bit like this:</p> 
 
 <p><a href="/images/fromblogger/s1600-h-SampleSupplierSchema.png"><img id="BLOGGER_PHOTO_ID_5145922358406504498" style="cursor: pointer" alt="" src="/images/fromblogger/s400-SampleSupplierSchema.png" border="0"></a></p> 
 
@@ -43,7 +43,7 @@ namespace Workshop.Entities {
 
 <p>These are nice ordinary classes, with no consideration given as to how they will be persisted. The only concession we have made is making everything <code>virtual</code> by default, so that it is easy for NHibernate to create proxies from these classes.</p>
 
-<p>I'll also throw in an App.config so NHibernate knows which database to talk to. This time around I'm using NHibernate 2.0, which has a <a href="http://davesquared.blogspot.com/2008/08/configuration-changes-in-nhibernate-20.html">new configuration format</a> from the last time I looked at this example.</p>
+<p>I'll also throw in an App.config so NHibernate knows which database to talk to. This time around I'm using NHibernate 2.0, which has a <a href="http://davesquared.net/2008/08/configuration-changes-in-nhibernate-20.html">new configuration format</a> from the last time I looked at this example.</p>
 
 <h2>Hand coding Hibernate Mapping Files</h2>
 
@@ -77,7 +77,7 @@ namespace Workshop.Entities {
 &lt;/hibernate-mapping&gt;
 </pre>
 
-<p>Here we are just telling NHibernate how to map each bit of entity data to the database schema. The HBM files include which main table is used to persist each entity, describes each entity's primary key and standard properties, as well as how the entities relate to each other (in this case we have a many-to-many mapping, using a <code>bag</code> collection). These files are explained in more detail in my <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">Messing around with NHibernate</a> post.
+<p>Here we are just telling NHibernate how to map each bit of entity data to the database schema. The HBM files include which main table is used to persist each entity, describes each entity's primary key and standard properties, as well as how the entities relate to each other (in this case we have a many-to-many mapping, using a <code>bag</code> collection). These files are explained in more detail in my <a href="http://davesquared.net/2007/12/messing-around-with-nhibernate.html">Messing around with NHibernate</a> post.
 </p>
 
 <h2>Testing our mappings</h2>

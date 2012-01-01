@@ -7,13 +7,13 @@ date: "2009-02-03T23:23:00.05+11:00"
 updated: "2010-03-26T10:38:18.314+11:00"
 ---
 
-<div class="note"><b>UPDATE!!! </b> I'm now using an <a href="http://www.davesquared.net/2010/03/easier-way-to-set-up-diff-and-merge.html">easier way of configuring diff and merge tools</a>. If you don't mind using KDiff3 then you might want to check that out first. If you want flexibility in which tools you use and how they're used, then read on. <i>-- DT, 26 Mar 2010</i></div>
+<div class="note"><b>UPDATE!!! </b> I'm now using an <a href="http://davesquared.net/2010/03/easier-way-to-set-up-diff-and-merge.html">easier way of configuring diff and merge tools</a>. If you don't mind using KDiff3 then you might want to check that out first. If you want flexibility in which tools you use and how they're used, then read on. <i>-- DT, 26 Mar 2010</i></div>
 
 <p>I finally got tired of reading diff outputs from git on the command line, and decided to hook up a visual diff and merge tool. After piecing together hints from various posts around ye olde intraweb I've now got somethings that works. I am using <a href="http://code.google.com/p/msysgit/">Git on MSys</a> to get Git working on Windows via a PowerShell command line, but a similar setup might work via Cygwin or via the <code>cmd.exe</code> command line.</p>
 
 <h2>Setting up a diff tool</h2>
 
-<div class="note"><b>Update 2009-05-20:</b> This approach stopped working for me when I upgraded to Windows 7 and Git 1.6.3. I had to <a href="http://www.davesquared.net/2009/05/setting-up-git-difftool-on-windows.html">switch to using <code>git difftool</code> instead</a>.</div>
+<div class="note"><b>Update 2009-05-20:</b> This approach stopped working for me when I upgraded to Windows 7 and Git 1.6.3. I had to <a href="http://davesquared.net/2009/05/setting-up-git-difftool-on-windows.html">switch to using <code>git difftool</code> instead</a>.</div>
 
 <p>The easiest way I found to do this was to create a shell script wrapper for your diff tool of choice. To make things easy on me I put the script, <code>git-diff-wrapper.sh</code> in <code>C:\Program Files\Git\cmd</code>, which is in my <code>Path</code> environment variable. The file contents looks like this:</p>
 

@@ -7,7 +7,7 @@ date: "2010-03-15T23:07:00.0+11:00"
 updated: "2010-03-15T23:47:39.991+11:00"
 ---
 
-<p>In the small WPF project I'm currently working on we are using <a href="http://www.davesquared.net/2010/02/attempt-at-simple-mvvm-with-wpf.html">MVVM (Model - View - ViewModel)</a> to separate our UI concerns from other logic.</p>
+<p>In the small WPF project I'm currently working on we are using <a href="http://davesquared.net/2010/02/attempt-at-simple-mvvm-with-wpf.html">MVVM (Model - View - ViewModel)</a> to separate our UI concerns from other logic.</p>
 
 <p>Now for various reasons we've ended up with two main projects (excluding tests): the core application DLL, and the WPF UI executable that references the core DLL. Our ViewModels are defined in the application DLL, which knows absolutely nothing about the UI executable. Our Views (XAML) live in the UI exe, and depend on the ViewModels in the core DLL. All pretty standard.</p>
 

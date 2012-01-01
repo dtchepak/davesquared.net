@@ -7,10 +7,10 @@ date: "2008-08-30T23:55:00.0+10:00"
 updated: "2008-10-03T15:30:47.149+10:00"
 ---
 
-<p>I recently got an <a href="http://davesquared.blogspot.com/2008/01/python-like-range-implementation-in-c.html?showComment=1220059620000#c3630230372213218148">interesting comment</a> on an older post of mine about implementing a <a href="http://davesquared.blogspot.com/2008/01/python-like-range-implementation-in-c.html">Python-like range() function in C#</a>. The commenter posed a solution to the slight feeling of disappointment experienced when you have a <code>foreach</code> loop and then realise you need to access the loop index, forcing a conversion to a <code>for</code> loop or manually incrementing a counter. The solution ended up with a syntax like this:</p>
+<p>I recently got an <a href="http://davesquared.net/2008/01/python-like-range-implementation-in-c.html?showComment=1220059620000#c3630230372213218148">interesting comment</a> on an older post of mine about implementing a <a href="http://davesquared.net/2008/01/python-like-range-implementation-in-c.html">Python-like range() function in C#</a>. The commenter posed a solution to the slight feeling of disappointment experienced when you have a <code>foreach</code> loop and then realise you need to access the loop index, forcing a conversion to a <code>for</code> loop or manually incrementing a counter. The solution ended up with a syntax like this:</p>
 
 <pre>
-//From <a href="http://davesquared.blogspot.com/2008/01/python-like-range-implementation-in-c.html?showComment=1220059620000#c3630230372213218148">this comment</a>:
+//From <a href="http://davesquared.net/2008/01/python-like-range-implementation-in-c.html?showComment=1220059620000#c3630230372213218148">this comment</a>:
 int[] a = new int[] { 1, 2, 3, 4, 5 };
 foreach (int i in Range.Array(a)) {
   // do something with i or a[i]

@@ -133,7 +133,7 @@ public class DoomsDayDevicePresenterFixture {
 
 <p>The final step is to factor out the duplication between our testcase scenarios into helper methods in a common base class or two. You can probably get away with doing this as you go, but I'd advise against doing it too prematurely. Wait until the code in two or three scenarios is screaming to be consolidated, and then do it. Otherwise you can wind up extracting commonalities that aren't really there, and we go back to losing cohesion between our setups and tests.</p>
 
-<p>Let's have a look at the <i>when view is loaded</i> scenario. I'll create a new subfolder in our test project called <code>DoomsDayDevicePresenterScenarios</code>, then create a <code>WhenViewLoaded.cs</code> class. I'm quite a fan of underscore-overload (cue <a href="http://www.davesquared.net/2008/05/bdd-test-naming-with-autohotkey.html">shameless post plug</a>), so I'd prefer to use <code>When_view_loaded</code>, but I'll try and skip potentially heated debates for now. :)</p> 
+<p>Let's have a look at the <i>when view is loaded</i> scenario. I'll create a new subfolder in our test project called <code>DoomsDayDevicePresenterScenarios</code>, then create a <code>WhenViewLoaded.cs</code> class. I'm quite a fan of underscore-overload (cue <a href="http://davesquared.net/2008/05/bdd-test-naming-with-autohotkey.html">shameless post plug</a>), so I'd prefer to use <code>When_view_loaded</code>, but I'll try and skip potentially heated debates for now. :)</p> 
 
 <p>The code below is how it looks after refactoring out some duplication:</p>
 

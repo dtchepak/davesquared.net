@@ -89,4 +89,4 @@ public void TestPagerAbbreviatesHeadOfList() {
   Assert.That(renderer.Pages, Is.EqualTo(expectedPages));
 }
 </pre>
-<p>True, this may classify as a bit of a <a href="http://davesquared.blogspot.com/2007/09/misusing-fluent-interfaces.html">misuse of a fluent interface</a>, but to me it eliminates the duplication of creating the renderer and pager whilst providing an easy, readable way of passing test-specific data. The test only needs to deal with the initialisation that is relevant to it. The only cost is a slight increase in complexity, but to me this is more than offset by the increased readability.</p>
+<p>True, this may classify as a bit of a <a href="http://davesquared.net/2007/09/misusing-fluent-interfaces.html">misuse of a fluent interface</a>, but to me it eliminates the duplication of creating the renderer and pager whilst providing an easy, readable way of passing test-specific data. The test only needs to deal with the initialisation that is relevant to it. The only cost is a slight increase in complexity, but to me this is more than offset by the increased readability.</p>

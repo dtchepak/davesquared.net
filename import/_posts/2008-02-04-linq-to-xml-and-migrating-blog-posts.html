@@ -7,7 +7,7 @@ date: "2008-02-04T12:43:00+11:00"
 updated: "2008-05-01T09:04:07.72+10:00"
 ---
 
-<p>During my <a href="http://davesquared.blogspot.com/2008/02/moving-up-moving-out-moving-back.html">recent dalliance</a> with other blog hosts, I ended up playing around with LINQ to XML and was quite impressed with how much nicer it was than the pre-LINQ .NET classes for XML parsing. Here's a quick overview of how I migrated all my Blogger posts to Community Server (before deciding to stick with Blogger :)), with a focus on the LINQ to XML bits.
+<p>During my <a href="http://davesquared.net/2008/02/moving-up-moving-out-moving-back.html">recent dalliance</a> with other blog hosts, I ended up playing around with LINQ to XML and was quite impressed with how much nicer it was than the pre-LINQ .NET classes for XML parsing. Here's a quick overview of how I migrated all my Blogger posts to Community Server (before deciding to stick with Blogger :)), with a focus on the LINQ to XML bits.
  </p>
  <p>First my compulsory disclaimers: this was a rush job. This was the most disgusting, hacky code I have ever written. I have written C64 Basic programs with better separation of concerns. If you use any of this code for anything at all you'd have to be insane! 
         I did write the code test-first, but definitely skipped the all-important &quot;design&quot; part of 
@@ -29,7 +29,7 @@ updated: "2008-05-01T09:04:07.72+10:00"
     &lt;category scheme='http://www.blogger.com/atom/ns#' term='shameless self promotion'/&gt;    
     &lt;title type='text'&gt;...&lt;/title&gt;
     &lt;content type='html'&gt;(blog post content here)&lt;/content&gt;
-    &lt;link rel='alternate' type='text/html' href='http://davesquared.blogspot.com/2008/02/sample-post.html' title='Sample post'/&gt;
+    &lt;link rel='alternate' type='text/html' href='http://davesquared.net/2008/02/sample-post.html' title='Sample post'/&gt;
     ...
   &lt;/entry&gt;
   &lt;!-- Lots more &lt;entry /&gt; nodes --&gt;
@@ -86,7 +86,7 @@ var entries = from feedElements in xml.Descendants(xmlns + &quot;entry&quot;)
 &lt;entry&gt;
   ...
   &lt;link <b>rel='alternate'</b> type='text/html' 
-      <b>href='http://davesquared.blogspot.com/2008/02/sample-post.html'</b> title='Sample post'/&gt;
+      <b>href='http://davesquared.net/2008/02/sample-post.html'</b> title='Sample post'/&gt;
   ...
  </pre>
  <p>Armed with this knowledge, let's tackled the new LINQ to XML query:</p>
@@ -118,7 +118,7 @@ IDictionary&lt;String, BlogEntry&gt; entries = parser.ParseFeed(feed).ToDictiona
 foreach (BlogEntry entry in entries.Values) {
   entry.Content =
     Regex.Replace(entry.Content,
-    @&quot;http://davesquared.blogspot.com/\d{4}/\d{2}/(?&lt;slug&gt;.*?)\.html&quot;,
+    @&quot;http://davesquared.net/\d{4}/\d{2}/(?&lt;slug&gt;.*?)\.html&quot;,
     delegate(Match match) {
       return entries[match.Groups[&quot;slug&quot;].Value].GetNewLink();
     },

@@ -19,7 +19,7 @@ updated: "2009-11-27T21:30:06.677+11:00"
 
 <h2>Cue long-winded example...</h2>
 
-<p>You can see the indirect application of this guideline in my recent <a href="http://www.davesquared.net/search/label/*Calculator%20TDD">Calculator Kata attempts</a>. The <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">first attempt</a> uses a data-based approach, while the <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">second attempt</a> uses a more behavioural approach. Rather than wading through that long and tedious series, let's take a look at this idea using a more focussed example (in a single long and tedious post ;)). Let's say we want to generate a filename that we're going to use to save some results. The file name needs to be based on the mode used and the date. We'll use an abbreviated form of the mode for the filename, and maybe just include the year from the date, and then add a ".txt" extension. Something like &quot;MD_2009.txt&quot;. </p>
+<p>You can see the indirect application of this guideline in my recent <a href="http://davesquared.net/search/label/*Calculator%20TDD">Calculator Kata attempts</a>. The <a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-1.html">first attempt</a> uses a data-based approach, while the <a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">second attempt</a> uses a more behavioural approach. Rather than wading through that long and tedious series, let's take a look at this idea using a more focussed example (in a single long and tedious post ;)). Let's say we want to generate a filename that we're going to use to save some results. The file name needs to be based on the mode used and the date. We'll use an abbreviated form of the mode for the filename, and maybe just include the year from the date, and then add a ".txt" extension. Something like &quot;MD_2009.txt&quot;. </p>
 
 <h2>Using data-based tests for a file name generator</h2>
 
@@ -93,7 +93,7 @@ public class FileNameGenerator {
 
 <p>In this case our data-based tests are dancing around the real intention and logic of the SUT. The actual implementation says it quite clearly: <code>return GetModePrefix(mode) + &quot;_&quot; + GetYear(dateTime) + &quot;.txt&quot;;</code>. This is the real logic we should be testing. To do so we'll need to isolate each bit of functionality into its own class. Let's look at how we can refactor to this, but we could easily test drive it that way to begin with, or guide our refactoring with new tests.</p>
 
-<p>As an aside, you'll notice that our tests are giving us some signals that not all is well. We need to write basically the same test for each new mode we add  (yes, we could use <code>[RowTest]</code> or whatever equivalent your testing framework has, but the point is the same). The fact we can't isolate the date formatting properly and so are only testing it with one mode is also a bit concerning. We know our current implementation can be tested using a single mode, but when that implementation needs to change we might have to update a whole lot of tests. This ickiness is a sign we've got some design problems, which in this case are <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">OCP and SRP</a> violations.</p>
+<p>As an aside, you'll notice that our tests are giving us some signals that not all is well. We need to write basically the same test for each new mode we add  (yes, we could use <code>[RowTest]</code> or whatever equivalent your testing framework has, but the point is the same). The fact we can't isolate the date formatting properly and so are only testing it with one mode is also a bit concerning. We know our current implementation can be tested using a single mode, but when that implementation needs to change we might have to update a whole lot of tests. This ickiness is a sign we've got some design problems, which in this case are <a href="http://davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">OCP and SRP</a> violations.</p>
 
 <h2>Introducing dependencies</h2>
 
@@ -177,7 +177,7 @@ public interface IDateFormatter {
 </pre>
 
 
-<p>We'll also provide an additional constructor to <code>FileNameGenerator</code> to allow us to inject dependencies as required. This will help us to test the logic of the class, but also gives us a handy way to change the class' behaviour by giving it different dependencies. (Cue <a href="http://www.davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">Open Closed Principle</a> reference.)</p>
+<p>We'll also provide an additional constructor to <code>FileNameGenerator</code> to allow us to inject dependencies as required. This will help us to test the logic of the class, but also gives us a handy way to change the class' behaviour by giving it different dependencies. (Cue <a href="http://davesquared.net/2009/01/introduction-to-solid-principles-of-oo.html">Open Closed Principle</a> reference.)</p>
 
 <pre class="brush:csharp">
 public class FileNameGenerator {
@@ -231,7 +231,7 @@ public class FileNameGeneratorFixture {
 }
 </pre>
 
-<p>Normally I <a href="http://www.davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">use a style that is a bit easier to read</a>, but as far as a basic refactoring goes this reads pretty clear to me. We are now testing <b>exactly</b> what we expect our class to do. But what about all the other tests we had? Well, we simply move those to new fixtures testing the implementations of our dependencies. These will still be data-based tests, but we can simplify the cases and number of tests as we don't need to deal with combinations of data:</p>
+<p>Normally I <a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">use a style that is a bit easier to read</a>, but as far as a basic refactoring goes this reads pretty clear to me. We are now testing <b>exactly</b> what we expect our class to do. But what about all the other tests we had? Well, we simply move those to new fixtures testing the implementations of our dependencies. These will still be data-based tests, but we can simplify the cases and number of tests as we don't need to deal with combinations of data:</p>
 
 <pre class="brush:csharp">
 [TestFixture]

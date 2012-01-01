@@ -27,7 +27,7 @@ foreach (int n in numbersPlusI) {
   Console.Write(" ");
 }
 </pre>
-<p>LINQ builds up an expression for <code>numbersPlusI</code>, but doesn't execute it <a href="http://davesquared.blogspot.com/2007/08/linq-enumeration-gotcha.html">until the result is enumerated</a>. Now remembering that C# has closures, the delegate binds to the local variable <code>i</code> (not its value at the point of declaration).&nbsp;When the enumeration is being performed, the delegate is called using <code>i</code>, which is 2 at the time of execution (i=1; i++). So we get:
+<p>LINQ builds up an expression for <code>numbersPlusI</code>, but doesn't execute it <a href="http://davesquared.net/2007/08/linq-enumeration-gotcha.html">until the result is enumerated</a>. Now remembering that C# has closures, the delegate binds to the local variable <code>i</code> (not its value at the point of declaration).&nbsp;When the enumeration is being performed, the delegate is called using <code>i</code>, which is 2 at the time of execution (i=1; i++). So we get:
 <p><pre>2 3 4 5 6 7 8 9 10 11 </pre>
 <p>If you want to run the code on .NET 2.0, here is my approximation of <code>System.Linq.Enumerable</code> and the <code>Func&lt;&gt;</code> delegate relevant for the example. Probably not brilliant, but I am really aiming to illustrate how variables a captured by closures in C#.</p><pre>public delegate T Func&lt;T, A&gt;(A a);
 public class Enumerable {
