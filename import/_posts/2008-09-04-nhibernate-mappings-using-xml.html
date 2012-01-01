@@ -14,7 +14,7 @@ updated: "2008-09-04T23:42:33.296+10:00"
 <h2>Getting started</h2> 
 <p>I decided to reuse the extra-simple scenario from my <a href="http://davesquared.blogspot.com/2007/12/messing-around-with-nhibernate.html">ORM roundup</a> posts. I have a table of suppliers, and a table of states (or provinces, territories, prefectures etc.). Both suppliers and states have names, which are stored as strings/varchars, and IDs, which are stored as Guids/uniqueidentifiers. Each supplier can service many states. So we have a simple many-to-many relationship between the two main entities. It looks a bit like this:</p> 
 
-<p><a href="http://bp0.blogger.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png"><img id="BLOGGER_PHOTO_ID_5145922358406504498" style="cursor: pointer" alt="" src="http://bp0.blogger.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png" border="0"></a></p> 
+<p><a href="/images/fromblogger/s1600-h-SampleSupplierSchema.png"><img id="BLOGGER_PHOTO_ID_5145922358406504498" style="cursor: pointer" alt="" src="/images/fromblogger/s400-SampleSupplierSchema.png" border="0"></a></p> 
 
 <p>Now let's create some POCOs for to model our suppliers and states. I've added these to an Entities folder in an otherwise blank C# Class Library project.</p>
 

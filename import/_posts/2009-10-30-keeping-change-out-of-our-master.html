@@ -14,12 +14,12 @@ updated: "2009-10-30T17:31:36.457+11:00"
 <p>So here's what I did. The first step was to create a branch off my master using <code>git checkout -b vs_upgrade</code>. I then ran the VS 2010 upgrade wizard which changed the relevant files, then commited those to my <code>vs_upgrade</code> branch. Second step was to create a branch off my <code>vs_upgrade</code> branch to add my feature (not strictly necessary, but keeps things nicely separated). I can now happily make changes to the code and commit the new feature to my feature branch.  The structure now looks something like this:</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://4.bp.blogspot.com/_wEsHWMWy090/SuqCRdsGgpI/AAAAAAAABUI/g3AMAflJln4/s1600-h/git_vs2010_upgrade.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://4.bp.blogspot.com/_wEsHWMWy090/SuqCRdsGgpI/AAAAAAAABUI/g3AMAflJln4/s320/git_vs2010_upgrade.png" /></a>
+<a href="/images/fromblogger/s1600-h-git_vs2010_upgrade.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="/images/fromblogger/s320-git_vs2010_upgrade.png" /></a>
 </div>
 
 <p>Now I need to get my feature back into my <code>master</code> branch, minus the VS 2010 upgrade. We can just cherry pick the change we want (I use <code>gitk --all</code> rather than the command line) and apply it to the <code>master</code> branch. Now we can push <code>master</code> to our remote server and everyone has the change, minus the VS 2010 bits. Very cool!</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://1.bp.blogspot.com/_wEsHWMWy090/SuqCTvteIUI/AAAAAAAABUQ/fjKIlqykwb8/s1600-h/git_merge_without_vs2010.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://1.bp.blogspot.com/_wEsHWMWy090/SuqCTvteIUI/AAAAAAAABUQ/fjKIlqykwb8/s320/git_merge_without_vs2010.png" /></a><br /></div>
+<a href="/images/fromblogger/s1600-h-git_merge_without_vs2010.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="/images/fromblogger/s320-git_merge_without_vs2010.png" /></a><br /></div>
 
 <p>We can rebase our <code>vs_upgrade</code> branch whenever some new changes are applied by other developers to <code>master</code>, and we get back to our first picture. We always have just a single commit containing our VS-related changes (so we don't have to repeat the upgrade), and we can always just cherry pick the changes we want made on top of the upgrade and apply them to our master. I get to play with VS 2010 and the nightly builds of ReSharper 5.0, without having any effect whatsoever on my team mates using VS 2008. The ease with which Git handles this branching and any merging is just awesome! :)</p>

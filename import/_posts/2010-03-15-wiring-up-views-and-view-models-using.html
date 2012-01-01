@@ -14,7 +14,7 @@ updated: "2010-03-15T23:47:39.991+11:00"
 <p>The one hiccup is that sometimes our application DLL needs to do something that will result in getting a reference to a view. For example, an application controller, screen conductor, or in our case, an <code>ApplicationShellViewModel</code> needs to load up the relevant views (it's a small project, remember? :)). So how does it do this when it knows nothing about the views in the UI exe?</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://2.bp.blogspot.com/_wEsHWMWy090/S54iWvt1bhI/AAAAAAAABgQ/hViASY9r3fA/s1600-h/ui_and_core_components.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="109" src="http://2.bp.blogspot.com/_wEsHWMWy090/S54iWvt1bhI/AAAAAAAABgQ/hViASY9r3fA/s320/ui_and_core_components.png" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-ui_and_core_components.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="109" src="/images/fromblogger/s320-ui_and_core_components.png" width="320" /></a></div>
 
 <p>In this case we decided to use a convention to map a ViewModel to a View. We've mandated that each View will have one and only one ViewModel (not strictly always the case, but works for us). So we can use our ViewModel types as "currency" to deal with our views, and exchange it for a view when required. We just need a way to map between a ViewModel and its View. </p>
 

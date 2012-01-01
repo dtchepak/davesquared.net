@@ -19,7 +19,7 @@ updated: "2008-07-31T23:20:05.446+10:00"
 <h2>Some quick planning</h2>
 <p>Shahar Yair (who posted the challenge) notes &quot;I think that this is a well known problem&quot;. I think (although without a good googling I can't be sure due to my limited cranial capacity) one of the common implementations is to use a stack, and push brackets on as you find them, and pop them off when you close them. If you have an empty stack at the end your string is ok. If a closing bracket doesn't match the bracket on the top of the stack then you have a problem. The beautiful image below (crafted in that great image editor, MS Word) shows the basic idea: pushing on open brackets and popping them off once they get closed.</p>
 
-<a href="http://bp3.blogger.com/_wEsHWMWy090/SIiVZI9h7UI/AAAAAAAAAng/_7ywVHW8ycg/s1600-h/BracketStackExample.png"><img src="http://bp3.blogger.com/_wEsHWMWy090/SIiVZI9h7UI/AAAAAAAAAng/_7ywVHW8ycg/s400/BracketStackExample.png" border="0" alt="Using a stack to keep track of open brackets." id="BLOGGER_PHOTO_ID_5226591626698288450" /></a>
+<a href="/images/fromblogger/s1600-h-BracketStackExample.png"><img src="/images/fromblogger/s400-BracketStackExample.png" border="0" alt="Using a stack to keep track of open brackets." id="BLOGGER_PHOTO_ID_5226591626698288450" /></a>
 
 <p>In terms of efficiency, the worst case for this is when you have a valid string, as you will have had to checked every character at least once (to see if it is a bracket). Using a stack will let us make a single pass through the string.</p>
 

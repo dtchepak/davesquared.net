@@ -33,7 +33,7 @@ updated: "2010-03-24T10:36:49.178+11:00"
 </pre>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://3.bp.blogspot.com/_wEsHWMWy090/S6iztlRJxuI/AAAAAAAABhE/c4EPbbtfBcA/s1600-h/textbox_resizing.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="300" src="http://3.bp.blogspot.com/_wEsHWMWy090/S6iztlRJxuI/AAAAAAAABhE/c4EPbbtfBcA/s320/textbox_resizing.PNG" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-textbox_resizing.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="300" src="/images/fromblogger/s320-textbox_resizing.PNG" width="320" /></a></div>
 
 <p>You can see that as I resize the window, our <code>TextBox</code> resizes to fit the area, and the scrollbar appears as required.</p>
 
@@ -50,12 +50,12 @@ updated: "2010-03-24T10:36:49.178+11:00"
 </pre>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S6iztjRpY_I/AAAAAAAABhI/lrKdAAlIsd4/s1600-h/textbox_in_stackpanel.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://4.bp.blogspot.com/_wEsHWMWy090/S6iztjRpY_I/AAAAAAAABhI/lrKdAAlIsd4/s320/textbox_in_stackpanel.PNG" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-textbox_in_stackpanel.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="/images/fromblogger/s320-textbox_in_stackpanel.PNG" width="320" /></a></div>
 
 <p>After running this the first thing we notice is that without text in it, our <code>TextBox</code> does not fill up all the remaining space in the window. When we paste in a chunk of text the box resizes to fit it in, but what happens when we try and resize the window? Hey, where's our scrollbar?!?!</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S6izt9iVrEI/AAAAAAAABhM/EWkpG736g0c/s1600-h/dudeWheresMyScrollbar.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="163" src="http://4.bp.blogspot.com/_wEsHWMWy090/S6izt9iVrEI/AAAAAAAABhM/EWkpG736g0c/s320/dudeWheresMyScrollbar.PNG" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-dudeWheresMyScrollbar.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="163" src="/images/fromblogger/s320-dudeWheresMyScrollbar.PNG" width="320" /></a></div>
 
 <h2>StackPanel size</h2>
 
@@ -101,7 +101,7 @@ updated: "2010-03-24T10:36:49.178+11:00"
 <p>And now everything works as expected:</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://1.bp.blogspot.com/_wEsHWMWy090/S6izt-Izy3I/AAAAAAAABhQ/5WHy8Un_vG4/s1600-h/happiness_is_a_vertical_scrollbar.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="121" src="http://1.bp.blogspot.com/_wEsHWMWy090/S6izt-Izy3I/AAAAAAAABhQ/5WHy8Un_vG4/s320/happiness_is_a_vertical_scrollbar.PNG" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-happiness_is_a_vertical_scrollbar.PNG" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="121" src="/images/fromblogger/s320-happiness_is_a_vertical_scrollbar.PNG" width="320" /></a></div>
 
 <div class="note"><b>Update: </b> <a href="http://kevin-berridge.blogspot.com/">Kevin Berridge</a> wrote in to note that <a href="http://www.davesquared.net/2010/03/wpf-newbie-battles-stackpanel.html?showComment=1269351754877#c8207778472298731109">a <code>DockPanel</code> will work here too</a>. And he is quite right. The reason I'm using a <code>Grid</code> is I want to get <code>StackPanel</code>-like ability to stack any number of items. The example presented here is a simplified version of the problem I encountered which had 7 stacked controls, each containing 2 other stacked controls. For this case I used a <code>DockPanel</code> for the inner 2 controls, and a <code>Grid</code> for the 7 outer controls. The important thing here is that regardless of what container you choose, just make sure it's not a <code>StackPanel</code>! ;)</div>
 

@@ -38,7 +38,7 @@ public partial class WidgetListView : Window {
 <p>As this view model has a <code>Widgets</code> property, the binding resolves correctly and we get a not-so-useful list of type names:</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://1.bp.blogspot.com/_wEsHWMWy090/S40BC-v-brI/AAAAAAAABdw/KWRY7oef8Yk/s1600-h/DefaultBinding.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://1.bp.blogspot.com/_wEsHWMWy090/S40BC-v-brI/AAAAAAAABdw/KWRY7oef8Yk/s320/DefaultBinding.png" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-DefaultBinding.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="/images/fromblogger/s320-DefaultBinding.png" width="320" /></a></div>
 
 <p>By default, the binding process will just call <code>ToString()</code> on each object. As my <code>Widget</code> class doesn't implement <code>ToString()</code> we get the default behaviour from <code>Object</code>, which is just the type name. We can fix this by telling our binding to use a specific member for each item. Let's try using the <code>Name</code> property on each widget.</p>
 
@@ -47,7 +47,7 @@ public partial class WidgetListView : Window {
 </pre>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S40BC9mVccI/AAAAAAAABd0/o4CH-nZKNH8/s1600-h/DisplayMemberPath.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://4.bp.blogspot.com/_wEsHWMWy090/S40BC9mVccI/AAAAAAAABd0/o4CH-nZKNH8/s320/DisplayMemberPath.png" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-DisplayMemberPath.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="/images/fromblogger/s320-DisplayMemberPath.png" width="320" /></a></div>
 
 <h2>Displaying more information using DataTemplates</h2>
 
@@ -79,7 +79,7 @@ public partial class WidgetListView : Window {
 
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://2.bp.blogspot.com/_wEsHWMWy090/S40BDagEI2I/AAAAAAAABd8/D4yXGfdFAtI/s1600-h/StyledDataTemplate.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://2.bp.blogspot.com/_wEsHWMWy090/S40BDagEI2I/AAAAAAAABd8/D4yXGfdFAtI/s320/StyledDataTemplate.png" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-StyledDataTemplate.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="/images/fromblogger/s320-StyledDataTemplate.png" width="320" /></a></div>
 
 <p>So how does this work? The ListBox doesn't have any specific attributes linking it to our <code>DataTemplate</code>. On the template itself however is a <code>DataType</code> attribute that has a cryptic <code>{x:Type local:Widget}</code> value. This is telling WPF that we want this template to be used whenever rendering a bound object of type <code>Widget</code>. The <code>x:Type</code> string tells WPF the attribute is referring to a type (sort of like XAML's equivalent of <code>typeof</code>). The <code>local:</code> prefix also looks a bit odd. If you check the <code>Window</code> node you'll see an <code>xmlns:local</code> attribute that has a value of <code>&quot;clr-namespace:DaveSquared.StylingListBox&quot;</code>. This is mapping the namespace of my project into XAML, so <code>local:Widget</code> resolves to the <code>DaveSquared.StylingListBox.Widget</code> type.</p>
 
@@ -123,7 +123,7 @@ public partial class WidgetListView : Window {
 <p>To apply this we just add a <code>ItemContainerStyle=&quot;{StaticResource RoundedItem}&quot;</code> attribute to our ListBox. (Note: <code>ListBox.Style</code> will apply to the listbox itself, whereas <code>ListBox.ItemContainerStyle</code> is the style used for each ListBoxItem.) The <code>{StaticResource}</code> value tells WPF to try and find the named resource in its various resource dictionaries (similar to how <code>DataContext</code> is searched for binding). WPF also has a <code>{DynamicResource}</code> which is used for resources that can change, and so need to be reevaluated throughout the life of the control. As our resources for this example are static we won't need that here.</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://3.bp.blogspot.com/_wEsHWMWy090/S40BDRgGmgI/AAAAAAAABeA/5t1uk1WIXIk/s1600-h/ContentTemplate.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://3.bp.blogspot.com/_wEsHWMWy090/S40BDRgGmgI/AAAAAAAABeA/5t1uk1WIXIk/s320/ContentTemplate.png" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-ContentTemplate.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="/images/fromblogger/s320-ContentTemplate.png" width="320" /></a></div>
 
 <p>Our app looks the same until we try to select an item and find that it does not get hightlighted. This is because we've overriden the ListBoxItem template that previously did this for us. Luckily we are now in a good position to not only restore the highlighting, but also fix it so it only highlights within the border of the item.</p>
 
@@ -147,7 +147,7 @@ public partial class WidgetListView : Window {
 <p>Here we're telling our template that when the <code>IsSelected</code> property of our <code>ListBoxItem</code> is true, we want the background of our border element set to light blue. Notice we've given the border element a name (&quot;ItemBorder&quot;) so that we can refer to it in our trigger's <code>Setter</code>. We also need to specify a starting background (in this case I've set it to transparent), otherwise it won't change back properly when the item is unselected (it needs to have an initial value to revert to).</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://2.bp.blogspot.com/_wEsHWMWy090/S40BY9kME3I/AAAAAAAABeE/CArI7BRkNIA/s1600-h/ContentTemplateWithSelected.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://2.bp.blogspot.com/_wEsHWMWy090/S40BY9kME3I/AAAAAAAABeE/CArI7BRkNIA/s320/ContentTemplateWithSelected.png" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-ContentTemplateWithSelected.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="/images/fromblogger/s320-ContentTemplateWithSelected.png" width="320" /></a></div>
 
 <h2>MultiTriggers</h2>
 
@@ -171,7 +171,7 @@ public partial class WidgetListView : Window {
 <p>Here we've set two conditions necessary for the multitrigger to be applied, IsMouseOver must be true, and IsSelected must be false. If these conditions are satisfied then we'll set the background to azure, and get this effect:</p>
 
 <div class="separator" style="clear: both; text-align: center;">
-<a href="http://4.bp.blogspot.com/_wEsHWMWy090/S40BY-i7w3I/AAAAAAAABeI/8oAekEztpyA/s1600-h/ContentTemplateSelectedAndHover.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="http://4.bp.blogspot.com/_wEsHWMWy090/S40BY-i7w3I/AAAAAAAABeI/8oAekEztpyA/s320/ContentTemplateSelectedAndHover.png" width="320" /></a></div>
+<a href="/images/fromblogger/s1600-h-ContentTemplateSelectedAndHover.png" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" height="213" src="/images/fromblogger/s320-ContentTemplateSelectedAndHover.png" width="320" /></a></div>
 
 <h2 id="March2010_WpfListBox_LastSection">Tidying up</h2>
 

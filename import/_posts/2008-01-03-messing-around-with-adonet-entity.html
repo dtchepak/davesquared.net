@@ -25,10 +25,10 @@ which are stored as Guids/uniqueidentifiers. Each supplier can
 service many states. So we have a simple many-to-many relationship
 between the two main entities. It looks a bit like this:</p>
 <p><a href=
-"http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s1600-h/SampleSupplierSchema.png">
+"/images/fromblogger/s1600-h-SampleSupplierSchema.png">
 <img id="BLOGGER_PHOTO_ID_5145922358406504498" style=
 "cursor: pointer" alt="" src=
-"http://1.bp.blogspot.com/_wEsHWMWy090/R2n9HuaPYDI/AAAAAAAAAfs/04T6Bg6e7mY/s400/SampleSupplierSchema.png"
+"/images/fromblogger/s400-SampleSupplierSchema.png"
 border="0" name="BLOGGER_PHOTO_ID_5145922358406504498" /></a></p>
 <p>I am using Aussie states for my tests, so I have populated the
 State table with the following names: NSW, VIC, QLD, TAS, SA, WA,
@@ -40,13 +40,13 @@ WorkshopModel.edmx. Adding the project item runs a wizard that
 lets you choose the connection, and then select which database 
 items to include in the model (including tables, views and SPs):</p>
 <p><a href=
-"http://4.bp.blogspot.com/_wEsHWMWy090/R3wx3uaPYFI/AAAAAAAAAf8/bsQcXKs8N0g/s1600-h/EntityFrameworkModelCreatorScreen.png">
+"/images/fromblogger/s1600-h-EntityFrameworkModelCreatorScreen.png">
 <img style="cursor: pointer;" src=
-"http://4.bp.blogspot.com/_wEsHWMWy090/R3wx3uaPYFI/AAAAAAAAAf8/bsQcXKs8N0g/s400/EntityFrameworkModelCreatorScreen.png"
+"/images/fromblogger/s400-EntityFrameworkModelCreatorScreen.png"
 alt="" id="BLOGGER_PHOTO_ID_5151046907225661522" border="0" name=
 "BLOGGER_PHOTO_ID_5151046907225661522" /></a></p>
 <p>Once the wizard completes the model is opened in the designer. Note the recognition of the many-to-many relationship between suppliers and states. I edited to default association name from Supplier_StatesServiced to StatesServiced to make it a bit easier to read.</p>
-<p><a href="http://1.bp.blogspot.com/_wEsHWMWy090/R3wx3-aPYGI/AAAAAAAAAgE/l8o_Kf3SBH8/s1600-h/EntityFrameworkModelDesignerScreen.png"><img style="cursor: pointer;" src="http://1.bp.blogspot.com/_wEsHWMWy090/R3wx3-aPYGI/AAAAAAAAAgE/l8o_Kf3SBH8/s400/EntityFrameworkModelDesignerScreen.png" alt="" id="BLOGGER_PHOTO_ID_5151046911520628834" border="0" /></a></p>
+<p><a href="/images/fromblogger/s1600-h-EntityFrameworkModelDesignerScreen.png"><img style="cursor: pointer;" src="/images/fromblogger/s400-EntityFrameworkModelDesignerScreen.png" alt="" id="BLOGGER_PHOTO_ID_5151046911520628834" border="0" /></a></p>
 
 <p> The designer provides access to loads of properties for the model, so it is possible that some of the code I am going to write further on could be simplified by tweaking the model. At this stage it feels very much like a WYSIWYG way of generating an NHibernate-style mapping file and accompanying entity classes. The designer generates a WorkshopData.Designer.cs file from my WorkshopData.edmx, which includes definitions of the Entity Framework-based classes.</p>
 
