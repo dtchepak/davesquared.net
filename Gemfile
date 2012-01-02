@@ -1,5 +1,6 @@
 source "http://rubygems.org"
 
+gem 'compass'
 gem 'sass'
 gem 'nokogiri'
 gem 'liquid', '<=2.2.2'
