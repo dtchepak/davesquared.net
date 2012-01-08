@@ -13,7 +13,7 @@ description:
 # You can customize the format as defined in
 # http://www.ruby-doc.org/core-1.9.2/Time.html#method-i-strftime
 # Additionally, %o will give you the ordinal representation of the day
-date_format: "ordinal"
+date_format: "%d %b %Y"
 
 # RSS / Email (optional) subscription links (change if using something like Feedburner)
 subscribe_rss: http://feeds2.feedburner.com/davesquared # /atom.xml
@@ -90,7 +90,7 @@ delicious_count: 3
 
 # Disqus Comments
 disqus_short_name: davesquared
-disqus_show_comment_count: true
+disqus_show_comment_count: false
 
 # Google Analytics
 google_analytics_tracking_id: UA-2217573-4
