@@ -35,7 +35,6 @@ code_dir: downloads/code
 category_dir: categories
 markdown: redcarpet
 pygments: false # default python pygments have been replaced by pygments.rb
-comments: true
 
 paginate: 10          # Posts per page on the blog index
 pagination_dir: # Directory base for pagination URLs eg. /blog/page/2/
