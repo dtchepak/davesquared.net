@@ -1,12 +1,19 @@
 source "http://rubygems.org"
 
-gem 'compass'
-gem 'sass'
-gem 'nokogiri'
-gem 'liquid', '<=2.2.2'
-gem 'redcarpet'
-gem 'jekyll'
-gem 'rack', "~>1.1"
-gem 'rack-contrib'
-gem 'thin'
+group :development do
+  gem 'rake'
+  gem 'rack'
+  gem 'jekyll'
+  gem 'redcarpet'
+  gem 'rdiscount'
+  gem 'pygments.rb'
+  gem 'RedCloth'
+  gem 'haml', '>= 3.1'
+  gem 'compass', '>= 0.11'
+  gem 'rubypants'
+  gem 'rb-fsevent'
+  gem 'stringex'
+  gem 'liquid', '2.2.2'
+end
 
+gem 'sinatra', '1.2.6'
