@@ -11,7 +11,6 @@
   <input value="005697633880271604295:snlx0l0dwf0" name="cx" type="hidden"/>
   <input value="" name="cof" type="hidden"/>
   <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  <!--<input value="search" name="sa" type="submit"/>-->
   </fieldset>
 </form>
 <!-- Google CSE Search Box Ends -->
@@ -22,13 +21,5 @@ function davesquared_submitSearchBoxWidget() {
   searchBox.cof.value="FORID:11";
 }
 </script>
-<!--
-<form action="{{ site.simple_search }}" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:{{ site.url | shorthand_url }}" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
--->
   {% endif %}
 {% include custom/navigation.html %}
