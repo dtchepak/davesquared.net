@@ -2,6 +2,7 @@ body > footer {
   @extend .sans;
   font-size: .8em;
   color: $footer-color;
+  text-align: center;
   text-shadow: lighten($footer-bg, 5) 0 1px;
   background-color: $footer-bg;
   @include background($footer-bg-front, $footer-bg-back);
@@ -16,4 +17,8 @@ body > footer {
     @include link-colors($footer-link-color, $footer-link-color-hover, $visited: $footer-link-color);
   }
   p:last-child { margin-bottom: 0; }
+  p.disclaimer {
+      font-size: 0.8em;
+      line-height: 1.5;
+  }
 }
