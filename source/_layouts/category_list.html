@@ -1,0 +1,14 @@
+---
+layout: page
+title: Categories
+---
+
+<div>
+    <ul>
+    {% for category in page.category_list %}
+    <li>{{ category.name | category_link }} ({{ category.post_count }}) </li>
+    {% endfor %}
+    </ul>
+</div>
+
+
