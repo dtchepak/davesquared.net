@@ -17,7 +17,9 @@ module Jekyll
 
     def generate(site)
       return nil unless site.layouts.key? 'category_list'
-      category_list = site.categories.keys.sort.collect { |c| CategoryItem.new(c, site.categories[c].size) }
+      category_list = site.categories.keys
+        .select { |c| not c.start_with? "+" }
+        .sort.collect { |c| CategoryItem.new(c, site.categories[c].size) }
 
       dir = site.config['category_dir']
 
