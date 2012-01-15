@@ -2,7 +2,7 @@ source "http://rubygems.org"
 
 group :development do
   gem 'rake'
-  gem 'rack'
+  gem 'nokogiri'
   gem 'jekyll'
   gem 'redcarpet'
   gem 'rdiscount'
@@ -17,3 +17,5 @@ group :development do
 end
 
 gem 'sinatra', '1.2.6'
+gem 'rack-rewrite'
+gem 'rack'
