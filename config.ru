@@ -1,8 +1,17 @@
 require 'bundler/setup'
 require 'sinatra/base'
+require 'rack'
+require 'rack/rewrite'
 
 # The project root directory
 $root = ::File.dirname(__FILE__)
+
+use Rack::Deflater
+use Rack::Rewrite do
+    r301 %r{.*}, 'http://davesquared.net$&', :if => Proc.new {|rack_env|
+          rack_env['SERVER_NAME'].start_with? 'www.'
+    }
+end
 
 class SinatraStaticServer < Sinatra::Base  
 
