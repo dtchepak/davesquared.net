@@ -2,6 +2,7 @@ body > nav {
   position: relative;
   background-color: $nav-bg;
   @include background($nav-bg-front, $nav-bg-back);
+  @include border-bottom-radius(.4em);
   border: {
     top: 1px solid $nav-border-top;
     bottom: 1px solid $nav-border-bottom; }
@@ -61,6 +62,9 @@ body > nav {
       font-size: 1.1em;
       padding: .1em 0;
       line-height: 1.5em;
+    }
+    a.siteHome {
+        font-weight: bold;
     }
     li + li {
       border-left: 1px solid $nav-border-left;

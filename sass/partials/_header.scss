@@ -1,4 +1,4 @@
-body > header {
+body > header, #content > header {
   background: $header-bg $noise-bg;
   h1 {
     display: inline-block;
@@ -15,4 +15,8 @@ body > header {
     color: $subtitle-color;
     font-weight: normal;
   }
+}
+
+#content > header {
+    padding-top: 3em;
 }
