@@ -2,7 +2,6 @@ body > nav {
   position: relative;
   background-color: $nav-bg;
   @include background($nav-bg-front, $nav-bg-back);
-  @include border-bottom-radius(.4em);
   border: {
     top: 1px solid $nav-border-top;
     bottom: 1px solid $nav-border-bottom; }
@@ -65,6 +64,7 @@ body > nav {
     }
     a.siteHome {
         font-weight: bold;
+        color: lighten($nav-color, 20);
     }
     li + li {
       border-left: 1px solid $nav-border-left;
@@ -93,6 +93,7 @@ body > nav {
     fieldset[role=search]{ width: 99%; }
   }
   @media only screen and (min-width: 992px) {
+    @include border-bottom-radius(.4em);
     form {
       width: $sidebar-width-wide - $pad-wide - $sidebar-pad-wide*2 + 10px;
     }
