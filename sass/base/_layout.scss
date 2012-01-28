@@ -139,7 +139,7 @@ body.sidebar-footer {
     .no-sidebar & { margin-right: 0; border-right: 0; }
     .collapse-sidebar & { margin-right: 20px; }
     > div, > article {
-      padding-top: $pad-medium/2;
+      //padding-top: $pad-medium/2;
       padding-bottom: $pad-medium/2;
       float: left;
     }
@@ -167,7 +167,7 @@ body.sidebar-footer {
   #content { margin-right: $sidebar-width-wide; }
   #content {
     > div, > article {
-      padding-top: $pad-wide/2;
+      //padding-top: $pad-wide/2;
       padding-bottom: $pad-wide/2;
     }
   }
