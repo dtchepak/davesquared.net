@@ -4,7 +4,6 @@ title: "Goodbye Blogger"
 date: 2012-01-29 21:28
 comments: true
 categories: misc
-published: false
 ---
 
 After blogging for five years on [Blogger](http://www.blogger.com), I've finally decided to take the plunge and run my own blog. I've actually really enjoyed hosting with Blogger; I think it's a pretty under-rated platform. It's easy to get started, possible to do all sorts of crazy customisations, and they've recently started adding some cool stuff like mobile templates and [different dynamic views](http://buzz.blogger.com/2011/03/fresh-new-perspectives-for-your-blog.html). So why on earth am I leaving again?
