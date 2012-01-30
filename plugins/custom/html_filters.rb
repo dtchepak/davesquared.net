@@ -1,10 +1,11 @@
 # encoding: utf-8
 
 #
-# This plugin by Matt Hall (https://github.com/MattHall/truncatehtml)
+# This plugin originally by Matt Hall (https://github.com/MattHall/truncatehtml)
 # Used this version:
 #   https://github.com/MattHall/truncatehtml/tree/1f2cd1bd8b503551be09bf56c6afeb5401346c23
 #
+# Modified to not wrap truncated html in <html><body> tags.
 require 'nokogiri'
 
 module Liquid
@@ -36,7 +37,7 @@ module Liquid
   
       to_delete.map(&:remove)
   
-      doc.inner_html
+      doc.search('html/body').children.to_html
     end
     
   private
