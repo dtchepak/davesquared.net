@@ -2,8 +2,8 @@
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">  
   <ShortName>Dave^2 Search</ShortName>  
   <Description>Search DaveSquared</Description>  
-  <Url type="text/html" method="get" template="http://www.davesquared.net/search?cx=005697633880271604295%3Asnlx0l0dwf0&amp;cof=FORID%3A11&amp;q={searchTerms}&amp;sa=Search#941"/>  
-  <Image width="16" height="16">http://www.davesquared.net/images/d2.png</Image>
+  <Url type="text/html" method="get" template="http://davesquared.net/search?cx=005697633880271604295%3Asnlx0l0dwf0&amp;cof=FORID%3A11&amp;q={searchTerms}&amp;sa=Search#941"/>  
+  <Image width="16" height="16">http://davesquared.net/images/d2.png</Image>
   <InputEncoding>UTF-8</InputEncoding>  
-  <SearchForm>http://www.davesquared.net/</SearchForm>  
+  <SearchForm>http://davesquared.net/</SearchForm>  
 </OpenSearchDescription> 
