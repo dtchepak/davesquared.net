@@ -8,7 +8,7 @@ categories: ["haskell", "functional programming", "+folds"]
 
 I've recently been trying to [learn some functional programming](http://learnyouahaskell.com/), and one of the first things to trip me up was the idea of _folds_. At their simplest, folds seem to be a short-hand for defining recursions over lists, but I find I start getting lost somewhere between fold types and optimising for languages with lazy evaluation. 
 
-This [series on folds](/categories/-folds) is my attempt to pull together the little bits and pieces I've managed to pick up into a form I can understand. If you're not familiar with folds, hopefully it will help get you started, and if you are then please send any corrections via comments or email and I'll update the post. 
+This [series on folds](/categories/-folds) is my attempt to pull together the little bits and pieces I've managed to pick up into a form I can understand. If you're not familiar with folds, hopefully it will help get you started. If you already know about folds then you probably won't get much out of this, but if you do read through it I'd love to get corrections via the comments or via email so I can update the post.
 
 In this first post of the series we will try to work out what folds are. We'll start by looking at some problems we can solve using recursion over lists. We'll then try and work out what these solutions have in common, and factor that out. Finally we'll see how this relates to folds, and how we can use folds to solve these problems more succinctly.
 
