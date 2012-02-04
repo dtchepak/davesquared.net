@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Folds Pt 1: Introduction to folds"
+title: "Folds Pt 1: From recursion to folds"
 date: 2012-02-05 00:08
 comments: true
 categories: ["haskell", "functional programming", "+folds"]
