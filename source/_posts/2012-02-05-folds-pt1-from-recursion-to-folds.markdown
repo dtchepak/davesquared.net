@@ -2,11 +2,12 @@
 layout: post
 title: "Folds Pt 1: From recursion to folds"
 date: 2012-02-05 00:08
+updated: 2012-02-05 17:24
 comments: true
 categories: ["haskell", "functional programming", "+folds"]
 ---
 
-I've recently been trying to [learn some functional programming](http://learnyouahaskell.com/), and one of the first things to trip me up was the idea of _folds_. At their simplest, folds seem to be a short-hand for defining recursions over lists, but I find I start getting lost somewhere between fold types and optimising for languages with lazy evaluation. 
+I've recently been trying to [learn some functional programming](http://learnyouahaskell.com/), and one of the first things to trip me up was the idea of _folds_. Folds crop up all over the place in both functional and imperative languages, so they're worth understanding. At their simplest, folds seem to be a short-hand for defining recursions over lists, but I find I start getting lost somewhere between fold types and optimising for languages with lazy evaluation. 
 
 This [series on folds](/categories/-folds) is my attempt to pull together the little bits and pieces I've managed to pick up into a form I can understand. If you're not familiar with folds, hopefully it will help get you started. If you already know about folds then you probably won't get much out of this, but if you do read through it I'd love to get corrections via the comments or via email so I can update the post.
 
@@ -158,7 +159,7 @@ Here we can see that both `len` and `len2` work exactly the same way, it's just 
 
 As you may have guessed, our `f` function is a _fold_ (more specifically, a right fold, which we'll get to in a later post). We're _folding_ the `func` argument over a list and providing a particular value for the stopping condition.
 
-What I've been clumsily referring to as "the result of recursively calling the function on the tail" tends to be known as the _accumulator_, because it represents the accumulation of the results for each element in the tail. The empty list value is also known as the _seed_, as that ends up being the first value of the accumulator once we get to the bottom of the recursion and start working out way back up. Fold itself can also be known as [inject or reduce](http://railspikes.com/2008/8/11/understanding-map-and-reduce), or [Aggregate in .NET](http://msdn.microsoft.com/en-us/library/bb549218.aspx).
+What I've been clumsily referring to as "the result of recursively calling the function on the tail" tends to be known as the _accumulator_, because it represents the accumulation of the results for each element in the tail. The empty list value is known as the _seed_, as that ends up being the first value of the accumulator once we get to the bottom of the recursion and start working out way back up. Fold itself can also be known as [inject or reduce](http://railspikes.com/2008/8/11/understanding-map-and-reduce), or [Aggregate in .NET](http://msdn.microsoft.com/en-us/library/bb549218.aspx).
 
 Let's quickly express our other examples using our fold function (renamed from `f`):
 
