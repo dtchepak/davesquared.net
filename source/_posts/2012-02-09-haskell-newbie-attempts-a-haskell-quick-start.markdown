@@ -3,7 +3,7 @@ layout: post
 title: "Haskell newbie attempts a Haskell quick start guide"
 date: 2012-02-09 12:02
 comments: true
-categories: ["haskell", "functional programming"]
+categories: ["haskell"]
 ---
 
 I recently posted an [attempt to explain folds using Haskell](/2012/02/folds-pt1-from-recursion-to-folds.html), and I got some feedback that the code samples were quite hard to follow for people that hadn't played with Haskell before. Now the best way that I know of to quickly get started with Haskell is to go through the excellent [Learn You a Haskell for Great Good](http://learnyouahaskell.com/) guide. I heartily recommend leaving this post right now and reading it. The whole guide is available free online, but you can also buy print copies of the fantastic reference. Here's [the link](http://learnyouahaskell.com/) again in case you missed it the first time.  
