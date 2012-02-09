@@ -305,7 +305,7 @@ The `let` binding has some other properties (for example, you can use it in lots
 
 ## Putting it together
 
-Let's apply a whole bunch of the things we've covered in this post. Let's write a function that filters a list. This function will have to take another function to do the filtering, which makes it a higher-order function. We'll also use pattern matching and recursion to work our way through the list. We also want to support any type of list elements, so we'll need a type signature that reflects that.
+Let's apply a whole bunch of the things we've covered in this post by writing a function that filters a list. This function will have to take another function to do the filtering, which makes it a higher-order function. We'll also use pattern matching and recursion to work our way through the list. We also want to support any type of list elements, so we'll need a type signature that reflects that.
 
 If we're dealing with lists of any element type, let's just call that type `a`. If we are filtering elements from a list of `a`, we're going to end up with another list of `a`, so that will also be our return type. The predicate function we pass in to do the actual filtering on each element is going to have to take one of these `a`s, and return `True` or `False`.
 
