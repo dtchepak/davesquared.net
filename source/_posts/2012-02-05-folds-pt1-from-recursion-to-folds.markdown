@@ -15,7 +15,7 @@ In this first post of the series we will try to work out what folds are. We'll s
 
 <!--more-->
 
-<div class="note"><b>Note:</b> I'll use Haskell for this post but won't assume you've had a chance to try it out, so I'll try and explain all the relevant bits as we go. This also means that I'll avoid some nice features of Haskell that could make the examples more concise and idiomatic, so we can focus less on the language, and more on the topic of folding. If you find yourself completely lost by the syntax, have a look at my attempt at a [Haskell quick start guide](/2012/02/haskell-newbie-attempts-a-haskell-quick-start.html).
+<div class="note"><b>Note:</b> I'll use Haskell for this post but won't assume you've had a chance to try it out, so I'll try and explain all the relevant bits as we go. This also means that I'll avoid some nice features of Haskell that could make the examples more concise and idiomatic, so we can focus less on the language, and more on the topic of folding. If you find yourself completely lost by the syntax, have a look at my attempt at a <a href="/2012/02/haskell-newbie-attempts-a-haskell-quick-start.html">Haskell quick start guide</a>.
 </div>
 
 ## Recursing over lists
