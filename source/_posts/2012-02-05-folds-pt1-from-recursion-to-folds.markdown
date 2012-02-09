@@ -36,14 +36,12 @@ What happens when we've recursively called `len` and get to the end of the list?
 
 Let's manually trace through what happens when we call this function:
 
-```
-len [1,2,3]
-    = 1 + len [2,3]
-    = 1 + 1 + len [3]
-    = 1 + 1 + 1 + len []
-    = 1 + 1 + 1 + 0
-    = 3
-```
+    len [1,2,3]
+        = 1 + len [2,3]
+        = 1 + 1 + len [3]
+        = 1 + 1 + 1 + len []
+        = 1 + 1 + 1 + 0
+        = 3
 
 Looks reasonable to me. We've defined the length of a list as 1 for its first element (its head) plus the length of the rest (its tail). And when we have a list with no elements (the empty list), its length is 0.
 
@@ -136,22 +134,20 @@ I think I'm starting to see how this hangs together now. Our `func` takes as arg
 
 Let's step through the evaluation of each function:
 
-```
-len [1,2,3]
-    = 1 + len [2,3]
-    = 1 + (1 + len [3])
-    = 1 + (1 + (1 + len []))
-    = 1 + (1 + (1 + 0))
-    = 3
+    len [1,2,3]
+        = 1 + len [2,3]
+        = 1 + (1 + len [3])
+        = 1 + (1 + (1 + len []))
+        = 1 + (1 + (1 + 0))
+        = 3
 
-len2 [1,2,3]
-    = f func 0 [1,2,3]
-    = 1 + (f func 0 [2,3])
-    = 1 + (1 + (f func 0 [3]))
-    = 1 + (1 + (1+ (f func 0 [])))
-    = 1 + (1 + (1+0))
-    = 3
-```
+    len2 [1,2,3]
+        = f func 0 [1,2,3]
+        = 1 + (f func 0 [2,3])
+        = 1 + (1 + (f func 0 [3]))
+        = 1 + (1 + (1+ (f func 0 [])))
+        = 1 + (1 + (1+0))
+        = 3
 
 Here we can see that both `len` and `len2` work exactly the same way, it's just that `len2` is now going via a function that handles the recursion plumbing for us.
 
