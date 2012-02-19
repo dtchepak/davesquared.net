@@ -14,7 +14,7 @@ Yet when I've asked other devs, most have great personal, work and non-tech goal
 
 ## Goals are important 
 
-I believe goals are very important. They have the potential to help us focus, prioritise, avoid wasting energy, make the most of opportunities we have and, when we reach them, give us a feeling of achievement and growth, along with the happiness that brings.
+Goals have the potential to motivate us, help us focus, get into a [flow](http://en.wikipedia.org/wiki/Flow_(psychology), avoid wasting energy, make the most of opportunities we have and, when we reach them, give us a feeling of achievement and growth, along with the happiness that brings.
 
 Many (if not all) of the people I know that I consider really successful are very goal-oriented. They know what they want to achieve and have the skill, self-confidence, and drive to make it happen. For them it seems to come naturally, but I think it is an approach that can be learned and adopted by anyone, irrespective of personality. It's simply a matter of choosing the right goals; ones that inspire and provide both feedback on progress and a feeling of achievement on meeting them.
 
@@ -48,11 +48,11 @@ A related approach that I've found useful is "building" a blog post on the topic
 
 ## Generating ideas for projects
 
-I thought it was worthwhile to quickly mention this. It can be tough to come up with usable project ideas, so whenever I do come up with one I note it somewhere safe ([David Allen's Getting Things Done](http://www.davidco.com/about-gtd) would call this a "trusted system"). Paper, notebook, task list app, email it to yourself, whatever. Just make sure it is captured and accessible. I've found the more I do this, the more ideas I get. If you're really stuck try looking up code katas or exercises like [Project Euler](http://projecteuler.net/). But the best projects will be ones that serve a need you have, or fit in with a hobby or subject that really interests you.
+I thought it was worthwhile to quickly mention this. It can be tough to come up with usable project ideas, so whenever I do come up with one I note it somewhere safe (in a "trusted system" as [David Allen](http://www.davidco.com/about-gtd) would call it). Paper, notebook, task list app, email it to yourself, whatever. Just make sure it is captured and accessible. I've found the more I do this, the more ideas I seem to get (although admittedly I still struggle to get lots of inspiring ideas. I do feel capturing everything is slowly helping me improve though). If you're really stuck try looking up code katas or exercises like [Project Euler](http://projecteuler.net/). But the best projects will be ones that serve a need you have, or fit in with a hobby or subject that really interests you.
 
 
 ## Conclusion
 
 Many developers I've spoken with have the aim of becoming better developers, but haven't taken the step of defining what that means. I've found it helpful to start translating this into specific goals, and the ones that seem to work best for me are building small projects that relate to an area of interest. I'm also careful to avoid goals that don't work for me, such as those that depend on external factors and non-specific goals.
 
-If you've found other software dev-specific goals that work for you, I'd love to hear about them!
+If you've found other software dev-specific goals and related approaches that work for you, I'd love to hear about them!
