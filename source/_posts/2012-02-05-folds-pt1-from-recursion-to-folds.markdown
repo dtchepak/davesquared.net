@@ -179,6 +179,6 @@ Once we start using some Haskell niceties like partial application and function 
 
 ## Still to come...
 
-In the next post we'll look at the different types of folds. After that we'll move on to look at some of the runtime characteristics of folds (and what we can do about them :)).
+In the [next post](/2012/02/folds-pt2-from-loops-to-folds.html) we'll look at the different types of folds. After that we'll move on to look at some of the runtime characteristics of folds (and what we can do about them :)).
 
 
