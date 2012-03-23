@@ -1,15 +1,15 @@
 ---
 layout: post
 title: "Folds Pt 3: Left fold, right?"
-date: 2012-03-23 12:31
+date: 2012-03-24 01:33
 comments: true
 categories: ["haskell", "functional programming", "+folds"]
 published: false
 ---
 
-This post is part 3 of a [series on folds](/categories/-folds), which is my attempt to understand the topic. I'm using examples in Haskell, but hopefully you can follow along even if you're not familiar with the language. If you find yourself getting lost in the syntax, I've written a [Haskell quick start](/2012/02/haskell-newbie-attempts-a-haskell-quick-start.html) that goes through all the bits we'll use.
+This post is part 3 of a [series on folds](/categories/-folds), which is my attempt to understand the topic. The examples are in Haskell, but hopefully you can follow along even if you're not familiar with the language. If you find yourself getting lost in the syntax, I've written a [Haskell quick start](/2012/02/haskell-newbie-attempts-a-haskell-quick-start.html) that goes through all the bits we'll use.
 
-In [part 1](/2012/02/folds-pt1-from-recursion-to-folds.html) we found that a fold is a way of abstracting recursive operations over lists. In [part 2](/2012/02/folds-pt2-from-loops-to-folds.html) we saw that we could also express loops using recursion, which we could extract into a different type of fold. We learned that the loop-like fold is called a _left fold_ (it accumulates it values on the left of the expression), and that our original fold was called a _right fold_ (which accumulates to the right). 
+In [part 1](/2012/02/folds-pt1-from-recursion-to-folds.html) we found that a fold is a way of abstracting recursive operations over lists. In [part 2](/2012/02/folds-pt2-from-loops-to-folds.html) we saw that we could also express loops using recursion, which we could extract into a different type of fold. We learned that the loop-like fold is called a _left fold_ (it accumulates its values on the left of the expression), and that our original fold was called a _right fold_ (which accumulates to the right). 
 
 ``` haskell
 foldLeft :: (a -> b -> a) -> a -> [b] -> a
@@ -21,7 +21,7 @@ foldRight f acc (head:tail) = f head (foldRight f acc tail)
 foldRight _ seed [] = seed
 ```
 
-We saw we could implement several functions using both left and right folds (like `sum`, `length`, and `mapFn`). As both folds abstract away explicit recursion, both ultimately seem capable of producing the same results, just with different orders of evaluation. These different ways of evaluating have some important implications, so in this post will take a closer look at these.
+We saw we could implement several functions using both left and right folds (like `sum`, `length`, and `mapFn`). As both folds abstract away explicit recursion, they seem capable of producing the same results, just with different orders of evaluation. It turns out these differences in evaluation have some important implications, so in this post we'll take a closer look at them.
 
 <!-- more -->
 
@@ -87,17 +87,18 @@ So not only do the functions we pass to both folds differ in argument order, but
 
 ## To infinity, and beyond!
 
-In the last section we saw that `foldLeft` accumulates in  `foldRight` accumulate in a flipped order
-The difference in evaluation order has another really important impact, and that is the different folds handle infinite lists.
+In the last section we saw that `foldLeft` and `foldRight` evaluate in opposite orders. This difference in evaluation order has another important impact, and that is how the different folds handle infinite lists.
 
 ### Taking just a bit of an infinite list
 
-First we'll need to take a small digression to explain how Haskell works with infinite lists. The `take` function in Haskell grabs a specified number of elements from a list. We can implement a basic version of this function so we can trace exactly what's happening when we call it.
+First we'll need to take a small digression to explain how Haskell works with infinite lists. The `take` function in Haskell grabs a specified number of elements from the start of a list. We can implement a basic version of this function so we can trace exactly what's happening when we call it.
 
-    take' :: Num a => a -> [b] -> [b]
-    take' 0 list = []
-    take' _ [] = []
-    take' i (head:tail) = head : (take' (i-1) tail)
+```haskell
+take' :: Num a => a -> [b] -> [b]
+take' 0 _ = []              -- The underscore '_' matches any argument value.
+take' _ [] = []
+take' i (head:tail) = head : (take' (i-1) tail)
+```
 
 We can use our `take'` function like this:
 
@@ -168,7 +169,7 @@ So while `take'` was able to get a list of the form `(1+1) : rest` from `addOneR
 
 So far we've seen that while left folds aren't going to do us any favours when it comes to infinite lists, right folds seem to take them in their stride. There is a wrinkle here though; if the function we pass to our right fold needs to evaluate both its arguments (or its right argument first), then the recursion is not going to terminate and we're going to end up hanging, just like our left fold. 
 
-The arguments a function has to evaluate is described as its [strictness](http://www.haskell.org/haskellwiki/Non-strict_semantics). A function that always needs to evaluate both its arguments is said to be strict in both its arguments. If it can sometimes get away with only evaluating its left argument it is said to be strict in its left argument.
+The arguments a function needs to evaluate to produce a result is described as its [strictness](http://www.haskell.org/haskellwiki/Non-strict_semantics). A function that always needs to evaluate both its arguments is said to be strict in both its arguments. If it can sometimes get away with only evaluating some of its arguments it is non-strict (or, for example, just strict in its first argument).
 
 An example of a function that is strict in both its arguments is `(+)`, which needs to evaluate both its left and right sides to return a result:
 
@@ -194,21 +195,21 @@ Why doesn't this stop as soon as the sum reaches 20?
 
 Even though our total is now greater than 5, our `(+)` operator isn't able to give us a result because it needs to evaluate both its left and right sides. When it looks at `(1 + rest)`, it tries to evaluate `rest` to give us an answer, which brings it to `(1 + (2 + rest))`. Again it needs to evaluate `rest` to finish evaluating the original `(1 + rest)` call. So before we can check `(>5)`, we have to wait until the infinite number of right-hand sides have been evaluated. And so again we reach for `Ctrl + c`.
 
-This is different to our `take'` example which used the `(:)` and `(++)` operators, which are only strict in their left arguments. If a function only needs the head of a list, it can grab that from `1:rest` without having to strictly evaluate the `rest` argument.
+This is different to our `take'` example which used the `(:)` and `(++)` operators, which are non-strict. If a function only needs the head of a list, it can grab that from `1:rest` without having to strictly evaluate the `rest` argument.
 
 ## Left or right?
 
 So how to we know when to choose a left fold over a right fold? I'm not entirely sure, but we can make some guesses based on what we've found so far.
 
-First, if we need to work with infinite lists we're going to need a right fold. This means for functions like `map` (or `mapFn` from previous posts) which make sense to be able to apply to infinite lists (for example, it makes sense to be able to map `(*2)` over an infinite list and just take the first 5 elements). So we would pick the right fold version of our `addOne` function (which maps `(+1)` over a list).
+First, if we want to work with infinite lists we're going to need a right fold. It can be quite handy to have functions like `map` (`mapFn` in previous posts) work with infinite lists, as that can give us elegant ways of writing some functions (for example, finding all the numbers whose squares are less than 1000: `takeWhile (< 1000) (map (** 2) [0..])`. Thanks to [@puffnfresh](https://twitter.com/puffnfresh) for this example). So we'd write `map` as a right fold. This also means we would pick the right fold version of our `addOne` function (as it is a mapping of `(+1)` over a list).
 
-If we can't work with infinite lists (say, because we're using a strict function like `(+)`), then we have a choice. We've seen there is a different order of arguments passed to the function being folded, as well as a different order of evaluation, which may better suit what we are trying to do with our fold. For example, reversing a list using `foldLeft (\acc h -> h:acc) []`, or just `foldLeft (flip (:)) []`, seems quite neat.
+If we can't work with infinite lists (say, because we're using a strict function like `(+)`), then we have a choice. We've seen arguments are passed in different orders to the function being folded, and the order of evaluation is reversed, either of which may better suit what we are trying to do with our fold. For example, reversing a list using `foldLeft (\acc h -> h:acc) []`, or just `foldLeft (flip (:)) []`, seems quite neat.
 
 I've seen suggestions to consider [loop-like vs. list recursion](http://stackoverflow.com/a/1446803/906) and [operator associativity](http://stackoverflow.com/a/1446478/906) in making a choice, but I'm not entirely sure how to apply these suggestions yet, so at the moment I'm stuck considering infinite lists and which order of evaluation suits what I'm trying to achieve.
 
-When trying to work out how to write a fold and which variant to use, I find it useful to think about the accumulator (`acc`) argument in the function we're folding as delving into the recursion. For left fold the function is `(\acc head -> ...)`, while right is `(\head acc -> ...)`, and the `acc` argument in both represents the result (or eventual result) of recursing over the rest of the list. This not only helps me to work out if a function can be folded right over an infinite list, but also helps me to work out how I need to implement or compose that function to give me the required result from my fold.
+When trying to work out how to write a fold and which variant to use, I find it useful to think about the accumulator (`acc`) argument in the function we're folding as _delving_ into the recursion. For left fold the function is `(\acc head -> ...)`, while right is `(\head acc -> ...)`, and the `acc` argument in both represents the result (or eventual result) of recursing over the rest of the list. This not only helps me to work out if a function can be folded right over an infinite list, but also helps me to work out how I need to implement or compose that function to give me the required result from my fold.
 
-There is one other important difference between the folds we haven't covered yet, and that is the question of efficiency in time taken and space used. We'll look at this for the next post.
+There is one other important difference between the folds we haven't covered yet, and that is the question of efficiency in time taken and space used. We'll look at this in the next post.
 
 ## Conclusion
 
@@ -216,11 +217,9 @@ We've now seen a few key differences between left and right folds that give us a
 
 First we saw that `foldRight` takes a function with the accumulator passed in on the right, while `foldLeft` has it passed in on the left. Depending on the arguments required to the function being folded, this can make certain folds simpler to call in one direction than the other (such as being able to use `(:)` instead of `(++)` to build up lists while maintaining its order).
 
-More importantly, we saw that the order of evaluation was different for the folds. Left folds start with the final list element first, working backwards to the start of the list, whereas right folds end up evaluating the list in its initial order.
+More importantly, we saw that the order of evaluation was different for the folds. Left folds start combining the first element with the initial accumulator, whereas for right folds the last element is the first combined with the initial accumulator value. This causes folding `(:)` using left fold to reverse a list, while the right fold preserves the initial order.
 
-This evaluation order means left folds don't work on infinite lists (as it needs to get to the final element first), while right folds (depending on a function's strictness) can sometimes work happily with an infinite list. To determine whether a function will work with infinite lists, we need to think about whether that function can return a result without accessing its second parameter (`acc`, or accumulator). 
-
-There are a few more subtleties I found while researching this article (like being able to [implement `foldl` using `foldr`](http://www.haskell.org/haskellwiki/Foldl_as_foldr), so that there are some cases where it will terminate for an infinite list), but hopefully this post has covered the basic points.
+This evaluation order means left folds don't work on infinite lists (it needs to get to the final element first before it can start evaluating the expression), while right folds (depending on a function's strictness) can sometimes work happily with an infinite list. To determine whether a function will work with infinite lists, we need to think about whether that function can return a result without accessing its second parameter (`acc`, or accumulator). 
 
 We can use these differences to decide which type of fold to use. If we need to handle infinite lists then a right fold is our only choice. Otherwise we can consider which evaluation order seems to best suit what we're trying to achieve. We are also yet to cover a final discriminator, the efficiency of different folds, and this will give us a bit more of a clue as to when we want to use each type of fold. We'll look at this aspect in the next post of this series, starting with finding a significant problem with our current `foldLeft` implementation.
 
