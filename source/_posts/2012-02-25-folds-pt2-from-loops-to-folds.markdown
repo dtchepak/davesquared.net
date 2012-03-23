@@ -237,5 +237,5 @@ foldRight _ seed [] = seed
 
 These functions are provided in the standard Haskell Prelude library as `foldl` and `foldr`. Both are used to abstract away explicit recursion, and other than our observation about the order it evaluates expression, they both give the same results.
 
-It turns out that this order of evaluation can make a world of difference, especially in a lazily-evaluted language like Haskell. In the next post in this series, we'll look at some of these differences.
+It turns out that this order of evaluation can make a world of difference, especially in a lazily-evaluted language like Haskell. In the [next post](/2012/03/folds-pt3-left-fold-right.html) in this series, we'll look at some of these differences.
 

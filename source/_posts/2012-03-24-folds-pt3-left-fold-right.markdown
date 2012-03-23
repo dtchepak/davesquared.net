@@ -4,7 +4,6 @@ title: "Folds Pt 3: Left fold, right?"
 date: 2012-03-24 01:33
 comments: true
 categories: ["haskell", "functional programming", "+folds"]
-published: false
 ---
 
 This post is part 3 of a [series on folds](/categories/-folds), which is my attempt to understand the topic. The examples are in Haskell, but hopefully you can follow along even if you're not familiar with the language. If you find yourself getting lost in the syntax, I've written a [Haskell quick start](/2012/02/haskell-newbie-attempts-a-haskell-quick-start.html) that goes through all the bits we'll use.
