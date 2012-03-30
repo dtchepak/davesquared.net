@@ -6,7 +6,7 @@ comments: true
 categories: ["haskell", "functional programming"]
 ---
 
-I'm currently reading [Introduction to Functional Programming](http://www.amazon.com/Introduction-Functional-Programming-International-Computing/dp/0134841972/) by Richard Bird and Philip Wadler, and it contains a really nice explanation of function strictness that came up in my [last post](/2012/03/folds-pt3-left-fold-right.html). 
+I'm currently reading [Introduction to Functional Programming](http://www.amazon.com/Introduction-Functional-Programming-International-Computing/dp/0134841972/) by Richard Bird and Philip Wadler, and it contains a really nice explanation of function strictness, a topic that came up in my [last post](/2012/03/folds-pt3-left-fold-right.html). 
 
 Bird and Wadler describe a strict function as one that is undefined when its input is undefined. The `⊥` symbol, or [bottom](http://en.wikipedia.org/wiki/Bottom_type), is used to represent 'undefined', so `f` is strict if `f ⊥ = ⊥`, otherwise it is non-strict.
 
