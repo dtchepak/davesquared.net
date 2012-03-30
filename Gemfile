@@ -14,6 +14,7 @@ group :development do
   gem 'rb-fsevent'
   gem 'stringex'
   gem 'liquid', '2.2.2'
+  gem 'pandoc-ruby'
 end
 
 gem 'thin'
