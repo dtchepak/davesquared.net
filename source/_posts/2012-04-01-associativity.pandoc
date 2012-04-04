@@ -22,7 +22,7 @@ Two operators are said to associate if they can be evaluated in any order:
 
 $$(x \oplus y) \otimes z = x \oplus (y \otimes z)$$
 
-In terms of functional programming, a binary operator is a two argument function using in [infix](http://en.wikipedia.org/wiki/Infix_notation) position, or between the arguments like ``a `f` b``, as opposed to _function notation_, which is the more familiar `f a b` arrangement. 
+In terms of functional programming, a binary operator is a two argument function used in [infix](http://en.wikipedia.org/wiki/Infix_notation) position, or between the arguments like ``a `f` b``, as opposed to _function notation_, which is the more familiar `f a b` arrangement. Languages like Haskell make it easy to switch between the two notations.
 
 ## Operator associativity
 
@@ -43,6 +43,6 @@ $$\begin{align}
                     &= f \circ g \circ g
 \end{align}$$
 
-More importantly I've noticed associativity has some implications for reasoning about [folds](http://davesquared.net/2012/03/folds-pt3-left-fold-right.html), and is a part of the definition of a _monoid_. I'm sure I'll come across a number of other functional programming concepts that use this concept as I continue to read up on the subject.
+More importantly I've noticed associativity has some implications for reasoning about [folds](http://davesquared.net/2012/03/folds-pt3-left-fold-right.html), and is a part of the definition of a _monoid_ which ends up flowing through to concepts like _monads_. I'm pretty sure associativity will keep cropping up as I continue reading up on functional programming, so I thought I'd write this post to help me get my terminology sorted out.
 
 
