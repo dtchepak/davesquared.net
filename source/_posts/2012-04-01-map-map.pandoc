@@ -1,0 +1,28 @@
+---
+layout: post
+title: "Working out function types: map map"
+date: 2012-04-04 22:22
+comments: true
+categories: ["haskell", "functional programming"]
+published: false
+---
+
+
+One of the exercises in [Introduction to Functional Programming](http://www.amazon.com/Introduction-Functional-Programming-International-Computing/dp/0134841972/) by Richard Bird and Philip Wadler is to work out the type signature of `map map` (i.e. calling `map` with `map` as its first argument). I've generally struggled to deal with all but the simplest of partial function application, but I found a great thread on the [Lambda the Ultimate forums](http://lambda-the-ultimate.org/node/2948) that really helped me out with this. Two commentators suggested different approaches: going through the maths, and understanding the abstraction.
+
+<!-- more -->
+
+## Solving algebraically
+
+$x^2 = a^2 + b^2$
+
+Trying a math block
+
+$$\begin{align}x^2 + 2 & = 6&\\
+x^2 & = 4&\\
+x & = \pm 2&\end{align}$$
+
+
+## Solving intuitively
+
+I tend to struggle with this, but I think it is a valuable skill 
