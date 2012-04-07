@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Working out function types: map map"
-date: 2012-04-04 22:22
+date: 2012-04-08 22:22
 comments: true
 categories: ["haskell", "functional programming"]
 published: false
@@ -14,13 +14,58 @@ One of the exercises in [Introduction to Functional Programming](http://www.amaz
 
 ## Solving algebraically
 
-$x^2 = a^2 + b^2$
+The signature for `map` is:
 
-Trying a math block
+$$map :: (a \to b) \to [a] \to [b]$$
 
-$$\begin{align}x^2 + 2 & = 6&\\
-x^2 & = 4&\\
-x & = \pm 2&\end{align}$$
+The first argument is a function which takes an `a` and returns a `b`. The second argument is a list of `a`. The last type, a list of `b`, is the function's return value.
+
+To work out the signature of `map map`, we need to substitute in what we know about `map`'s type signature to work out the resulting combination of `a` and `b`. I found this really tricky, but by applying a few rules we can work it out.
+
+First, let's pass some function $f :: c \to d$ as the first argument to map:
+
+$$\begin{align}
+map :: (a \to b) \to [a] \to [b] \\
+f :: c \to d \\
+map f :: [c] \to [d]  \text{by substitution}
+\end{align}$$
+
+Now the $\to$ operator is [right-associative](/2012/04/associativity.html), which means we can re-write $map$ like this:
+
+$$map :: (a \to b) \to ([a] \to [b])$$ 
+
+This is know as _currying_. In Haskell, all functions can be considered to take one argument, and return a function that takes the remainder of the arguments. Here, we're thinking of $map$ as a function which takes a function from $a \to b$, and returns a function that takes a $[a]$ and returns a $[b]$.
+
+Now we have have $map$ in a form that matches $f :: c \to d$, so we can substitute that in for our $map f$ signature:
+
+$$\begin{align}
+f :: c \to d \\
+map :: (a \to b) \to ([a] \to [b]) \\
+
+\text{So if }map \eq f\text{: }\\
+c :: (a \to b) \\
+d :: ([a] \to [b]) \\
+
+\text{As shown previously: } \\
+map f :: [c] \to [d] \\
+
+\text{So substituting }c\text{ and }d\text{: }\\
+map map :: [(a \to b)] \to [([a] \to [b])] \\
+map map :: [(a \to b)] \to [[a] \to [b]] \\
+\end{align}$$
+
+asdfasdf
+
+```haskell
+-- But map itself can be considered a function of the form f :: c -> d.
+-- map :: (a -> b) -> ([a] -> [b])
+-- So c :: (a -> b), d :: -> ([a] -> [b])
+
+-- Substituting this into map f gives us:
+map map :: [(a -> b)] -> [ ([a] -> []b) ]
+map map :: [(a -> b)] -> [[a] -> [b]]
+```
+
 
 
 ## Solving intuitively
