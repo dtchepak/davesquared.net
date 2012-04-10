@@ -6,7 +6,7 @@ comments: true
 categories: ["functional programming"]
 ---
 
-One of the nice things about pure functional programming is that we can use mathematical properties and axioms to reason about, simplify and derive functions. A property that I've seen crop up a few times while reading is [associativity](http://en.wikipedia.org/wiki/Associativity).
+One of the nice things about pure functional programming is that we can use mathematical properties and axioms to reason about, simplify and derive functions. A property that I've seen crop up a few times is [associativity](http://en.wikipedia.org/wiki/Associativity).
 
 <!-- more -->
 
@@ -16,27 +16,70 @@ Associativity is a property of some binary operators that means the order operat
 
 $$(x \oplus y) \oplus z = x \oplus (y \oplus z)$$
 
-A familiar example is $+$. We can safely write $1 + 2 + 3$ and know we'll get the correct answer irrespective of the order in which it is evaluated, as $(1 + 2) + 3 = 1 + (2 + 3)$. An example of a non-associative operator is $-$, as $(1-2)-3 \neq 1-(2-3)$.
+A familiar example is addition. We can safely write $1 + 2 + 3$ and know we'll get the correct answer irrespective of the order in which it is evaluated, as $(1 + 2) + 3 = 1 + (2 + 3)$. An example of a non-associative operator is subtraction, as $(1-2)-3 \neq 1-(2-3)$.
 
 Two operators are said to associate if they can be evaluated in any order:
 
 $$(x \oplus y) \otimes z = x \oplus (y \otimes z)$$
 
-In terms of functional programming, a binary operator is a two argument function. We tend to refer to operators as functions used in [infix](http://en.wikipedia.org/wiki/Infix_notation) position, or between arguments like ``a `f` b``, as opposed to _function notation_, which is the more familiar `f a b` arrangement. A function can be associative regardless of the notation used. Our previous $+$ example could be rewritten in function notation as `(+) ((+) 1 2) 3 = (+) 1 ((+) 2 3)`.
-
-Associativity seems particularly useful for reasoning about [folds](http://davesquared.net/2012/03/folds-pt3-left-fold-right.html). If we don't have to worry about the order of evaluation, this can simplify how we think about using the function. For example, if `f` is associative, then `foldr f a = foldl f a`. It is also part of the definition of a _monoid_ which ends up flowing through to concepts like _monads_. 
 
 ## Operator associativity
 
 Related to this mathematical property is [operator associativity](http://en.wikipedia.org/wiki/Operator_associativity) or _fixity_, which is essentially an exercise in parenthesis-saving. For non-associative operations where order of evaluation matters, we can define the operator as _left-associative_ or _right-associative_ depending on how we want it to evaluate in the absence of parentheses.
 
+For a left-associative operator:
+
+$$ x \oplus y \oplus z = (x \oplus y) \oplus z $$
+
+For a right-associative operator:
+
+$$ x \otimes y \otimes z = x \otimes (y \otimes z) $$
+
+## Applying to programming
+
+In terms of functional programming, a binary operator is a two argument function. We tend to refer to operators as functions used in [infix](http://en.wikipedia.org/wiki/Infix_notation) position, or between arguments like ``a `f` b``, as opposed to _function notation_, which is the more familiar `f a b` arrangement. A function can be associative regardless of the notation used. Our previous $1+2+3$ example could be rewritten in function notation as `(+) ((+) 1 2) 3 = (+) 1 ((+) 2 3)`.
+
+### Monoids
+Associative functions seem useful for reasoning about [folds](http://davesquared.net/2012/03/folds-pt3-left-fold-right.html), particularly when part of a [monoid](http://en.wikipedia.org/wiki/Monoid). A monoid is formed by an associative binary function and an _identity element_ $a$ that exists such that:
 $$\begin{align}
-\text{For a left-associative operator: } \\
-x \oplus y \oplus z &= (x \oplus y) \oplus z \\
-\\
-\text{For a right-associative operator: } \\
-x \otimes y \otimes z &= x \otimes (y \otimes z)\\
+x \oplus a = x = a \oplus x
 \end{align}$$
 
+Addition is a monoid for integers, as it is associative and has $0$ as an identity value.
+
+$$ (x + y) + z = x + (y + z) $$
+$$ x + 0 = x = 0 + x $$
+
+When an operator $\oplus$ and value $a$ form a monoid this can simplify how we think about folds, as:
+
+$$ foldr \oplus a \; [] = a $$ 
+$$ foldr \oplus a \; [x_0, x_1, ..., x_n] = x_0 \oplus x_1 \oplus ... \oplus x_n $$
+
+Monoids also give us the _first duality theorem_: for monoids and a finite list $xs$, $foldr \oplus a \; xs = foldl \oplus a \; xs$. This equivalency means we can decide on which fold to use based purely on efficiency when working with monoids and finite lists.
+
+### Reducing noise
 For maths and programming I've always erred on the side of over-specifying parentheses, but as I get more into functional programming I've found learning operator associativity starts to really reduce the noise. One example is _function composition_ using the `(.)` operator. Because this is an associative operation, we can compose a string of functions without the noise of parentheses: `f . g . h`.
+
+### Currying
+Another important example of noise-reduction is the behaviour of type-mapping operator $\to$. Type-mapping is right-associative, which means that $f :: a \to b \to c$ is actually equivalent to $f :: a \to (b \to c)$. This is also known as [currying](http://en.wikipedia.org/wiki/Currying). Let's take good old integer addition as an example again. Its type is:
+
+$$ + :: Integer \to Integer \to Integer $$
+
+Normally we'd call this with two arguments such as `1+2` and get an integer `3` back. But $+$'s type signature can also be expressed as:
+
+$$+ :: Integer \to (Integer \to Integer)$$
+
+This means $+$ can take an integer, and return a function which takes an integer and returns the final result. So in Haskell we can do things like this:
+
+    *Main> :type (+)
+    (+) :: Num a => a -> a -> a
+    *Main> let addOne = (1+)
+    *Main> :type addOne
+    addOne :: Integer -> Integer
+    *Main> addOne 2
+    3
+
+Here we've given `(+)` just one argument, and the result is an `addOne` function that will take a single integer and add one to it. The right-associativity of type mapping, combined with the left-associativity of function application, gives us standard calling semantics for the type declaration `a -> a -> a`, while also letting us partially apply functions as `a -> (a -> a)`. In fact, all Haskell functions are curried (they only take one argument, and return a function to handle the rest), but thanks to operator associativity we can call them in whichever way makes sense for each situation.
+
+
 
