@@ -1,0 +1,62 @@
+---
+layout: post
+title: "Working out function types: map map"
+date: 2012-04-11 22:07
+comments: true
+categories: ["functional programming"]
+---
+
+
+One of the exercises in [Introduction to Functional Programming](http://www.amazon.com/Introduction-Functional-Programming-International-Computing/dp/0134841972/) by Richard Bird and Philip Wadler is to work out the type signature of `map map` (i.e. calling `map` with `map` as its first argument). I've generally struggled to deal with all but the simplest of partial function application, but I found a great thread on the [Lambda the Ultimate forums](http://lambda-the-ultimate.org/node/2948) that really helped me out with this. Two commenters suggested different approaches: [going through the maths](http://lambda-the-ultimate.org/node/2948#comment-43448), and [understanding the abstraction](http://lambda-the-ultimate.org/node/2948#comment-43437).
+
+<!-- more -->
+
+## Solving algebraically
+
+The signature for $map$ is:
+
+$$map :: (a \to b) \to [a] \to [b]$$
+
+The first argument is a function which takes an $a$ and returns a $b$. The second argument is a list of $a$. The last type, a list of $b$, is the function's return value.
+
+To work out the signature of $map\;map$, we need to substitute in what we know about $map$'s type signature to work out the resulting combination of $a$ and $b$. I found this really tricky, but by applying a few rules we can work it out.
+
+First, let's pass some arbitrary function $f :: c \to d$ as the first argument to $map$. 
+
+$$map :: (a \to b) \to [a] \to [b]$$
+$$f :: c \to d$$
+$$map\;f :: [c] \to [d]$$
+
+In our case, we want to pass $map$ as $f$. But $f$ is a function that takes one argument, while $map$ takes two. So how can we use it in place of $f$? Well, the $\to$ operator is [right-associative](/2012/04/associativity.html), which means we can re-write $map$ like this:
+
+$$map :: (a \to b) \to ([a] \to [b])$$ 
+
+This is know as _currying_. In Haskell, all functions can be considered to take one argument, and return a function that takes the remainder of the arguments. Here, we're thinking of $map$ as a function which takes a function from $a \to b$, and returns a function that takes a $[a]$ and returns a $[b]$.
+
+Now we have $map$ in a form that matches $f :: c \to d$:
+
+$$f :: c \to d$$
+$$map :: (a \to b) \to ([a] \to [b])$$
+
+So:
+$$c :: (a \to b)$$
+$$d :: ([a] \to [b])$$
+
+Now we can substitute back into our $map\;f$ type declaration:
+
+$$map\;f :: [c] \to [d]$$
+$$map\;map :: [(a \to b)] \to [([a] \to [b])]$$
+$$map\;map :: [a \to b] \to [[a] \to [b]]$$
+
+So $map\;map$ takes a list of functions of the form $(a \to b)$ and returns a list of functions that take $[a]$ an returns $[b]$ (i.e. $([a] \to [b])$).
+
+## Solving intuitively
+
+The [other suggested approach](http://lambda-the-ultimate.org/node/2948#comment-43437) was to think about the abstractions being used, rather than the mathematical basis for the functions. I tend to struggle with this, but it is worth trying to come to grips with the concepts and intention, and not just rely on somewhat-blindly applying maths principles.
+
+The $map$ function conceptually represents transforming a function to work on a list. For example, `(+1)` adds one to a single number, while `map (+1)` adds on to a list of numbers. This corresponds to the step in our last approach where we starting thinking of $map$ as $map :: (a \to b) \to ([a] \to [b])$.
+
+Continuing this line of thinking, $map\;map$ will then take a list of functions $[a \to b]$ and return a list of transformed functions that work on lists of $a$, or $[[a] \to [b]]$. This gives us the same result as last time, $map\;map :: [a \to b] \to [[a] \to [b]]$. 
+
+I tend to get lost when I try to think about it this way, but hopefully I'll start to get the hang of reasoning about functions this way as I get more practice. If not, there is always the option of falling back on the maths. 
+
