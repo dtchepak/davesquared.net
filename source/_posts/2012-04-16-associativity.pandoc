@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Associativity"
-date: 2012-04-11 11:00
+date: 2012-04-16 18:20
 comments: true
 categories: ["haskell", "functional programming"]
 ---
@@ -55,7 +55,9 @@ When an operator $\oplus$ and value $a$ form a monoid this can simplify how we t
 $$ foldr \oplus a \; [] = a $$ 
 $$ foldr \oplus a \; [x_0, x_1, ..., x_n] = x_0 \oplus x_1 \oplus ... \oplus x_n $$
 
-Monoids also give us the _first duality theorem_: for monoids and a finite list $xs$, $foldr \oplus a \; xs = foldl \oplus a \; xs$. This equivalency means we can decide on which fold to use based purely on efficiency when working with monoids and finite lists.
+Monoids also give us the _first duality theorem_: for monoids and a finite list $xs$, $foldr \oplus a \; xs = foldl \oplus a \; xs$. This equivalency means we can decide on which fold to use based purely on efficiency when working with monoids and finite lists. 
+
+There seems to be much [more to monoids in Haskell](http://blog.sigfpe.com/2009/01/haskell-monoids-and-their-uses.html), but the point I'm trying to make is that associativity forms the basis for some more advanced and quite useful concepts (functors being another example).
 
 ### Reducing noise
 For maths and programming I've always erred on the side of over-specifying parentheses, but as I get more into functional programming I've found learning operator associativity starts to really reduce the noise. One example is _function composition_ using the `(.)` operator. Because this is an associative operation, we can compose a string of functions without the noise of parentheses: `f . g . h`.
