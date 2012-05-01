@@ -6,7 +6,7 @@ comments: true
 categories: ["dev practices", "imho"]
 ---
 
-Being a bit of a [realist](http://en.wikipedia.org/wiki/Pessimism), I find it much easier to find problems with my design ideas than I do finding designs I'm really happy with. I am always cognisant of this and make sure to balance the needs of doing a good job and getting the job done. One technique I find useful for this is thinking about the minimum amount of code required. 
+Being a bit of a [realist](http://en.wikipedia.org/wiki/Pessimism) (;)), I find it much easier to find problems with my design ideas than I do finding designs I'm really happy with. I am always cognisant of this and make sure to balance the needs of doing a good job and getting the job done. One technique I find useful for this is thinking about the minimum amount of code required. 
 
 Whenever I find myself evaluating different design patterns or counting responsibilities to work out where the feature should go or which areas I should refactor, I stop and work out the minimum amount of code I'd need to write to solve the problem, ignoring design considerations. Once I've starting thinking about the problem in that light, working out where to put that code becomes a bit easier. If the code violates my sense of design aesthetics, it could just be because it is a messy problem, and no matter how hard I try to abstract or design my way out, the fundamental messiness still remains.
 
