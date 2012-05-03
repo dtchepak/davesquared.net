@@ -143,7 +143,7 @@ These properties aren't enforced by the type system, but we need to make sure ou
 
 * ["Functors, Applicative Functors and Monoids"](http://learnyouahaskell.com/functors-applicative-functors-and-monoids), Learn You A Haskell
 * ["Functor"](http://en.wikipedia.org/wiki/Functor), Wikipedia
-* ["Map (higher-order function)"](http://en.wikipedia.org/wiki/Map_(higher-order_function)#Generalization)
+* ["Map (higher-order function)"](http://en.wikipedia.org/wiki/Map_(higher-order_function)#Generalization), Wikipedia
 * ["Typeclassopedia"](http://www.haskell.org/haskellwiki/Typeclassopedia), HaskellWiki
 * ["Applicative functors"](http://en.wikibooks.org/wiki/Haskell/Applicative_Functors#Functors), Haskell Wikibook
 
