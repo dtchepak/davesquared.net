@@ -27,7 +27,7 @@ Say we have a function `fn` which can take some value of type `a` and return a v
 
 Now imagine we have some sort of box that can hold some quantity of `a`. We'd like to apply `fn` to the `a` we have in the box, and get a new box of `b`. But `fn` works on an `a`, not on a "box of `a`", so we need a way of apply our `fn` inside the box, and then a way of shoving the resulting `b` into a new box. 
 
-!['a' is passed from the box into 'fx', and the 'b' is returned in a new box](/images/2012/fmap.png)
+!['a' is passed from the box into 'fn', and the 'b' is returned in a new box](/images/2012/fmap.png)
 
 The solution is to define a function called `fmap` which does exactly that. It takes a function `(a -> b)`, and a box of `a`, and returns a box of `b`:
 
