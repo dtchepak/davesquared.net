@@ -10,3 +10,12 @@
     font-size: 0.7em;
     b { font-weight: bolder; }
 }
+
+figure:not(.code) {
+    text-align: center;
+    >figcaption {
+        font-size: 0.7em;
+        padding-bottom: 0.5em;
+        font-style: italic;
+    }
+}
