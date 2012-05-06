@@ -1,0 +1,323 @@
+---
+layout: post
+title: "A lengthy approach to Haskell fundamentals"
+date: 2012-05-06 20:50
+comments: true
+categories: ["haskell", "functional programming"]
+---
+
+At my work a few of us developers are learning Haskell, starting with some exercises from [Tony Morris's](http://twitter.com/dibblego) YOW workshop last year. One of these exercises involves re-implementing some common operations on lists, and this has proved a great way to learn some of the basics of Haskell.
+
+For this post we'll be working through implementing our own version of the `length` function, which takes a list and returns a integer reflecting the length of that list.
+
+We'll start with this non-functioning implementation, which we'll call `length'` so it doesn't collide with Haskell's built-in function (`'` is a legal character to have in Haskell identifiers):
+
+    length' :: [a] -> Int
+    length' = error "todo"
+
+<!-- more -->
+
+To run our function, save it in `length.hs`, and run `ghci length.hs` to load it into GHCi, the Haskell REPL. If you update the file, run `:r` to reload it. See "Loading a Haskell file" in my [Haskell quickstart](http://davesquared.net/2012/02/haskell-newbie-attempts-a-haskell-quick-start.html) for more information on setting this up.
+
+If we run this with GHCi we get:
+
+    ghci> length' [1,2,3]
+    *** Exception: todo
+
+Great, let's get started.
+
+## Type signatures
+
+The first line is the type signature of our function. The `::` means "has type"^[ [Pronounciation guide](http://www.haskell.org/haskellwiki/Pronunciation), Haskel Wiki]. To the right of `::` are the function argument types, and the return type. In this case we can see that `length'` takes `[a]` (a list of `a`) and returns an `Int`.
+
+`Int` is pretty clear, but what's `a`? It is a *type parameter*, which means it can stand in for any type. We don't mind what kind of type is in the list passed to `length'`, just so long as we get a list. This is analogous to `List<T>` in C#.
+
+Regardless of whether we have `[1,2,3]`, `["hello", "world"]` or the empty list `[]`, we can still work out the length of the list without knowing what type of elements are in it.
+
+## Functions with multiple arguments
+
+Our `length'` function only takes one argument. When we have multiple arguments we separate them with multiple `->` operators. One example is the built-in `const` function. We can implement our own version like this:
+
+    const' :: a -> b -> a
+    const' first second = first
+
+This takes an `a` and a `b` as an argument, and returns an `a`. The type signature gives us a fair idea of what it is doing without reading the implementation: `const'` takes two arguments, and returns the first one. This is exactly what the implementation does. The left-hand side of the `=` is the function name and argument names, and the right-hand side is the value that the function will evaluated to.
+
+<div class="note">**Aside:** I wrote 'evaluated' rather than 'it returns' to highlight an at first subtle difference between imperative and functional programming. In imperative programs we step through a series of instructions in a procedure and return a value. In functional programming, functions get evaluated and reduced according to their definitions. It's a lot like algebra: if we have `y = x^2`, and `x = 2*z`, we can evaluate `y` as `4*z^2`. We're not executing instructions so much as substituting rules to evaluate functions to their simplest form. </div>
+
+Notice that the first argument to `const'` is some type `a`, while the second is some type `b`. Again, this means that `a` and `b` can be any types, but it also means that they don't have to have any particular relationship. If the type was `a -> a -> a`, then all the arguments and the return value would have to be of the same type. By having `a` and `b`, we're saying that while they could both be the same type, they could also vary independently. We could pass an `Int` and `String` for example. We've also said the return value is an `a`, so that means it will have to return a value that is the same type as the first argument.
+
+Let's experiment a little with our `const'` function:
+
+    ghci> const' 42 100
+    42
+    ghci> const' "hello" 12
+    "hello"
+    ghci> const' 'a' [1,2,3]
+    'a'
+
+We can see that arguments are separated by spaces when passed to functions. Rather than writing `f(x,y,z)`, we write `f x y z`.
+
+## Pattern matching
+
+Let's get back to our `length'` function. To start, let's consider the length of an empty list `[]`.
+
+    length' :: [a] -> Int
+    length' [] = 0
+
+We're telling Haskell that when it needs to evaluate an expression `length' []`, it can replace it with `0`.
+
+    ghci> length' []
+    0
+    ghci> length' [42]
+    *** Exception: lengthy.hs:2:1-14: Non-exhaustive patterns in function length'
+
+This works fine with the empty list, but Haskell doesn't know how to evaluate the expression when it has a list that doesn't match the pattern we gave it (in this case, it fails to match a list with a single element in it). We can make our function handle additional cases by providing other patterns it can match. Haskell will try each pattern, from top to bottom, and evaluate the first one that matches (or raise an exception about non-exhaustive patterns if there is no match).
+
+    length' :: [a] -> Int
+    length' [] = 0
+    length' [a] = 1
+    length' [b,a] = 2
+
+    ghci> length' [42]
+    1
+    ghci> length' [42,24]
+    2
+    ghci> length' [42,24,37]
+    *** Exception: lengthy.hs:(2,1)-(4,17): Non-exhaustive patterns in function length'
+
+This seems to be working, but this approach isn't exactly going to scale well to all possible inputs. Luckily for us, Haskell can do some more advanced matching based on the structure of the data type being passed to the function.
+
+## The list type
+
+The list data type we're using is made up of two different types of values. `[a]` can either be the empty list `[]`, or be an element joined to the front of a `[a]` using a `:`, or *cons* operator (for *construct* I think). Its definition would probably look a bit like this (where the `|` means `or`).
+
+    data [a] = [] | a : [a]
+
+At first this sounds a bit strange: a list is either empty or an element and a list? But if we step through it, it actually makes a lot of sense. `[]` is a valid list, so `1:[]` is also a valid list (an element *cons'd* on to another list). Which means we could also do `2:(1:[])`, and `3:(2:(1:[]))`, and so on. This is a *recursive* definition; a list is defined by an element cons'd on to a list. The recursion terminates when we get to the empty list `[]`.
+
+<div class="note">**Aside:** GHCi prints `1:(2:(3:[]))` as `[1,2,3]`, the latter just being a prettified version of the former. Because `:` is [right-associative](/2012/04/associativity.html/), we can also write it as `1:2:3:[]`. Finally, because lists are so common, Haskell has some short-hand forms for defining lists, such as `[1,2,3]` as we've already seen, but also `[1..10]` for a list from one to ten, `[2,4..10]` gives even numbers from two to ten, and `[10..]` gives a list that starts at ten and goes on toward infinity.</div>
+
+We now know enough to be able to specify all the patterns we need for our `length'` function. Our input list will either be `[]`, or in the form `a : [a]`. Together these two patterns cover every list that can be passed to our function (in other words, they *exhaustively* cover all the inputs).
+
+The first element in the pattern `a : [a]` is called the *head* of the list, while the second is called the *tail* (i.e. the rest). We can think of list `[1,2,3]` as `1:[2,3]` (or `1:(2:(3:[]))`). In this case `1` is the head, and `[2,3]` is the tail. We can also have `3:[]`, so `3` is the head, and the empty list `[]` is the tail.
+
+## Recursion
+
+So how do we put our knowledge of lists together to work out the length of a list. We saw that lists themselves are defined [recursively](https://www.google.com.au/search?q=recursion) (a list is defined in terms of itself), and we can use that same approach to define a list's length.
+
+Let's take another look at our current version of `length'`:
+
+    length' :: [a] -> Int
+    length' [] = 0
+    length' [a] = 1
+    length' [b,a] = 2
+
+We can rewrite the last line in the head / tail pattern:
+
+    length' (b:[a]) = 2
+
+The second last line says that `length' [a] = 1`, so combining those two lines gives us:
+
+    length' (b:[a]) = 1 + length' [a]
+
+Here we've defined the length of a two element list as one plus the length of a one element list. We can generalise this to any list: the length of a list is one plus the length of the tail of the list. Using this fact, we can finally get a working version of our function:
+
+    length' :: [a] -> Int
+    length' [] = 0
+    length' (head:tail) = 1 + length' tail
+
+Let's trace through an example:
+
+    length' [1,2,3]
+      = length' 1:[2,3]
+      = 1 + length' 2:[3]
+      = 1 + 1 + length' 3:[]
+      = 1 + 1 + 1 + length' []
+      = 1 + 1 + 1 + 0
+      = 3
+
+Our `length'` function keeps calling itself until it gets to `length' []`, which equals `0`. This is called the *stopping case* (also known as the *base* or *terminating* case), which does not make any further recursive calls and so causes the chain of function calls stop. And now we can handle all kinds of lists:
+
+    ghci> length' []
+    0
+    ghci> length' [1,2,3,4,5]
+    5
+    ghci> length' [1..2001]
+    2001
+
+## The end of the beginning
+
+The current version of our function is fine, and we'd be quite entitled to stop here. But we can take this example quite a bit further to help us understand more about Haskell, and also to give us a glimpse into more idiomatic Haskell style. I think I'm right in saying that it would be quite rare for an experienced Haskeller to right a function like this (I'm a novice still, so I can't say for sure). So let's press on!
+
+## Folds
+
+The recursive pattern we've defined for `length'` crops up all over the place when dealing with lists. It's so common that this way of traversing a list has been [abstracted into dedicated functions, called *folds*](http://davesquared.net/categories/-folds). Folds reduce the amount of code we need to write, have mathematical properties that can help us prove things about our code, and provide instantly recognisable patterns of recursion. At first I found folds much harder to read than the equivalent explicit recursive code, but after a bit of practice I find them as least as clear as their explicit or imperative equivalents, and generally prefer them to long-hand recursion.
+
+To work out the length of our list we're going to have to traverse every element in our list, which means our function is never going to work on an infinite list. This is a clue that we want a left fold (to work on infinite lists we have to use a right fold. For everything else we'll pretty much use a left fold).
+
+<div class="note">**Aside:** How can we work with infinite lists? One example is mapping a function over an infinite list, then only taking the first 10 elements. In Haskell this works fine. But getting the length of an infinite list then taking a piece of the answer is never going to work.</div>
+
+I've [cataloged my attempts to understand folds in excruciating detail](http://davesquared.net/categories/-folds), so take a look at that if you're keen to see how explicit recursion translates to folds, but for now let's write an imperative version of left fold using C# to illustrate how it works:
+
+```csharp
+public static TResult FoldLeft<TItem, TResult>(
+    Func<TResult, TItem, TResult> combine, 
+    TResult initialValue, 
+    IEnumerable<TItem> items) 
+{
+    var accumulator = initialValue;
+    foreach (var item in items) {
+        accumulator = combine(accumulator, item);
+    }
+    return accumulator;
+}
+```
+
+The first argument is itself a function that combines a list item with the value accumulated during the previous calls. The second argument gives the case for the empty list (the stopping case for the recursion). Finally, we return the accumulated result.
+
+Here's our rewritten function:
+
+    length' :: [a] -> Int
+    length' list = foldl onePlusLengthOfTail 0 list
+        where onePlusLengthOfTail tailLength listElement = 1 + tailLength
+
+Despite looking completely different, this works exactly the same as our previous `length'` function. Let's look at some key features.
+
+First, we only need the one input pattern, as our fold will take care of the empty list case and the head/tail recursion stuff. The empty list case returns `0`, and you can see that is the second parameter to `foldl`.
+
+We're also using a `where` clause. This defines a function called `onePlusLengthOfTail`, but it can only be called from our `length'` function. It is like a little private function for the sole use of its parent function. `onePlusLengthOfTail` combines a list element with the accumulated result of the recursion. In this case we're saying that for each list element we want to add one plus whatever the result was of recursively calling the previous calls, which is exactly what our previous implementation did.
+
+## Lambdas
+
+Pulling out helper functions like `onePlusLengthOfTail` is often helpful, but in some cases it adds little but noise. Often with Haskell the types will often tell us more information than names do, so once we're familiar with the fold syntax naming the combining function will typically give us little benefit.
+
+Instead, we can include the function in-line using lambda notation. Haskell's syntax for lambdas is quite similar to C#'s. In C# we'd write `x => x + 1`, in Haskell `\x -> x + 1`.
+
+    length' :: [a] -> Int
+    length' list = foldl (\acc x -> 1+acc) 0 list
+
+The `\` symbol was chosen for its slight resemblance to the lambda symbol 'λ'. After that are the function arguments, which I've called `acc` for accumulator (it is the accumulated value of our recursion) and `x` for whatever list element we're looking at. Now we don't actually use the value of `x`, so Haskellers would generally replace it with an underscore like this: `\acc _ -> 1+acc`. This isn't actually an argument name, it is Haskell's symbol for a catch-all pattern. It will match anything, a bit like the `*` wildcard character typically used for searches.
+
+## Partial function application
+
+Remember our `const'` function which takes two arguments, ignores the second and returns the first? What happens when we call it with one argument?
+
+Let's use GHCi's `:t` command to check it's type:
+
+    ghci> :t const'
+    const' :: a -> b -> a
+    ghci> :t const' 'a'
+    const' 'a' :: b -> Char
+
+Normally `const'` is type `a -> b -> a`, but `const' 'a'` is type `b -> Char`. What's going on?
+
+Well, all functions in Haskell are *curried*, which means they only take one argument, and return a function that takes the rest. So the real type of `const'` is actually `a -> (b -> a)`; it takes an `a` and returns a function which takes a `b` and returns an `a`. Because of the [associativity](/2012/04/associativity.html) of the `->` operator and of function application, we can write it either way. This also means we can call Haskell functions with as many or as few of the required arguments as we like, and we'll get back a function to finish the job as soon as we provide the remainder of the arguments. 
+
+This is known as partial application. We can partially apply the arguments to a function to get back another function. Once all the arguments have been passed in we'll get the final value.
+
+The best example I can think of to illustrate this is the `(+)` function. Normally this would take 2 arguments (such as `4 + 1`, or `(+) 4 1`, both are legal in Haskell. The former is called *infix* position, and the latter is *function notation*.) Let's just apply one argument to `(+)`:
+
+    ghci> let addOne = (1+)
+    ghci> :t addOne
+    addOne :: Integer -> Integer
+    ghci> addOne 4
+    5
+    ghci> addOne 72
+    73
+
+Here we've partially applied the argument `1` to `(+)`, which has returned a function that takes the next argument and returns the result. We can then call `addOne` as a single argument function.
+
+## Back on topic please Dave!
+
+But we are still on topic! Look at our `length'` function:
+
+    length' :: [a] -> Int
+    length' list = foldl (\acc _ -> 1+acc) 0 list
+
+It takes a `[a]` and returns an `Int`. Now the `foldl` on the right hand side takes a function, an `Int` and a `[a]` and returns an `Int`. If we think back to partial application, that means that `foldl (\acc _ -> 1+acc)` takes an `Int` and a `[a]` and returns an `Int`. Which means that `foldl (\acc _ -> 1+acc) 0` takes a `[a]` and returns an `Int`.
+
+Hold on, read the last sentence again! Both `length'` and `foldl (\acc _ -> 1+acc) 0` are of type `[a] -> Int`. So really: 
+
+    length' = foldl (\acc _ -> 1+acc) 0 
+
+We don't need to explicitly add the `list` argument, as `foldl (\acc _ -> 1+acc) 0` is going to return a function which takes a list anyway. Just as we were able to write `let addOne = (1+)`, we can assign the name `length'` to `foldl (\acc _ -> 1+acc) 0`.
+
+The general rule is whenever an argument appears on the end of both the left and right hand sides of our function definition, we can drop it off thanks to partial application. (The one catch is when the last argument is surrounded by parentheses such as `f (g x)`. We need to change that a little before we can drop off the `x`. We'll see how to do that shortly.)
+
+This may initially seem a little pointless, but we'll rarely see Haskell code that keeps an unrequired argument on both sides so it is a good idea to get familiar with it. Once we get comfortable with partial application keeping the arguments just appears wasteful, and will stick out like a sore thumb.
+
+## Point free
+
+Not explicitly referencing arguments is called [point-free style](http://buffered.io/posts/point-free-style-what-is-it-good-for). While the particular case mentioned above (dropping an argument referenced on both sides of a function definition) is pretty essential for idiomatic Haskell, there is a little more debate over point-free style, where every effort is made to not reference any arguments at all. (Hence why it is also known, mainly jokingly, as "point-less" style :).)
+
+Much like folds, I initially couldn't see why anyone would want to write in point-free style as it seems to make code so much more difficult to read. Again, after a little time adjusting to it, I found that I could start to read it quite naturally, with the added benefit of being concise, and making the all-important composition and chaining of functions much neater. That said, I'd guess that even the most ardent point-free fans would acknowledge that there are some cases where having explicit arguments is clearer, so the aim is not to dogmatically pursue point-free functions, but to keep an eye out for where heading in that direction will help our code. Love it or hate it, I'd suggest getting comfortable with reading point-free style as you'll see lots of Haskell code written like this, and it is one of those things you need to give yourself a chance to get used to.
+
+To move a bit closer to a point-free function, let's get rid of the reference to the unused second argument of our lambda.
+
+    (\acc _ -> 1+acc)
+
+This is a function which takes an `Int` and an `a`, ignores that `a` and returns a new `Int`. Ignores the second argument huh? That sounds a lot like our `const'` function:
+
+    (\acc x -> const' (1+acc) x)
+
+We've had to put the `x` back in for now so we can reference it on the right hand side of our function definition, but now we have the `x` as the last argument on both sides. And from our work with partial application we know that means we can drop it:
+
+    (\acc -> const' (1+acc))
+
+Now we're partially applying one argument to `const'`, so it will return a function which takes another argument, ignores it and return the first argument it was initially called with (`1+acc`).
+
+
+    length' :: [a] -> Int
+    length' = foldl (\acc -> const' (1+acc)) 0 
+
+## Function composition
+
+[Function composition](http://en.wikipedia.org/wiki/Function_composition_(computer_science)) is a way of combining functions that each take one argument. Say we have two functions, `f :: b -> c` and `g :: a -> b`. We can compose `f` and `g` such that:
+
+    (f . g) x = f (g x)
+
+The `(.)` operator means composition. Notice that `g x` returns a `b`, and `f` takes a `b` and returns a `c`. So `f . g :: a -> c`. Again, initially confusing, ultimately awesome. Composition means we can wire up lovely pipelines of functions that values flow through, without the traditional imperative steps of call this, assign to that, call another, assign to new variable and so on.
+
+Now we've now got this little `const' (1+acc)` expression which is just pleading with us to use function composition, but it's a little hard to see at the moment. It would be clearer if we used our `addOne` function from earlier. Remember we wrote `let addOne = (1+)`? Well in Haskell this function already exists, and is called `succ` for *successor*.
+
+    const' (succ acc)
+
+This is now in the form `f (g x)`, where `f = const'` and `g = succ`. So substituting in for `f . g`:
+
+    length' :: [a] -> Int
+    length' = foldl (\acc -> (const' . succ) acc) 0 
+
+And look what's appeared on both sides of our lambda: `\acc -> (const' . succ) acc`. Thanks to partial application we can drop off the `acc` argument and we have:
+
+    length' :: [a] -> Int
+    length' = foldl (const' . succ) 0 
+
+It's small, it's beautiful, it actually works, and if you're just starting out it's probably utterly incomprehensible. Give it a little while though. With a bit of practice it'll be second nature to you in next to no time. (I didn't believe this either, but after a couple of months I've been suitably warped by the small amount of functional programming I've done that I'm actually starting to prefer this. :))
+
+## Wat?
+
+While we're waiting for our brains to warp enough to be able to read this fluently, let's look at some quick tips to help us decipher it.
+
+First, we have our function name `length'` and the type signature. It takes a list of `a` and returns an `Int`. It's a pretty safe bet that it is intended to return the length of a list.
+
+Next, we can see it's using a fold, which means it is recursing over the list. It has a `0` as the second parameter to the fold, so that means when given the empty list the length will be `0`.
+
+Now we have this strange point-free function passed to `foldl`. I find it easiest to read composed functions is to go from right to left. Our composed function will call `succ` on an argument (add one to it), and call `const'` on the result, which will take two arguments but ignore the second. So we're adding one to the first argument passed in. (Another approach is to translate back to `acc -> const' (succ acc)`, and take as many steps reversing the process we went through to get to the point it becomes clear.)
+
+Finally, we know (or can look up via [Hoogle](http://www.haskell.org/hoogle/) or using `:t` in GHCi) that `foldl` calls the `const'.succ` function with first the accumulated value of the fold, and the current list item. So we're going to start with our base case of 0, and for each list item we're going to add 1 to it. Which will give us the length of the list.
+
+## Learning cliff
+
+I found these topics quite confusing when I first encountered them. If you're feeling similarly, it's worth keeping in mind that most of us have been trained to think of programming imperatively rather than functionally, so it is naturally going to take some time to adjust to ideas like reducing expressions, folds, function composition and point-free style. I really believe it is worth persisting with. Even if you don't end up using it regularly, it is worth it to get a different way of looking at programming problems. 
+
+## Conclusion
+
+In this post we've seen some of the basics of Haskell's type system and function syntax, and applied pattern matching on lists and recursion to implement our own `length'` function.
+
+We've then seen how to replace the explicit recursion code with a fold, before applying partial application and function composition to make the code very concise.
+
+These techniques are very powerful (more so than this simple example suggests), and by learning to use them we can get real, safe reuse of code by partially applying and composing small, very cohesive functions in a myriad of ways. Even in this small example we used `foldl`, `const` and `succ`; we wrote almost no code, and instead just wired together existing pieces. Coupling to something as fundamental as "adding one" is a much safer kind of reuse than I'm used to being bitten with in other programming paradigms.
+
+I hope you enjoyed this post. As you can probably tell, I'm really enjoying learning a different perspective on programming, and I hope I've managed to pass some of that along. Please let me know any parts are unclear so I can try and improve them. 
+
