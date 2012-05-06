@@ -178,13 +178,18 @@ The first argument is itself a function that combines a list item with the value
 
 Here's our rewritten function:
 
+    import Data.List
+
     length' :: [a] -> Int
-    length' list = foldl onePlusLengthOfTail 0 list
+    length' list = foldl' onePlusLengthOfTail 0 list
         where onePlusLengthOfTail tailLength listElement = 1 + tailLength
+
 
 Despite looking completely different, this works exactly the same as our previous `length'` function. Let's look at some key features.
 
-First, we only need the one input pattern, as our fold will take care of the empty list case and the head/tail recursion stuff. The empty list case returns `0`, and you can see that is the second parameter to `foldl`.
+First, we've added `import Data.List` so that we can use the `foldl'` (fold left) function.^[Haskell provides a `foldl` function in the default module it loads, but in practice the `foldl'` variant is almost always preferred for left folds as it is more space efficient and can prevent stack overflows when working with large lists. See [Foldr Foldl Foldl'](http://www.haskell.org/haskellwiki/Foldr_Foldl_Foldl') on HaskellWiki for a detailed explanation.]
+
+Next, we now only need the one input pattern, as our fold will take care of the empty list case and the head/tail recursion stuff. The empty list case returns `0`, and you can see that is the second parameter to `foldl'`.
 
 We're also using a `where` clause. This defines a function called `onePlusLengthOfTail`, but it can only be called from our `length'` function. It is like a little private function for the sole use of its parent function. `onePlusLengthOfTail` combines a list element with the accumulated result of the recursion. In this case we're saying that for each list element we want to add one plus whatever the result was of recursively calling the previous calls, which is exactly what our previous implementation did.
 
@@ -195,7 +200,7 @@ Pulling out helper functions like `onePlusLengthOfTail` is often helpful, but in
 Instead, we can include the function in-line using lambda notation. Haskell's syntax for lambdas is quite similar to C#'s. In C# we'd write `x => x + 1`, in Haskell `\x -> x + 1`.
 
     length' :: [a] -> Int
-    length' list = foldl (\acc x -> 1+acc) 0 list
+    length' list = foldl' (\acc x -> 1+acc) 0 list
 
 The `\` symbol was chosen for its slight resemblance to the lambda symbol 'λ'. After that are the function arguments, which I've called `acc` for accumulator (it is the accumulated value of our recursion) and `x` for whatever list element we're looking at. Now we don't actually use the value of `x`, so Haskellers would generally replace it with an underscore like this: `\acc _ -> 1+acc`. This isn't actually an argument name, it is Haskell's symbol for a catch-all pattern. It will match anything, a bit like the `*` wildcard character typically used for searches.
 
@@ -233,15 +238,15 @@ Here we've partially applied the argument `1` to `(+)`, which has returned a fun
 But we are still on topic! Look at our `length'` function:
 
     length' :: [a] -> Int
-    length' list = foldl (\acc _ -> 1+acc) 0 list
+    length' list = foldl' (\acc _ -> 1+acc) 0 list
 
-It takes a `[a]` and returns an `Int`. Now the `foldl` on the right hand side takes a function, an `Int` and a `[a]` and returns an `Int`. If we think back to partial application, that means that `foldl (\acc _ -> 1+acc)` takes an `Int` and a `[a]` and returns an `Int`. Which means that `foldl (\acc _ -> 1+acc) 0` takes a `[a]` and returns an `Int`.
+It takes a `[a]` and returns an `Int`. Now the `foldl'` on the right hand side takes a function, an `Int` and a `[a]` and returns an `Int`. If we think back to partial application, that means that `foldl' (\acc _ -> 1+acc)` takes an `Int` and a `[a]` and returns an `Int`. Which means that `foldl' (\acc _ -> 1+acc) 0` takes a `[a]` and returns an `Int`.
 
-Hold on, read the last sentence again! Both `length'` and `foldl (\acc _ -> 1+acc) 0` are of type `[a] -> Int`. So really: 
+Hold on, read the last sentence again! Both `length'` and `foldl' (\acc _ -> 1+acc) 0` are of type `[a] -> Int`. So really: 
 
-    length' = foldl (\acc _ -> 1+acc) 0 
+    length' = foldl' (\acc _ -> 1+acc) 0 
 
-We don't need to explicitly add the `list` argument, as `foldl (\acc _ -> 1+acc) 0` is going to return a function which takes a list anyway. Just as we were able to write `let addOne = (1+)`, we can assign the name `length'` to `foldl (\acc _ -> 1+acc) 0`.
+We don't need to explicitly add the `list` argument, as `foldl' (\acc _ -> 1+acc) 0` is going to return a function which takes a list anyway. Just as we were able to write `let addOne = (1+)`, we can assign the name `length'` to `foldl' (\acc _ -> 1+acc) 0`.
 
 The general rule is whenever an argument appears on the end of both the left and right hand sides of our function definition, we can drop it off thanks to partial application. (The one catch is when the last argument is surrounded by parentheses such as `f (g x)`. We need to change that a little before we can drop off the `x`. We'll see how to do that shortly.)
 
@@ -269,7 +274,7 @@ Now we're partially applying one argument to `const'`, so it will return a funct
 
 
     length' :: [a] -> Int
-    length' = foldl (\acc -> const' (1+acc)) 0 
+    length' = foldl' (\acc -> const' (1+acc)) 0 
 
 ## Function composition
 
@@ -286,12 +291,12 @@ Now we've now got this little `const' (1+acc)` expression which is just pleading
 This is now in the form `f (g x)`, where `f = const'` and `g = succ`. So substituting in for `f . g`:
 
     length' :: [a] -> Int
-    length' = foldl (\acc -> (const' . succ) acc) 0 
+    length' = foldl' (\acc -> (const' . succ) acc) 0 
 
 And look what's appeared on both sides of our lambda: `\acc -> (const' . succ) acc`. Thanks to partial application we can drop off the `acc` argument and we have:
 
     length' :: [a] -> Int
-    length' = foldl (const' . succ) 0 
+    length' = foldl' (const' . succ) 0 
 
 It's small, it's beautiful, it actually works, and if you're just starting out it's probably utterly incomprehensible. Give it a little while though. With a bit of practice it'll be second nature to you in next to no time. (I didn't believe this either, but after a couple of months I've been suitably warped by the small amount of functional programming I've done that I'm actually starting to prefer this. :))
 
@@ -303,9 +308,9 @@ First, we have our function name `length'` and the type signature. It takes a li
 
 Next, we can see it's using a fold, which means it is recursing over the list. It has a `0` as the second parameter to the fold, so that means when given the empty list the length will be `0`.
 
-Now we have this strange point-free function passed to `foldl`. I find it easiest to read composed functions is to go from right to left. Our composed function will call `succ` on an argument (add one to it), and call `const'` on the result, which will take two arguments but ignore the second. So we're adding one to the first argument passed in. (Another approach is to translate back to `acc -> const' (succ acc)`, and take as many steps reversing the process we went through to get to the point it becomes clear.)
+Now we have this strange point-free function passed to `foldl'`. I find it easiest to read composed functions is to go from right to left. Our composed function will call `succ` on an argument (add one to it), and call `const'` on the result, which will take two arguments but ignore the second. So we're adding one to the first argument passed in. (Another approach is to translate back to `acc -> const' (succ acc)`, and take as many steps reversing the process we went through to get to the point it becomes clear.)
 
-Finally, we know (or can look up via [Hoogle](http://www.haskell.org/hoogle/) or using `:t` in GHCi) that `foldl` calls the `const'.succ` function with first the accumulated value of the fold, and the current list item. So we're going to start with our base case of 0, and for each list item we're going to add 1 to it. Which will give us the length of the list.
+Finally, we know (or can look up via [Hoogle](http://www.haskell.org/hoogle/) or using `:t` in GHCi) that `foldl'` calls the `const'.succ` function with first the accumulated value of the fold, and the current list item. So we're going to start with our base case of 0, and for each list item we're going to add 1 to it. Which will give us the length of the list.
 
 ## Learning cliff
 
@@ -317,7 +322,7 @@ In this post we've seen some of the basics of Haskell's type system and function
 
 We've then seen how to replace the explicit recursion code with a fold, before applying partial application and function composition to make the code very concise.
 
-These techniques are very powerful (more so than this simple example suggests), and by learning to use them we can get real, safe reuse of code by partially applying and composing small, very cohesive functions in a myriad of ways. Even in this small example we used `foldl`, `const` and `succ`; we wrote almost no code, and instead just wired together existing pieces. Coupling to something as fundamental as "adding one" is a much safer kind of reuse than I'm used to being bitten with in other programming paradigms.
+These techniques are very powerful (more so than this simple example suggests), and by learning to use them we can get real, safe reuse of code by partially applying and composing small, very cohesive functions in a myriad of ways. Even in this small example we used `foldl'`, `const` and `succ`; we wrote almost no code, and instead just wired together existing pieces. Coupling to something as fundamental as "adding one" is a much safer kind of reuse than I'm used to being bitten with in other programming paradigms.
 
 I hope you enjoyed this post. As you can probably tell, I'm really enjoying learning a different perspective on programming, and I hope I've managed to pass some of that along. Please let me know any parts are unclear so I can try and improve them. 
 
