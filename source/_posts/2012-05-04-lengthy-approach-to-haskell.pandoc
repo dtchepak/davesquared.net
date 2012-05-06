@@ -2,7 +2,7 @@
 layout: post
 title: "A lengthy approach to Haskell fundamentals"
 date: 2012-05-06 20:50
-updated: 2012-05-06 22:35
+updated: 2012-05-06 22:44
 comments: true
 categories: ["haskell", "functional programming"]
 ---
@@ -29,7 +29,7 @@ Great, let's get started.
 
 ## Type signatures
 
-The first line is the type signature of our function. The `::` means "has type"^[ [Pronounciation guide](http://www.haskell.org/haskellwiki/Pronunciation), Haskel Wiki]. To the right of `::` are the function argument types, and the return type. In this case we can see that `length'` takes `[a]` (a list of `a`) and returns an `Int`.
+The first line is the type signature of our function. The `::` means "has type"^[ [Pronounciation guide](http://www.haskell.org/haskellwiki/Pronunciation), HaskellWiki]. To the right of `::` are the function argument types, and the return type. In this case we can see that `length'` takes `[a]` (a list of `a`) and returns an `Int`.
 
 `Int` is pretty clear, but what's `a`? It is a *type parameter*, which means it can stand in for any type. We don't mind what kind of type is in the list passed to `length'`, just so long as we get a list. This is analogous to `List<T>` in C#.
 
