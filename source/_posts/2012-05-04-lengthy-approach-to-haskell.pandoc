@@ -2,7 +2,7 @@
 layout: post
 title: "A lengthy approach to Haskell fundamentals"
 date: 2012-05-06 20:50
-updated: 2012-05-06 22:27
+updated: 2012-05-06 22:35
 comments: true
 categories: ["haskell", "functional programming"]
 ---
@@ -188,7 +188,7 @@ Here's our rewritten function:
 
 Despite looking completely different, this works exactly the same as our previous `length'` function. Let's look at some key features.
 
-First, we've added `import Data.List` so that we can use the `foldl'` (fold left) function.^[Haskell provides a `foldl` function in the default module it loads, but in practice the `foldl'` variant is almost always preferred for left folds as it is more space efficient and can prevent stack overflows when working with large lists. See [Foldr Foldl Foldl'](http://www.haskell.org/haskellwiki/Foldr_Foldl_Foldl') on HaskellWiki for a detailed explanation.]
+First, we've added `import Data.List` so that we can use the `foldl'` (fold left) function.^[Haskell provides a `foldl` function in the default module it loads, but in practice the `foldl'` variant is almost always preferred for left folds as it is more space efficient and can prevent stack overflows when working with large lists. See [Foldr Foldl Foldl'](http://www.haskell.org/haskellwiki/Foldr_Foldl_Foldl') on HaskellWiki for a detailed explanation.] We'll omit the `import` from later code samples, but be aware whenever you see `foldl'` you'll need to have the correct import.
 
 Next, we now only need the one input pattern, as our fold will take care of the empty list case and the head/tail recursion stuff. The empty list case returns `0`, and you can see that is the second parameter to `foldl'`.
 
