@@ -2,7 +2,7 @@
 layout: post
 title: "A lengthy approach to Haskell fundamentals"
 date: 2012-05-06 20:50
-updated: 2012-05-06 22:44
+updated: 2012-05-08 10:23
 comments: true
 categories: ["haskell", "functional programming"]
 ---
@@ -149,7 +149,7 @@ Our `length'` function keeps calling itself until it gets to `length' []`, which
 
 ## The end of the beginning
 
-The current version of our function is fine, and we'd be quite entitled to stop here. But we can take this example quite a bit further to help us understand more about Haskell, and also to give us a glimpse into more idiomatic Haskell style. I think I'm right in saying that it would be quite rare for an experienced Haskeller to right a function like this (I'm a novice still, so I can't say for sure). So let's press on!
+The current version of our function is fine, and we'd be quite entitled to stop here. But we can take this example quite a bit further to help us understand more about Haskell, and also to give us a glimpse into more idiomatic Haskell style. I think I'm right in saying that it would be quite rare for an experienced Haskeller to write a function like this (I'm a novice still, so I can't say for sure). So let's press on!
 
 ## Folds
 
