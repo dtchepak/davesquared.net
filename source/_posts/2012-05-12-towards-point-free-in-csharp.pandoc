@@ -1,0 +1,209 @@
+---
+layout: post
+title: "Towards point-free in C#"
+date: 2012-05-12 23:37
+comments: true
+categories: ["functional programming", ".net", "haskell"]
+---
+
+Last post we saw [an example of writing a function to get the length of a list](/2012/05/lengthy-approach-to-haskell.html), first using explicit recursion, then folds, then moving towards *point-free* style by dropping explicit references to arguments where practical. To summarise the latter part of that post:
+
+```haskell
+length xs = foldl' (\acc x -> acc+1) 0 xs
+length = foldl' (\acc x -> acc+1) 0            -- `xs` appears on both sides, so can drop it.
+length = foldl' (\acc x -> const (acc+1) x) 0  -- `const` ignores 2nd arg, returns 1st.
+length = foldl' (\acc -> const (acc+1)) 0      -- Drop `x` from both sides of lambda
+length = foldl' (\acc -> const (succ acc)) 0   -- Replace (+1) with built-in `succ` function
+length = foldl' (\acc -> (const.succ) acc) 0   -- Function composition rule: (f.g) x = f(g x)
+length = foldl' (const.succ) 0                 -- Drop `acc` from both sides of lambda
+```
+
+The topic of this post is the "argument appears on both sides so can drop it" steps. How do we go from passing `foldl'` a function which takes two explicit arguments (`\arg x -> ...`) to none? The answer is by using *currying*, *partial function application* and *function composition*, and we can do both of these in C# (albeit not as neatly, as C# is not really built for it).
+
+<!-- more -->
+
+## Standard C\#
+
+We can implement the first version of the Haskell `length` function above using the following C#:
+
+```csharp
+    public A Foldl<A,B>(Func<A,B,A> f, A initial, IEnumerable<B> xs) {
+        var acc = initial;
+        foreach (var x in xs) {
+            acc = f(acc, x);
+        }
+        return acc;
+    }
+
+    [Test]
+    public void TestLength0() {
+        var xs = new[] {1,2,3,4};
+
+        var length0 = Foldl<int,int>((acc, x) => acc+1, 0, xs);
+        
+        Assert.AreEqual(length0, 4);
+    }
+```
+
+So the `Foldl` function loops over a list, and accumulates a value based on a function `f` passed in. To get the length of a list, our `f` is going to add 1 to our accumulator for each element in the list. 
+
+## Currying
+
+Our `Foldl`, much like Haskell's, takes a function of the form `Func<A,B,A>`. It takes two arguments, the accumulator `acc` and the current list item `x`, and returns a new accumulator value. In Haskell though, functions all take a single argument and return a function that will handle the rest. This is called *currying*.
+
+To do this in C# we need to convert `Func<A,B,A>` into `Func<A,Func<B,A>>`. In other words, rather than taking two arguments and returning a value, our function will take one argument, then return a function which takes the second argument and finally return the required value. We can write an overload of `Foldl` to support curried functions:
+
+```csharp
+    public static A Foldl<A,B>(Func<A,Func<B,A>> curriedFn, A initial, IEnumerable<B> xs) {
+        var acc = initial;
+        foreach (var x in xs) {
+            var f = curriedFn(acc); // Call with acc to get remainder of function
+            acc = f(x);             // Apply last argument to function
+        }
+        return acc;
+    }
+
+    [Test]
+    public void TestLength1() {
+        var xs = new[] {1,2,3,4};
+
+        var length1 = Foldl<int,int>(acc => (x => acc+1), 0, xs);
+        
+        Assert.AreEqual(length1, 4);
+    }
+```
+
+Now we need to pass this crazy looking `acc => (x => acc+1)` line to our fold, but we end up with two functions that each take a single argument.
+
+## Dropping the reference to `x`
+
+Let's go back to using the original `Foldl` overload that takes a two argument `Func<A,B,A>`, and introduce a `Const` function like we did for the Haskell example:
+
+
+```csharp
+    // `const` should actually be `Func<B,A> Const(A a)`, but we're using `int`
+    // as that's all we need for this example, and it makes the type defs less verbose.
+    public static Func<int,int> Const(int a) { return b => a; }
+
+    [Test]
+    public void TestLength2() {
+        var xs = new[] {1,2,3,4};
+
+        var length2 = Foldl<int,int>((acc,x) => Const(acc+1)(x), 0, xs);
+        
+        Assert.AreEqual(length2, 4);
+    }
+```
+
+The `Const` function is curried; it takes one argument and returns a new function which takes a second argument, ignores it and returns the original, which is why it is called as `Const(acc+1)(x)`. We could have also written it like this:
+
+    (acc,x) => {
+        var newFn = Const(acc+1);
+        return newFn(x);
+    }
+
+Sure, doesn't make too much sense for C#, but when you get it for free in languages like Haskell it can let us do some interesting stuff. Interesting stuff like partial function application.
+
+We're currently passing a lambda `(acc,x) => Const(acc+1)(x)`, which is of type `Func<int,int,int>`. What would happen if we didn't give this function the `x` argument? 
+
+    acc => Const(acc+1)
+
+We know our curried `Const` function returns a `Func<int,int>`. And we also know that `acc` is an `int`. So our lambda `acc => Const(acc+1)` will be a `Func<int, Func<int,int>>`. And we have an overload of `Foldl` that will take a curried function of type `Func<A, Func<B,A>>`, so maybe we can use that?
+
+
+```csharp
+    [Test]
+    public void TestLength3() {
+        var xs = new[] {1,2,3,4};
+
+        var length3 = Foldl<int,int>(acc => Const(acc+1), 0, xs);
+        
+        Assert.AreEqual(length3, 4);
+    }
+```
+
+The `Const` function needs to eventually get two arguments to return a result (e.g. `Const(acc+1)(x)`), but instead we're only applying one of the arguments (`Const(acc+1)`), and passing around the resulting function that is patiently waiting for the second argument before it returns its result. Because it is in this semi-evaluated state, we call this *partial function application*.
+
+So where does the second argument come from?
+
+```csharp
+    public static A Foldl<A,B>(Func<A,Func<B,A>> curriedFn, A initial, IEnumerable<B> xs) {
+        var acc = initial;
+        foreach (var x in xs) {     // <--- We get an `x` from the list `xs`
+            var f = curriedFn(acc); // <--- Call `curriedFn` with first argument
+            acc = f(x);             // <--- Apply `x` as second argument
+        }
+        return acc;
+    }
+```
+
+This corresponds to the following step from our original Haskell version:
+
+    length = foldl' (\acc x -> const (acc+1) x) 0  -- `const` ignores 2nd arg, returns 1st.
+    length = foldl' (\acc -> const (acc+1)) 0      -- Drop `x` from both sides of lambda
+
+
+## Matching experiments with intuition
+
+How can we just lose an argument like that?  Well, if the function we're calling is expecting to use a function with two arguments, it's going to call it with two arguments. If we pass `Foldl` a curried function that references both arguments and returns a value like `acc => (x => acc+1)`, it will call `curriedFn(acc)(x)`. If instead we pass it a partially-applied function that returns a new function like `acc => Const(acc+1)`, `Foldl` is still going to call `curriedFn(acc)(x)`, which applies the second argument to the new function.
+
+In Haskell all functions are curried, so regardless of whether we pass a function `f` as `\acc x -> const acc x` or `\acc -> const acc`, we're still going to call `(f a) b` and get the same result. 
+
+The end result is that for curried functions, if we have a free variable on the end of both sides of an expression, we don't have to explicitly reference it. We can drop it off the argument list on the left of the expression at the same time as we stop applying it on the right. So for a Haskell function like this:
+
+      z = fn (\x y -> (someFn x) y)          -- y free on left and right of `->`
+        = fn (\x -> someFn x)                -- x free on left and right of `->`
+        = fn someFn
+
+<div class="note">**Aside:** If I'm getting my FP-[gobbledygook](http://en.wikipedia.org/wiki/Gobbledygook) right, dropping an explicit argument reference like this is known as [eta reduction](http://www.haskell.org/haskellwiki/Eta_conversion).</div>
+
+## Finishing up with function composition
+
+The final steps in our Haskell example where to replace `acc+1` with a call to `succ acc` (which does exactly the same thing, but it looks like a normal function compared with `(+1)`), and then use function composition to remove the remaining arguments in our lambda.
+
+We can do this, again a tad messily, in C# by introducing our own `Succ` and `Compose` functions:
+
+```csharp
+    public static Func<A,C> Compose<A,B,C>(Func<B,C> f, Func<A,B> g) {
+        //Function composition rule: (f.g) x = f(g x)
+        return x => f(g(x)); 
+    }
+
+    public static int Succ(int x) { return x+1; }
+
+    [Test]
+    public void TestLength4() {
+        var xs = new[] {1,2,3,4};
+        var length4 = Foldl<int,int>(acc => Compose<int,int,Func<int,int>>(Const,Succ)(acc), 0, xs);
+        Assert.AreEqual(length4, 4);
+    }
+```
+
+Ugh, C#'s type inference doesn't quite go far enough to help us with that awful generic signature, but we've now replaced a `acc => Const(Succ(acc))` function with `acc => Compose<...>(Const,Succ)(acc)`. And now we've got the `acc` argument free on both sides, so we can drop it:
+
+    [Test]
+    public void TestLength4() {
+        var xs = new[] {1,2,3,4};
+        var length5 = Foldl<int,int>(Compose<int,int,Func<int,int>>(Const,Succ), 0, xs);
+        Assert.AreEqual(length4, 4);
+    }
+
+## Conclusion
+
+We've seen that when passing curried functions, if an argument appears at the end of the function's argument list and it is applied unchanged at the end of the function definition, we can drop it off both and pass around the partially applied function. So:
+
+    acc => (x => Const(acc+1)(x))
+
+Is the same as:
+
+    acc => Const(acc+1)
+
+This stuff doesn't translate all that well to C#, but for languages like Haskell where all functions are curried we get equivalences like this:
+
+    f = \acc x => const (acc+1) x
+      = \acc => const (acc+1)
+      = \acc => const (succ acc)
+      = \acc => (const . succ) acc
+      = const . succ
+
+Hopefully this will help if you've found playing around with higher order functions in Haskell as challenging as I have. If you've got any questions or if I've got anything muddled up please let me know in the comments.
