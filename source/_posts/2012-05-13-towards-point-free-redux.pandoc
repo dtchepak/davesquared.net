@@ -1,0 +1,57 @@
+---
+layout: post
+title: "Towards point-free redux"
+date: 2012-05-13 21:58
+comments: true
+categories: ["functional programming"]
+---
+
+Over the [last](/2012/05/towards-point-free-in-csharp.html) [two](/2012/05/lengthy-approach-to-haskell.html) posts I've made a few efforts to explain how we can drop of explicit argument references when moving functions towards point-free style. We've looked at currying, partial function application, and function composition as explanations for this. These concepts are really important, but after kicking around various ideas about this with a colleague I've decided to try and separate all these concepts from the most fundamental form of reducing a function towards point-free.
+
+<!-- more -->
+
+## Eta reduction
+
+Say we have two functions, `f` and `g`, with exactly the same types. Both take one argument of type `a` and return something of type `b`. We'll define `f` in terms of `g`:
+
+    f :: a -> b
+    g :: a -> b
+
+    f = \a -> g a
+
+In Haskell this this can also be written as:
+
+    f a = g a       ... (1)
+
+If `f` and `g` are [pure functions](http://en.wikipedia.org/wiki/Pure_function) (deterministic, no side-effects, no state), then we have:
+
+    f = g           ... (2)
+
+We've just said in `(1)` that the functions are equal when applied with the same argument, so for all values in type `a` the functions `f` and `g` will be equivalent; we can use them [interchangeably](http://en.wikipedia.org/wiki/Referential_transparency_(computer_science)). We don't have to worry about partial application, or currying, or anything else; we can just apply this equivalency.
+
+Removing redundant argument references like this is called [eta reduction](http://www.haskell.org/haskellwiki/Eta_conversion) (also written as *η-reduction*). Continually reducing in this way can lead to point-free functions once we've omitted all redundant argument references.
+
+## Applying with multiple arguments
+
+We can apply this same equivalency to our [previous example](/2012/05/towards-point-free-in-csharp.html) with multiple arguments:
+
+    z = \acc x -> const (acc+1) x
+
+    -- `z` is of the form:  
+    --      f x = g x 
+    -- where:
+    --      f = z acc
+    --      g = const (acc+1)
+
+    z = \acc -> const (acc+1)
+
+We use currying, partial application, and concepts like function composition to get our functions into the required `f x = g x` form, but once we're there we can use η-reduction to drop the explicit reference to the last argument.
+
+## Impure functions
+
+Notice that this doesn't apply for impure functions, as we could have:
+
+    int f(int x) { Console.WriteLine(x); return g(x); }
+    int g(int x) { return x+1; }
+
+In this case we can't use `f` and `g` interchangeably as they behave differently. In a pure functional language like Haskell we don't have to worry about this; the type system will differentiate functions with side-effects.
