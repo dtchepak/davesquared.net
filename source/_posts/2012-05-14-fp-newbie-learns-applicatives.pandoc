@@ -98,4 +98,4 @@ Applicative functors are functors that support some additional behaviours. While
 
 We can apply each argument using the `<*>` operator, giving us expressions like `f <$> arg0 <*> arg1 <*> ... <*> argN`. We can also lift functions of 1 to 3 arguments using `liftA`, `liftA2` or `liftA3`.
 
-We saw previously that [functors can be quite useful](http://davesquared.net/2012/05/fp-newbie-learns-functors.html#lifting-functions-is-useful) to reuse functions in different contexts such as performing IO operations. Applicative functors extends the same benefits to functions that take multiple arguments.
+We saw previously that [functors can be quite useful](http://davesquared.net/2012/05/fp-newbie-learns-functors.html#lifting-functions-is-useful) to reuse functions in different contexts, such as when performing IO operations that result in particular values. Applicative functors extends the same benefits to functions that take multiple arguments.
