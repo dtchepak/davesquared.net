@@ -1,0 +1,101 @@
+---
+layout: post
+title: "FP newbie learns a little about applicatives"
+date: 2012-05-15 17:47
+comments: true
+categories: ["functional programming", "haskell"]
+---
+
+A few posts back I learned that [functors are types that can be mapped over](/2012/05/fp-newbie-learns-functors.html). The idea is that if we have a function `a -> b`, we would like to be able to apply that to `a`s in different contexts, such as a list of `a`, a `Maybe a`, or an IO action that results in an `a`. In the previous post we referred to these contexts as "boxes", so we could lift a function `a -> b` to work on a box of `a` and return a box of `b`.
+
+    -- "Functor f =>"  just means that `f` refers to a functor type (or a type of box)
+    fmap :: Functor f => (a -> b) -> f a -> f b 
+
+    ghci> fmap succ (Just 4)
+    Just 5
+    ghci> fmap (^2) (Just 4)
+    Just 16
+    ghci> fmap (++"!") getLine
+    Hello World
+    "Hello World!"
+
+All these calls map single argument functions over functors, which is neat, but a bit limiting. What happens if we map a two (or more) argument function like `+`?
+
+    ghci> :t fmap (+) (Just 4)
+    fmap (+) (Just 4) :: Num a => Maybe (a -> a)
+
+This gives us a `+4` function in a `Maybe` context, so `fmap (+) (Just 4) = Just (4+)`. But how do we pass the second argument to this boxed up function? We can't use `fmap` again, because it's signature takes an `(a -> b)`, not a `f (a -> b)`. But if `f` is not just a functor, but an *applicative functor*, then we have another option. Applicative functors still support `fmap`, but also add some other functions, the main one being:
+
+    (<*>) :: Applicative f => f (a -> b) -> f a -> f b
+
+The bizarre-looking `<*>` function takes a boxed-up function `a -> b` and applies it to a boxed-up `a`, which is just what we need in this case. 
+
+<!-- more -->
+
+    ghci> import Control.Applicative  -- imports (<*>) function (et al.)
+    ghci> fmap (+) (Just 4) <*> (Just 10)
+    Just 14
+
+## Applying applicatives
+
+Just as `fmap` lets us map a function over a value in a context, `<*>` applies a function in a context to a value in a context. It ends up mirroring standard function application, only within a context:
+
+    ghci> let sum3 a b c = a+b+c
+    ghci> sum3 5 10 15
+    30
+    ghci> fmap sum3 (Just 5) <*> (Just 10) <*> (Just 15)
+    Just 30
+
+The initial `fmap` call lifts `sum3` into the new context (puts it in a box, in this case the `Maybe` type), then we apply that boxed function to its remaining arguments while staying in that context.
+
+Because this is a fairly common pattern, the `Control.Applicative` library defines the function `<$>` as an alias for `fmap`:
+
+    ghci> sum3 <$> (Just 5) <*> (Just 10) <*> (Just 15)
+    Just 30
+
+Using this syntax we can apply functions with any number of arguments within a context. We apply each argument using `<*>`. 
+
+## Lifting functions
+
+There are also some convenience functions, `liftA`, `liftA2` and `liftA3` to convert 1, 2 and 3 argument functions that take applicative functor values. From the [Haskell source](http://hackage.haskell.org/packages/archive/base/latest/doc/html/src/Control-Applicative.html#liftA):
+
+    -- For unary functions:
+    liftA :: Applicative f => (a -> b) -> f a -> f b
+    liftA f a = pure f <*> a
+
+    -- For binary functions:
+    liftA2 :: Applicative f => (a -> b -> c) -> f a -> f b -> f c
+    liftA2 f a b = f <$> a <*> b
+
+    -- For ternary functions:
+    liftA3 :: Applicative f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
+    liftA3 f a b c = f <$> a <*> b <*> c
+
+This lets us use standard function syntax for calling our functions within a context.
+
+    ghci> liftA3 sum3 (Just 5) (Just 10) (Just 15)
+    Just 30
+
+## Well-behaved applicatives
+
+Just as there are [laws a functor must satisfy](/2012/05/fp-newbie-learns-functors.html#well-behaved-functors), applicative functors have some additional requirements.
+
+First up, as they are defined in Haskell, applicatives have to not only supply a `<*>` function, but also a `pure` function, which will take a value and put it in the context of the applicative functor:
+
+    pure :: Applicative f => a -> f a
+
+This can be used to lift a function into a context so we can apply it to applicatives. As above, `liftA` is defined as `liftA f a = pure f <*> a`, which is equivalent to writing `fmap f a`. This gives our first applicative property. There's a good description of [all the applicative laws in the Haskell Wikibook](http://en.wikibooks.org/wiki/Haskell/Applicative_Functors), but as a quick summary:
+
+   * fmap law: `pure f <*> x = fmap f x`
+   * Identity: `pure id <*> v = v`
+   * Composition: `pure (.) <*> u <*> v *<> w = u <*> (v <*> w)`
+   * Interchange: `u <*> pure y = pure ($ y) <*> u`
+   * Homomorphism: `pure f <*> pure x = pure (f x)`
+
+## Summary
+
+Applicative functors are functors that support some additional behaviours. While the motivation for functors is to be able to apply a function within a context, the motivation for applicatives is to apply functions with multiple arguments within a context. 
+
+We can apply each argument using the `<*>` operator, giving us expressions like `f <$> arg0 <*> arg1 <*> ... <*> argN`. We can also lift functions of 1 to 3 arguments using `liftA`, `liftA2` or `liftA3`.
+
+We saw previously that [functors can be quite useful](http://davesquared.net/2012/05/fp-newbie-learns-functors.html#lifting-functions-is-useful) to reuse functions in different contexts such as performing IO operations. Applicative functors extends the same benefits to functions that take multiple arguments.
