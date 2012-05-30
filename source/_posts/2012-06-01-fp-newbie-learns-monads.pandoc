@@ -1,13 +1,12 @@
 ---
 layout: post
 title: "FP newbie learns a little about monads"
-date: 2012-05-29 21:55
+date: 2012-06-01 00:30
 comments: true
-published: false
 categories: ["functional programming", "haskell"]
 ---
 
-So after learning a little bit about [functors](/2012/05/fp-newbie-learns-functors.html) and [applicative functors](/2012/05/fp-newbie-learns-applicatives.html), finally I arrive at the notorious [monad](http://en.wikipedia.org/wiki/Monad_(functional_programming)).
+So after learning a little bit about [functors](/2012/05/fp-newbie-learns-functors.html) and [applicative functors](/2012/05/fp-newbie-learns-applicatives.html), I finally arrive at the notorious [monad](http://en.wikipedia.org/wiki/Monad_(functional_programming)).
 
 <!-- more -->
 
@@ -85,13 +84,18 @@ In other words:
 
 > Monads let us apply functions inside a context which depend on previous results
 
-## Seriously? Is that it?
+As a quick aside, Haskell also lets chain bind operations using do-notation, which is generally more readable than chaining `>>=` calls. Haskell will translate the example below into the same calls to `>>=` as our example above.
 
-Yep, a monad is just another abstraction, like functors and applicative functors, to let us apply functions to values in various contexts. If you type works with a function with a bind-like signature, `m a -> (a -> m b) -> m b`, then there's a good chance you've got a monad. 
+    example = do
+        x <- Just 42
+        y <- Just 28
+        return (x+y, x-y)
 
-## No way can that be it!
+## Seriously? That's it?
 
-Sure it can. If you've used LINQ in .NET, you may be familiar with this method:
+Yep, a monad is just another abstraction, like functors and applicative functors, to let us apply functions to values in various contexts. If your type works with a function with a bind-like signature, `m a -> (a -> m b) -> m b`, then there's a good chance you've got a monad. 
+
+If you've used LINQ in .NET, you may be familiar with this method:
 
 ```csharp
 public static IEnumerable<TResult> SelectMany<TSource, TResult>(
@@ -110,13 +114,22 @@ That's right, `SelectMany` is the bind operation for the `IEnumerable`, or colle
 
 ## Why the fuss?
 
-So answering the question "what is a monad?" is not too difficult; it's a type which has an appropriate bind function. Understanding the implications of this abstraction however, is a more involved task (and one I'm definitely not up to yet :)). This is probably why it is hard to get a straight answer from people when them what a monad is. "Anything that supports bind" is not a particularly useful answer, but explaining the myriad ways this abstraction is useful becomes quite involved.
+So answering the question "what is a monad?" is not too difficult; it's a type which has an appropriate bind function. Understanding all the implications of this is a much more involved task, and one I definitely haven't got a handle on yet. Here's my interpretation so far.
 
-<!--
-implications:
-seen applying functions insides a context, where final value depends on previous values
-state, writer, reader monads (and lots more!)
-IO monad for encapsulating side-effects
-sequencing functions in languages like Haskell where evaluation order is not normally guaranteed
--->
+We can use the bind function to produce a new value that depends on a chain of previous values. This lets us evaluate a sequence of expressions, giving us a type-safe, functional alternative to the sequence of steps used in imperative programming. If the previous values we're working with include a representation of the state at that time (say a tuple `(value, state)`) then we have a very nice way of modelling stateful computations (this is called the [state monad](http://learnyouahaskell.com/for-a-few-monads-more#state)).
+
+Monads also let us use values without leaving a particular context. In our `Maybe` examples we could work on the values within our monad (like `Just 42`), and get a result that is still in that context (`Just (70,14)`). This is useful for functions with side-effects, or *impure functions*, such as those that work with IO. We can perform operations on the results of IO actions without having a value from an impure function floating around the rest of our pure program.
+
+Another thing monads give us is the potential to handle errors or otherwise end evaluation early. We saw an example of this when one of our `Maybe` values was `Nothing`, and the entire expression evaluated to `Nothing` rather than raising an error or trying to continue evaluation. Contrast this to how imperative programs normally react when they get an unexpected `null`; cue null reference exception.
+
+There are [lots of implementations of monads](http://en.wikipedia.org/wiki/Monad_(functional_programming)#Examples), such as Reader, Writer, State, Maybe, list, IO, and parsers. These all have their own interesting characteristics, thanks to their particular data structures and implementations of bind. [Learn You A Haskell](http://learnyouahaskell.com/for-a-few-monads-more) goes through some examples of some of these monads. These specific monad instances give more concrete examples of what the abstract monad concept can be used to achieve.
+
+## Conclusion
+
+Just like functors and applicatives, monads seem another way of applying functions to values within certain contexts, such as in a list or a `Maybe`. The monad bind operation, `(>>=) :: m a -> (a -> m b) -> m b` lets us chain or compose these function applications in a way that produces a result that depends on the previous values, all without leaving the context of the monad.
+
+We also saw that with LINQ, .NET collections are monads thanks to the `SelectMany` function that has the required bind type signature.
+
+While working out the answer to the question "what is a monad?" wasn't too painful (I hope), understanding the implications of this abstract concept is more difficult. Monads can help us sequence operations, model state, or safely short-circuit evaluation under certain conditions like errors. Specific examples like State, Writer and list give us some idea as to how the concept can be applied, but I'm going to need a lot more practice before I start getting a better answer to the "what do monads do for me?" question.
+
 
