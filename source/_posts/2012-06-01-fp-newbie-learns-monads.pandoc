@@ -6,11 +6,11 @@ comments: true
 categories: ["functional programming", "haskell"]
 ---
 
-So after learning a little bit about [functors](/2012/05/fp-newbie-learns-functors.html) and [applicative functors](/2012/05/fp-newbie-learns-applicatives.html), I finally arrive at the notorious [monad](http://en.wikipedia.org/wiki/Monad_(functional_programming)).
+And so it has come to this. After learning a little bit about [functors](/2012/05/fp-newbie-learns-functors.html) and [applicative functors](/2012/05/fp-newbie-learns-applicatives.html), I finally arrive at the notorious [monad](http://en.wikipedia.org/wiki/Monad_(functional_programming)).
 
 <!-- more -->
 
-It seems to me all these concepts actually have quite a bit in common; they are all about function application. Say we have a "normal" function `f :: a -> b`, we can apply it to an argument of type `a` and get back something of type `b`.
+It seems to me all these concepts actually have something in common; they are all about function application. Say we have a "normal" function `f :: a -> b`, we can apply it to an argument of type `a` and get back something of type `b`.
 
 Sometimes we don't have a plain `a`, instead we have an `a` with some additional context or information around it. Say a list `[a]`, or `Maybe a` (which can hold a single `a` or nothing). We've got all these functions that already work on `a -> b`, so it would be nice to apply them to `a`'s in other contexts.
 
@@ -44,29 +44,29 @@ What if our function `a -> b` is in a particular context as well, like a list of
 
 This turns out to be very useful, as it lets us apply functions with more than one argument inside a context, where standard functors only really helped with single argument functions.
 
-    ghci> pure (+) <*> Just 10 <*> Just 20
+    ghci> Just (+) <*> Just 10 <*> Just 20
     Just 30
-    ghci> pure (+) <*> [1,2] <*> [3,4]
+    ghci> Just (+) <*> [1,2] <*> [3,4]
     [4,5,5,6]
 
-For the first example, `pure` (also defined on `Applicative`) puts the `(+)` function into a `Maybe` context, `Just (+)`. We apply the first argument `Just 10` using `<*>` to give us `Just (10+)`, then applies the second argument to get our answer of `Just 30`.
+For the first example, we put the `(+)` function into a `Maybe` context, `Just (+)`. We apply the first argument `Just 10` using `<*>` to give us `Just (10+)`, then applies the second argument to get our answer of `Just 30`.
 
 > Applicative functors let us apply functions with multiple arguments to
 > arguments inside a context.
 
 ## Monads
 
-And so we come to monads. Monads define a few functions, the main ones being *bind*, denoted as `>>=`, and `return` (which works just like `pure` for applicatives):
+And so we come to monads. Monads define a few functions, the main ones being *bind*, denoted as `>>=`, and `return` which puts a value into the right context:
 
     (>>=) :: Monad m => m a -> (a -> m b) -> m b
     return :: Monad m => a -> m a
 
-This allows us to apply a function to an `m a` (an `a` in some context) that uses that `a` value to produce an `m b`; a new `b` in the same context. Any type that work with functions with these signatures (and [obey a couple of rules](http://www.haskell.org/haskellwiki/Monad_laws)) are monads.
+This allows us to apply a function to an `m a` (an `a` in some context) that uses that `a` value to produce an `m b`; a new `b` in the same context. Any type that works with functions with these signatures (and [obeys a couple of rules](http://www.haskell.org/haskellwiki/Monad_laws)) are monads.
 
     ghci> Just 42 >>= (\x -> return (x+2))
     Just 44
 
-Here we've bound `Just 42` to a function. The bind operation with take the `42` out of the `Maybe` context and passes it into the bound function as `x`. This function uses `return (x+2)` to add 2 and put the result back into the `Maybe` context, which gives us `Just 44`.
+Here we've bound `Just 42` to a function. The bind operation will take the `42` out of the `Maybe` context and pass it into the bound function as `x`. This function uses `return (x+2)` to add 2 and put the result back into the `Maybe` context, which gives us `Just 44`.
 
 What does this give us which `fmap (+2) (Just 42)` won't? The ability to chain, or *compose*, several of these bindings, and potentially handle failures along the way:
 
@@ -86,10 +86,12 @@ In other words:
 
 As a quick aside, Haskell also lets chain bind operations using do-notation, which is generally more readable than chaining `>>=` calls. Haskell will translate the example below into the same calls to `>>=` as our example above.
 
-    example = do
-        x <- Just 42
-        y <- Just 28
-        return (x+y, x-y)
+```haskell
+example = do
+    x <- Just 42            -- Just 42 >>= (\x ->
+    y <- Just 28            -- Just 28 >>= (\y ->
+    return (x+y, x-y)       -- return (x+y, x-y)  ))
+```
 
 ## Seriously? That's it?
 
@@ -110,17 +112,17 @@ In other words, this method takes an `IEnumerable<A>` and a function which takes
     SelectMany :: IEnumerable<A> -> (A -> IEnumerable<B>) -> IEnumerable<B>
     (>>=)      ::     m a        ->     (a -> m b)        ->     m b
 
-That's right, `SelectMany` is the bind operation for the `IEnumerable`, or collection, monad. While we're at it, the more common `Select` method corresponds to `fmap` (all monads happen to be functors as well).
+So `SelectMany` is the bind operation for the `IEnumerable`, or collection, monad. While we're at it, the more common `Select` method corresponds to `fmap` (all monads happen to be functors as well).
 
 ## Why the fuss?
 
 So answering the question "what is a monad?" is not too difficult; it's a type which has an appropriate bind function. Understanding all the implications of this is a much more involved task, and one I definitely haven't got a handle on yet. Here's my interpretation so far.
 
-We can use the bind function to produce a new value that depends on a chain of previous values. This lets us evaluate a sequence of expressions, giving us a type-safe, functional alternative to the sequence of steps used in imperative programming. If the previous values we're working with include a representation of the state at that time (say a tuple `(value, state)`) then we have a very nice way of modelling stateful computations (this is called the [state monad](http://learnyouahaskell.com/for-a-few-monads-more#state)).
+We can use the bind function to produce a new value that depends on a chain of previous values. This lets us evaluate a sequence of expressions, giving us a type-safe, functional alternative to the sequences of steps used in imperative programming. If the previous values we're working with include a representation of the state at that time (say a tuple `(value, state)`) then we have a very nice way of modelling stateful computations, with each new value and state depending on the previous ones (this is called the [state monad](http://learnyouahaskell.com/for-a-few-monads-more#state)).
 
 Monads also let us use values without leaving a particular context. In our `Maybe` examples we could work on the values within our monad (like `Just 42`), and get a result that is still in that context (`Just (70,14)`). This is useful for functions with side-effects, or *impure functions*, such as those that work with IO. We can perform operations on the results of IO actions without having a value from an impure function floating around the rest of our pure program.
 
-Another thing monads give us is the potential to handle errors or otherwise end evaluation early. We saw an example of this when one of our `Maybe` values was `Nothing`, and the entire expression evaluated to `Nothing` rather than raising an error or trying to continue evaluation. Contrast this to how imperative programs normally react when they get an unexpected `null`; cue null reference exception.
+Another thing monads give us is the potential to handle errors or otherwise stop evaluation early. We saw an example of this when one of our `Maybe` values was `Nothing`, and the entire expression evaluated to `Nothing` rather than raising an error or trying to continue evaluation. Contrast this to how imperative programs normally react when they get an unexpected `null` (cue null reference exception).
 
 There are [lots of implementations of monads](http://en.wikipedia.org/wiki/Monad_(functional_programming)#Examples), such as Reader, Writer, State, Maybe, list, IO, and parsers. These all have their own interesting characteristics, thanks to their particular data structures and implementations of bind. [Learn You A Haskell](http://learnyouahaskell.com/for-a-few-monads-more) goes through some examples of some of these monads. These specific monad instances give more concrete examples of what the abstract monad concept can be used to achieve.
 
@@ -128,8 +130,5 @@ There are [lots of implementations of monads](http://en.wikipedia.org/wiki/Monad
 
 Just like functors and applicatives, monads seem another way of applying functions to values within certain contexts, such as in a list or a `Maybe`. The monad bind operation, `(>>=) :: m a -> (a -> m b) -> m b` lets us chain or compose these function applications in a way that produces a result that depends on the previous values, all without leaving the context of the monad.
 
-We also saw that with LINQ, .NET collections are monads thanks to the `SelectMany` function that has the required bind type signature.
-
-While working out the answer to the question "what is a monad?" wasn't too painful (I hope), understanding the implications of this abstract concept is more difficult. Monads can help us sequence operations, model state, or safely short-circuit evaluation under certain conditions like errors. Specific examples like State, Writer and list give us some idea as to how the concept can be applied, but I'm going to need a lot more practice before I start getting a better answer to the "what do monads do for me?" question.
-
+While working out the answer to the question "what is a monad?" wasn't too painful (I hope), understanding the implications of this abstract concept is more difficult. Monads can help us sequence operations, model state, or safely short-circuit evaluation under certain conditions like errors. Specific examples like State, Writer and list give us some idea as to how the concept can be applied, but I'm going to need a lot more practice before I start getting a comprehensive understanding of the myriad uses of monads.
 
