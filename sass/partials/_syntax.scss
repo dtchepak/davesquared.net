@@ -98,12 +98,17 @@ p, li, .note {
     font-size: .8em;
     line-height: 1.5em;
     color: #555;
-    border: 1px solid #ddd;
+    border: 1px solid #eee;
     @include border-radius(.4em);
     padding: 0 .3em;
     margin: -1px 0;
   }
   pre code { font-size: 1em !important; background: none; border: none; }
+}
+
+a > code {
+  text-decoration: underline;
+  @include link-colors($link-color, $hover: $link-color-hover, $focus: $link-color-hover, $visited: $link-color-visited, $active: $link-color-active);
 }
 
 .pre-code {
