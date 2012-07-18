@@ -2,6 +2,7 @@
 layout: post
 title: "Left-to-right function composition"
 date: 2012-07-18 22:49
+updated: 2012-07-19 00:05
 comments: true
 categories: ["functional programming", "haskell"]
 ---
@@ -20,9 +21,14 @@ In other words, I wanted left-to-right composition, rather than right-to-left. T
 (>>>) :: (a -> b) -> (b -> c) -> (a -> c)
 f >>> g = g . f     -- or: (>>>) = flip (.)
 
-{--
+{-- Left-to-right vs. right-to-left composition:
+
 ghci> reverse >>> (++" world") >>> (++"!") $ "olleh"
 "hello world!"
+
+ghci> (++"!") . (++ " world") . reverse $ "olleh"
+"hello world!"
+
 --}
 ```
 
