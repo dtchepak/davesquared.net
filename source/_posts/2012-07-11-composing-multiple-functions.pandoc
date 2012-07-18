@@ -1,42 +1,36 @@
 ---
 layout: post
-title: "FP newbie composes multiple functions"
-date: 2012-07-16 12:39
+title: "Composing multiple functions"
+date: 2012-07-18 23:32
 comments: true
 categories: ["functional programming", "haskell"]
 ---
 
-Function composition is [a way of combining two functions to produce a new function](/2012/05/lengthy-approach-to-haskell.html#function-composition). If we have a function $f :: b \to c$ and a function $g :: a \to b$, we can combine $f$ and $g$ to produce a new function $f \circ g :: a \to c$. In Haskell this is defined as `f . g = \x -> f (g x)`. So "`f` compose `g`" means call `g` with an argument, and pass the result as the argument to `f`. We can use this to assemble chains of multiple functions such as `a . b . c . …`. 
+Last post we looked at [left-to-right function composition](/2012/07/left-to-right-composition.html). One idea that cropped up while I was thinking about composition was how to compose an arbitrary number of functions, say, because we're dealing with a list of them. For this case we want to convert a list of functions `[a -> a]` into a single, composed function `a -> a`.
 
-I was recently looking at trying to compose longish function chains in a readable way, similar to Haskell's do-notation, and found Haskell is fine with line-breaks and indents to separate each call:
+One approach is to fold over the list, and apply the accumulated argument to each new function. Whether we choose fold left or right will depend on the order we want the functions composed. For example, `[a, b, c]` can be composed right-to-left as `a . b . c`, or left-to-right as `c . b . a`.
 
-```haskell
-updates = a 
-          . b
-          . c
-```
-
-What if we want to compose an arbitrary number of functions, say, because we're dealing with a list of functions? One approach is to fold over the list of functions.
+<!-- more -->
 
 ```haskell
-compose :: [a -> a] -> a -> a
-compose fns input = foldl' (\acc f -> f acc) input fns
--- or, for pointfree fans:
---   compose = flip . foldl' . flip $ ($)
+-- compose all functions left-to-right 
+(|>>>) :: [a -> a] -> a -> a
+fs |>>> input = foldl' (flip ($)) input fs 
+-- or for pointfree fans:
+--    (|>>>) = flip . foldl' . flip $ ($)
+
+-- compose all functions right-to-left 
+(<<<|) :: [a -> a] -> a -> a
+fs <<<| input = foldr ($) input fs 
+-- or: (<<<|) = flip (foldr ($))
 ```
 
-Whether you choose fold left or right will depend on the order you want the functions composed (e.g. `[a, b, c]` as `a . b . c` or `c . b . a`).
+We can then apply the String transformations we looked at last post.
 
     ghci> let transforms = [reverse, (++ " world"), (++ "!")]
-    ghci> compose transforms "olleh"
+    ghci> transforms |>>> "olleh"
     "hello world!"
-    ghci> let composeRev = (flip . Prelude.foldr) ($)
-
-    -- foldr to compose in reverse order
-    ghci> let composeRev = (flip . Prelude.foldr) ($)
-    ghci> composeRev transforms "olleh"
-    "dlrow !hello"
-    ghci> composeRev (reverse transforms) "olleh"
+    ghci> (reverse transforms) <<<| "olleh"
     "hello world!"
 
-I'm not sure if this is at all useful, but I found it interesting to think through, particularly when looking at [other approaches for achieving similar behaviour](/2012/07/composing-with-scary-maths-terms.html).
+I'm not sure if this is at all useful, but I found it interesting to think through. It also led to me looking at some of the maths behind this form of composition (which I'll look at in a later post).

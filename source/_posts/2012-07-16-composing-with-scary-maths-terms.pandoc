@@ -1,8 +1,9 @@
 ---
 layout: post
 title: "Composition via scary-sounding maths terms"
-date: 2012-07-16 12:43
+date: 2012-07-18 23:33
 comments: true
+published: false
 categories: ["functional programming", "haskell"]
 ---
 
