@@ -7,7 +7,7 @@ published: false
 categories: ["functional programming", "haskell"]
 ---
 
-Last post we looked at [composing lists of functions](/2012/07/composing-multiple-functions.html) using folds. This let use write a `compose` function of type `[a -> a] -> a -> a` (take a list of functions `a -> a`, and return a single function `a -> a`).
+Last post we looked at [composing lists of functions](/2012/07/composing-multiple-functions.html) using folds. This let use write functions of type `[a -> a] -> a -> a` to compose lists of functions (take a list of functions `a -> a`, and return a single function `a -> a`).
 
 Another way to do this relies on treating functions of type `a -> a` as a [monoid](http://davesquared.net/2012/04/associativity.html#monoids). 
 
@@ -50,22 +50,38 @@ The function to combine two endomorphisms, `mappend`, is defined as composition 
 All this means that if we wrap our `a -> a` functions in the `Endo` type, we can use `mconcat` to compose them all together.
 
     ghci> import Data.Monoid
-    ghci>  mconcat (map Endo transforms) `appEndo` "olleh"
-    "dlrow !hello"
+    ghci> let transforms = [(++ "!"), (++ " world"), reverse]
+    ghci> mconcat (map Endo transforms) `appEndo` "olleh"
+    "hello world!"
 
 The `appEndo` function applies the resulting, composed endomorphism to the argument `"olleh"`.
 
-This particular implementation has a different order to our `foldl` example, because `mconcat` uses `foldr` under the hood. The order in which we wish to compose these functions is a bit arbitrary, but if we want to we can restore the original behaviour by reversing our `transforms` list.
+We can simplify the `mconcat . map Endo` by using `foldMap` in the `Data.Foldable` module (this also means we can compose functions in any foldable structure, not just lists):
 
-    ghci> (mconcat . map Endo . reverse $ transforms) `appEndo` "olleh"
-    "hello world!"
-
-We can simplify the `mconcat . map Endo` by using `foldMap` in the `Data.Foldable` module:
-
-    ghci> import Foldable
+    ghci> import Data.Foldable
     ghci> :t foldMap
     foldMap :: (Foldable t, Monoid m) => (a -> m) -> t a -> m
-    ghci> (foldMap Endo . reverse $ transforms) `appEndo` "olleh"
+    ghci> (foldMap Endo transforms) `appEndo` "olleh"
+    "hello world!"
+
+Using `appEndo` to apply the function wrapped up in the `Endo` type is a bit of extra noise we could do without. The [newtype](http://hackage.haskell.org/packages/archive/newtype/0.2/doc/html/Control-Newtype.html) package on Hackage provides an `ala` function that lets us `foldMap` à la (in the manner of) endomorphisms.
+
+    ghci> import Control.Newtype 
+    ghci> ala Endo foldMap transforms "olleh"
+    "hello world!"
+    ghci> :t ala Endo foldMap
+    ala Endo foldMap :: Foldable t => t (a -> a) -> a -> a
+
+So `ala Endo foldMap` can do the job of our right-to-left compose function. The main difference between this and the original function, `fs <<<| input = foldr ($) input fs`, is that the former explicitly declares we are working with endomorphism, which compose when concatenated as monoids.
+
+## Left-to-right composition using `Dual`
+
+The implementation above [composes right-to-left](/2012/07/left-to-right-composition.html), as if we had written `(++ "!") . (++ " world") . reverse`, because `mconcat` uses `foldr` under the hood. 
+
+<!-- MARKER -->
+The order in which we wish to compose these functions is a bit arbitrary, but if we want to we can restore the original behaviour by reversing our `transforms` list.
+
+    ghci> (mconcat . map Endo . reverse $ transforms) `appEndo` "olleh"
     "hello world!"
 
 If we want to avoid the reverse, we can convert our `Endo` into its dual using the [`Dual` monoid](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Dual). All this does is flip the arguments to `mappend`, which effectively reverses the order our functions are concatenated. From the [Haskell source](http://hackage.haskell.org/packages/archive/base/latest/doc/html/src/Data-Monoid.html#Dual):
