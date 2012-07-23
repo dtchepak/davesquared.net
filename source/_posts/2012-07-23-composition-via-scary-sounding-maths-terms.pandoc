@@ -10,7 +10,7 @@ Last post we looked at [composing lists of functions](/2012/07/composing-multipl
 
 Another way to do this relies on treating functions of type `a -> a`, also known as endomorphisms, as a [monoid](/2012/04/associativity.html#monoids). 
 
-## Prologue (or, "Why bother?")
+## Prologue (or "Why bother?")
 
 Me-from-a-year-ago would have tuned out when someone dropped a monoid-bomb or similar term, assuming it was too complicated. Since then I've found lots of maths / category theory terms co-opted by computer science that represent surprisingly straight-forward and useful concepts. No [Babel fish](http://en.wikipedia.org/wiki/Babel_fish_(The_Hitchhiker%27s_Guide_to_the_Galaxy)#Babel_fish) required, just a little bit of patience. :) 
 
