@@ -1,24 +1,32 @@
 ---
 layout: post
 title: "Composition via scary-sounding maths terms"
-date: 2012-07-18 23:33
+date: 2012-07-23 15:15
 comments: true
-published: false
 categories: ["functional programming", "haskell"]
 ---
 
 Last post we looked at [composing lists of functions](/2012/07/composing-multiple-functions.html) using folds. This let use write functions of type `[a -> a] -> a -> a` to compose lists of functions (take a list of functions `a -> a`, and return a single function `a -> a`).
 
-Another way to do this relies on treating functions of type `a -> a` as a [monoid](http://davesquared.net/2012/04/associativity.html#monoids). 
+Another way to do this relies on treating functions of type `a -> a`, also known as endomorphisms, as a [monoid](/2012/04/associativity.html#monoids). 
 
-<div class="note">If you find maths terms off-putting I urge you to push through your skepticism and finish the post. There are tonnes of maths / category theory terms co-opted by computer science that are really quite useful and represent straight-forward concepts, despite them sounding like something you'd need a [Babel fish](http://en.wikipedia.org/wiki/Babel_fish_(The_Hitchhiker%27s_Guide_to_the_Galaxy)#Babel_fish) to decipher. :)</div>
+## Prologue (or, "Why bother?")
 
-<!-- more -->
+Me-from-a-year-ago would have tuned out when someone dropped a monoid-bomb or similar term, assuming it was too complicated. Since then I've found lots of maths / category theory terms co-opted by computer science that represent surprisingly straight-forward and useful concepts. No [Babel fish](http://en.wikipedia.org/wiki/Babel_fish_(The_Hitchhiker%27s_Guide_to_the_Galaxy)#Babel_fish) required, just a little bit of patience. :) 
+
+Even more surprisingly, I've found looking at this stuff both interesting and fun!
+
+> "[O]ne of the joys of functional programming is the way in which apparently-exotic theory can have a direct and practical application … ." 
+> <footer> **Simon Peyton Jones** <cite>[Tackling the awkward squad](http://research.microsoft.com/en-us/um/people/simonpj/papers/marktoberdorf/)</cite></footer>
+
+Too right! So let's dive right in. Please ask me to clarify anything I've done a bad job of explaining (if it's confusing it means I'm explaining it poorly. It's not you, it's me). Or if you know all this stuff already please point out the mistakes I've made.
 
 ## Monoids in Haskell
-A monoid is a type that has an [associative](http://davesquared.net/2012/04/associativity.html) binary function, and an identity value such that when we pass it as one of the arguments to that function, we always get the other argument back. For example, the [Sum](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Sum) monoid for numbers is the function `(+)` and the value `0`. This is associative (`10 + 2 = 2 + 10`), and has the required identity property (`x + 0 = x`).
+A monoid is a type that has an [associative](/2012/04/associativity.html) binary function, and an identity value such that when we pass it as one of the arguments to that function, we always get the other argument back. 
 
-In Haskell monoids are represented with the [Monoid](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html) type class. The binary function is called `mappend` (it combines, or appends, two values), and the identity value is called `mempty`. (When you make a type an instance of the monoid typeclass you provide implementations of these two functions.)
+This is much simpler to understand by looking at examples. The [Sum](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Sum) monoid for numbers is the function `(+)` and the value `0`. This is associative (`10 + 2 = 2 + 10`), and has the required identity property (`x + 0 = x`). Another example is multiplication, which has function `(*)` and value `1`. Division is not a monoid because `10 / 2 != 2 / 10`, so it is not associative.
+
+In Haskell monoids are represented with the [Monoid](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html) type class. The binary function is called `mappend` (it combines, or appends, two values), and the identity value is called `mempty`. (We need to provide implementations of these two functions when we make a type an instance of the monoid typeclass.)
 
 Using these two properties we can define a function that combines arbitrarily many monoid values. This function is called `mconcat` in Haskell, and its default implementation looks a bit like this:
 
@@ -27,11 +35,13 @@ mconcat :: Monoid a => [a] -> a
 mconcat = foldr mappend mempty
 ```
 
-This means that for any monoid, we can combine multiple values. Handy!
+This means that for any monoid we can combine multiple values. Handy!
 
 ## A monoid for endomorphisms 
 
-Haskell has a monoid defined called [`Endo`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Endo), for "endomorphism", which, roughly speaking, means a mapping into itself ("endo" for "inside", morphism for "transformation"). A function `a -> a` is a mapping into itself; it takes an `a` and maps it to another `a`. This is [how `Endo` is implemented in Haskell](http://hackage.haskell.org/packages/archive/base/latest/doc/html/src/Data-Monoid.html#Endo):
+Roughly speaking, "endomorphism" means a mapping from a type into itself ("endo" for "inside", "morphism" for "transformation"). A function `a -> a` is a mapping into itself; it takes an `a` and maps it to another `a`. 
+
+Haskell has a monoid defined for endomorphisms called [`Endo`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Endo). This is how [`Endo` is implemented in Haskell](http://hackage.haskell.org/packages/archive/base/latest/doc/html/src/Data-Monoid.html#Endo):
 
 
 ```haskell
@@ -47,44 +57,42 @@ The function to combine two endomorphisms, `mappend`, is defined as composition 
 
 ## Putting it all together
 
-All this means that if we wrap our `a -> a` functions in the `Endo` type, we can use `mconcat` to compose them all together.
+This means that if we wrap our `a -> a` functions in the `Endo` type (using `map Endo` on the list of functions), we can use `mconcat` to compose them all together.
 
     ghci> import Data.Monoid
     ghci> let transforms = [(++ "!"), (++ " world"), reverse]
     ghci> mconcat (map Endo transforms) `appEndo` "olleh"
     "hello world!"
 
-The `appEndo` function applies the resulting, composed endomorphism to the argument `"olleh"`.
+The `appEndo` function applies the resulting, composed endomorphism to the argument `"olleh"`. We had to wrap our function in the `Endo` type to treat it as a monoid, so we have to unwrap it using `appEndo` before we can use it (this wrinkle is specific to Haskell, rather than part of the underlying theory).
 
-We can simplify the `mconcat . map Endo` by using `foldMap` in the `Data.Foldable` module (this also means we can compose functions in any foldable structure, not just lists):
+We can now rewrite `<<<|`, our right-to-left composition operator from [last post](/2012/07/composing-multiple-functions.html), like this:
 
-    ghci> import Data.Foldable
-    ghci> :t foldMap
-    foldMap :: (Foldable t, Monoid m) => (a -> m) -> t a -> m
-    ghci> (foldMap Endo transforms) `appEndo` "olleh"
+```haskell
+(<<<|) :: [a -> a] -> a -> a
+(<<<|) = appEndo . mconcat . map Endo
+
+{-  ghci> transforms <<<| "olleh"
     "hello world!"
+-}
+```
 
-Using `appEndo` to apply the function wrapped up in the `Endo` type is a bit of extra noise we could do without. The [newtype](http://hackage.haskell.org/packages/archive/newtype/0.2/doc/html/Control-Newtype.html) package on Hackage provides an `ala` function that lets us `foldMap` à la (in the manner of) endomorphisms.
+We can simplify the `mconcat . map Endo` expression using `foldMap` from the `Data.Foldable` module (this also means we can compose functions in any foldable structure, not just lists):
 
-    ghci> import Control.Newtype 
-    ghci> ala Endo foldMap transforms "olleh"
-    "hello world!"
-    ghci> :t ala Endo foldMap
-    ala Endo foldMap :: Foldable t => t (a -> a) -> a -> a
+```haskell
+(<<<|) :: Foldable t => t (a -> a) -> a -> a
+(<<<|) = appEndo . foldMap Endo
+```
 
-So `ala Endo foldMap` can do the job of our right-to-left compose function. The main difference between this and the original function, `fs <<<| input = foldr ($) input fs`, is that the former explicitly declares we are working with endomorphism, which compose when concatenated as monoids.
+The main difference between this and the [original function](/2012/07/composing-multiple-functions.html), `fs <<<| input = foldr ($) input fs`, is that the former explicitly declares we are working with endomorphisms, which compose when concatenated as monoids. The latter expresses more of the mechanics of the operation; it is less declarative. 
 
-## Left-to-right composition using `Dual`
+Which is easier to understand will depend on the reader's knowledge of concepts like monoids, but I like the idea that mathematical concepts can provide a deeper understanding of a program's intention.
 
-The implementation above [composes right-to-left](/2012/07/left-to-right-composition.html), as if we had written `(++ "!") . (++ " world") . reverse`, because `mconcat` uses `foldr` under the hood. 
+## For extra credit: Left-to-right composition using `Dual`
 
-<!-- MARKER -->
-The order in which we wish to compose these functions is a bit arbitrary, but if we want to we can restore the original behaviour by reversing our `transforms` list.
+The implementation above [composes right-to-left](/2012/07/left-to-right-composition.html), as if we had written `(++ "!") . (++ " world") . reverse`. If we want to instead compose left-to-right, we can use the [dual](http://en.wikipedia.org/wiki/Dual_(category_theory)) of the endomorphism monoid. 
 
-    ghci> (mconcat . map Endo . reverse $ transforms) `appEndo` "olleh"
-    "hello world!"
-
-If we want to avoid the reverse, we can convert our `Endo` into its dual using the [`Dual` monoid](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Dual). All this does is flip the arguments to `mappend`, which effectively reverses the order our functions are concatenated. From the [Haskell source](http://hackage.haskell.org/packages/archive/base/latest/doc/html/src/Data-Monoid.html#Dual):
+We can do this in Haskell with the [`Dual` monoid](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Dual), which combines monoid values in the opposite order by flipping the arguments given to `mappend`. When combined with the `Endo` monoid, this reverses the order our functions are composed. From the [Haskell source](http://hackage.haskell.org/packages/archive/base/latest/doc/html/src/Data-Monoid.html#Dual):
 
 ```haskell
 newtype Dual a = Dual { getDual :: a } deriving (Eq, Ord, Read, Show, Bounded)
@@ -93,10 +101,27 @@ instance Monoid a => Monoid (Dual a) where
         Dual x `mappend` Dual y = Dual (y `mappend` x)
 ```
 
-Which means we can compose any number of functions like this:
+Which means we can compose any number of functions left-to-right like this:
 
-    ghci> (appEndo . getDual . foldMap (Dual . Endo) $ transforms) "olleh"
+```haskell
+(|>>>) :: Foldable t => t (a -> a) -> a -> a
+(|>>>) = appEndo . getDual . foldMap (Dual . Endo)
+
+{-
+    ghci> [reverse, (++ " world"), (++ "!")] |>>> "olleh"
     "hello world!"
+-}
+```
 
-This is more involved than our [initial example which just used `foldl'`](/2012/07/composing-multiple-functions.html), but I find it very interesting how concepts like monoids can be used to combine functions in interesting ways.
+Our [previous example used `foldl'`](/2012/07/composing-multiple-functions.html) to get functions composing in this order:
+
+    fs |>>> input = foldl' (flip ($)) input fs
+
+Again, this seems to focus more on the mechanics of the operation, rather than relying on the properties of the things we are composing. Unwrapping our function using `appEndo . getDual` is an unfortunate bit of mess, but `foldMap (Dual . Endo)` shows that we are folding (reducing) our functions as the dual of endomorphism composition (I am sure I am butchering the terminology here, but from my layman's perspective we're composing endomorphisms in the opposite order, so I'm calling that the dual. Please correct me).
+
+In this particular case we may be better off reversing the composition like this:
+
+    (|>>>) = (<<<|) . reverse
+
+Still, I find it very interesting how we can use mathematical properties to combine functions in different ways. The `Dual` monoid folds other monoids in the reverse order, and `Endo` folds functions `a -> a` using standard right-to-left composition, so `Dual . Endo` gives us left-to-right composition. I've got no idea what to do with this information, but for some reason I find it fascinating. :)
 
