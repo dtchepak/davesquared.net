@@ -1,0 +1,96 @@
+---
+layout: post
+title: "Reader monad"
+date: 2012-08-12 18:00
+comments: true
+categories: ["functional programming", "haskell"]
+---
+
+The Reader monad is used to pass one value as an argument to a number of function calls. This can be useful when you require some configuration or environment information accessible from a block of functions. 
+
+This monad is provided in Haskell's standard libraries, but let's have a go at creating it ourselves.
+
+<!-- more -->
+
+## A sample problem
+
+Say we have a `Person` data type with a `name`, `age` and `address`, and we want to write a `showPerson` function to display these details in a string.
+
+```haskell
+data Person = Person { name :: String, age :: Int, address :: String }
+
+showPerson :: Person -> String
+showPerson person =
+    let x = "Name: " ++ name person
+        y = "Age: " ++ (show . age) person
+        z = "Address: " ++ address person
+    in unlines [x, y, z]
+```
+
+Notice how we need to pass the `person` argument around everywhere? It would be nice to be able to have all this run in the context of a particular `person`, and that's what the Reader monad lets us do.
+
+Rather than having the `x`, `y`, and `z` parts of the `showPerson` function each evaluating to a string, how about we instead treat them as functions of type `Person -> String`. We'd like to compose all these together and return a value which is a combination of the previous results, which [sounds like something we can use a monad for](/2012/06/fp-newbie-learns-monads.html).
+
+## Implementing a monad for single argument functions
+
+Rather than the specific `Person -> String` functions from the example, we can look at the general case of a function `r -> a`, or a function that reads some value of type `r` and returns some other value. We are interested in the `r ->` bit, but Haskell won't let us to that. Instead we need to write it as `(->) r`.
+
+<div class="note">**Aside:** In Haskell we can move an operator from infix position such as `1 + 2` to prefix position as `(+) 1 2`. This is just what we've done in moving `r -> a` to `(->) r a`.</div>
+
+All monads are functors, so let's implement that first:
+
+```haskell
+-- For some functor f:
+--     fmap :: (a -> b) -> f a -> f b
+-- For ((->) r), substitute in for f:
+--     fmap :: (a -> b) -> ((->) r) a -> ((->) r) b
+-- Rewrite in infix position:
+--     fmap :: (a -> b) -> (r -> a) -> (r -> b)
+-- The only real way to implement a function of this type is
+-- using function composition.
+instance Functor ((->) r) where
+    fmap = (.)
+```
+
+We can follow the same trail of types to implement the monad type class:
+
+```haskell
+-- For a monad m:
+--     (>>=) :: m a -> (a -> m b) -> m b
+-- Substitute ((->) r) for m:
+--     (>>=) :: (r -> a) -> (a -> r -> b) -> r -> b
+instance Monad ((->) r) where
+    return = const
+    f >>= g = \r -> let a = f r
+                    in g a r
+```
+
+We can now rewrite our `showPerson` example by binding together the functions that read the `Person` information using `>>=`:
+
+```haskell
+showPerson :: Person -> String
+showPerson = (
+        ("Name: " ++) . name        >>= \x ->
+        ("Age: " ++) . show . age   >>= \y ->
+        ("Address: " ++) . address  >>= \z ->
+        return (unlines [x,y,z])
+    )
+```
+
+Alternatively we can use Haskell's do-notation. (The two forms are equivalent; Haskell will turn this into the same code as the above snippet, but do-notation tends to look neater.)
+
+```haskell
+showPerson :: Person -> String
+showPerson = do
+    x <- ("Name: " ++) . name
+    y <- ("Age: " ++) . show . age
+    z <-("Address: " ++) . address
+    return . unlines $ [x,y,z]
+```
+
+## Built-in reader
+
+We can import [Control.Monad.Reader](http://hackage.haskell.org/packages/archive/mtl/2.1.1/doc/html/Control-Monad-Reader.html) to make our `showPerson` examples compile without having to define the reader implementation ourselves. 
+
+This implementation also provides a `Reader` type and `ReaderT` monad transformer, along with `ask`, `asks`, and `local` functions to access the passed in environment, and a `runReader` function to pass an environment to a `Reader` and get the result. I haven't had a need for these yet, but thought I'd mention them as they crop up in examples all the time. (I'm guessing these functions are most useful when using reader with monad transformers, but I'm still trying to work those out. :))
+
