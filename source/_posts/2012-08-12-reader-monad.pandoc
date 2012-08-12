@@ -33,7 +33,7 @@ Rather than having the `x`, `y`, and `z` parts of the `showPerson` function each
 
 ## Implementing a monad for single argument functions
 
-Rather than the specific `Person -> String` functions from the example, we can look at the general case of a function `r -> a`, or a function that reads some value of type `r` and returns some other value. We are interested in the `r ->` bit, but Haskell won't let us to that. Instead we need to write it as `(->) r`.
+Rather than the specific `Person -> String` functions from the example, we can look at the general case of a function `r -> a`, or a function that reads some value of type `r` and returns some other value. We are interested in the `r ->` bit, but Haskell won't let us do that. Instead we need to write it as `(->) r`.
 
 <div class="note">**Aside:** In Haskell we can move an operator from infix position such as `1 + 2` to prefix position as `(+) 1 2`. This is just what we've done in moving `r -> a` to `(->) r a`.</div>
 
