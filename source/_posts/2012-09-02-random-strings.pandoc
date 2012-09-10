@@ -1,0 +1,153 @@
+---
+layout: post
+title: "State monad and random strings"
+date: 2012-09-02 12:49
+comments: true
+published: false
+categories: ["functional programming", "haskell"]
+---
+
+During some recent work I found the need to use a State monad. Unfortunately I had no idea how to do this. In this post we'll retrace the steps I took while trying to generate random strings with Haskell. We'll start by coding specific, non-monadic pieces to solve the problem, then generalise this by implementing our own State monad, before finally switching over to use Haskell's State monad. By the end of it we'll hopefully all understand the State monad (which is more than I can say for when I first started tackling this problem :)).
+
+If you've never encountered monads before then you may want to start with this [introduction to monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html) (yes, yes, Yet Another Monad tutorial. Feel free to [read a good one instead](http://www.haskell.org/haskellwiki/Monad_tutorials_timeline) if you don't like mine :)).
+
+<!-- more -->
+
+## A little context
+
+So I found myself needing to generate random strings to anonymise the data in a bunch of fields. Using a `replaceField` function I was able to replace the field contents with a hard coded string, like this:
+
+    ghci> input
+    ["first: hello","second: world","third: !!!"]
+    ghci> map (replaceField "abc") input
+    ["first: abc","second: abc","third: abc"]
+
+Now I just needed to replace the `"abc"` string with randomly generated strings. 
+
+<div class="note">**Aside:** I think we can actually use [QuickCheck](http://www.haskell.org/haskellwiki/Introduction_to_QuickCheck2) to generate arbitrary strings for us. But where's the fun in that?</div>
+
+## Random characters
+
+To get a (pseudo-)random value we can use Haskell's `System.Random` module:
+
+    ghci> import System.Random
+    ghci> :t randomR
+    randomR :: (RandomGen g, Random a) => (a, a) -> g -> (a, g)
+
+The `randomR` function takes as input a tuple with the lower and upper-bounds of the random value to generate, and a random number generator. It's output is a tuple consisting of a random value within those bounds, and a new generator which will generate the next random value in the sequence. (This will work for any type `a` that is an instance of the `Random` type class, and any generator `g` which is an instance of `RandomGen`.) We can use it like this:
+
+    ghci> let g = mkStdGen 42
+    ghci> randomR (1,10) g
+    (2,1720602 40692)
+    ghci> randomR ('a','z') g
+    ('n',1720602 40692)
+
+Here we've seeded a new generator with the number `42`, and generated a number between `(1,10)` to get `2`, and a character between `('a','z')` to get `'n'`. So we've got random character generation under control.
+
+## Multiple random characters
+
+To get a new random value we're going to have to use `randomR` again, but this time with the new generator from the tuple returned from our previous call. (Remember Haskell functions are pure; their output depends purely on their input. If we pass the same generator `mkStdGen 42` as input we'll get exactly the same "random" character as output.) We'll have to keep feeding each generator that comes out of one call as input to the next call:
+
+    ghci> let (a', g') = randomR ('a','z') g
+    ghci> let (a'',g'') = randomR ('a','z') g'
+    ghci> let (a''',g''') = randomR ('a','z') g''
+    ghci> let (a'''',g'''') = randomR ('a','z') g'''
+    ghci> let (a''''',g''''') = randomR ('a','z') g''''
+    ghci> [a', a'', a''', a'''', a''''']
+    "ndfeo"
+
+To generate a string of some length `i`, we'll need to call this `randomR ('a','z')` function `i` times, accumulating both the string value and the generator at each step. Let's hack this out:
+
+```haskell
+import System.Random
+
+getRandomChar :: RandomGen g => g -> (Char, g)
+getRandomChar = randomR ('a','z')
+
+getRandomStringWithLength :: RandomGen g => Int -> g -> (String, g)
+getRandomStringWithLength i g =
+    let charGenerators = replicate i getRandomChar
+    in  foldr apply ([], g) charGenerators
+
+apply :: (a -> (b, a)) -> ([b], a) -> ([b], a)
+apply f (xs, g) = let (x, g') = f g
+                  in  (x:xs, g')
+```
+
+Here we've used the name `getRandomChar` to refer to the `randomR ('a','z')` function which will give us a single character plus a new generator. 
+
+We've also got a `getRandomStringWithLength` function which takes an integer (how many characters long the string should be) and a generator, and outputs the resulting string and the last generator produced. It calls `replicate i getRandomChar`, which will return a list of `getRandomChar` functions. If we call `replicate 3 getRandomChar`, we'll get `[getRandomChar, getRandomChar, getRandomChar]`. We need to reduce this list, accumulating characters and the most recent generator as we go.
+
+For that `getRandomStringWithLength` uses a [fold](http://davesquared.net/2012/02/folds-pt1-from-recursion-to-folds.html). The fold's initial value (seed) is an empty list and the first generator passed in (`([],g)`), and from their we `apply` each of the `charGenerators`.
+
+The `apply` function is fairly hideous. It takes the current `getRandomChar` function and the `(string, generator)` value accumulated in the fold, applies the function to that generator, and returns a tuple of `(newString, newGenerator)`. But, hideousness aside, we now have a function that will generate a random string of characters:
+
+    ghci> getRandomStringWithLength 5 (mkStdGen 42)
+    ("oefdn",1421974012 652912057)
+
+## Encapsulating State
+
+So let's tidy up this mess I've made. The `getRandomChar` function takes some initial generator, and returns a tuple with a character and a new generator. In general terms it's a function `s -> (a,s)`. A more general way to think of this is that for some initial state `s`, we want to return a value `a` and a new state of `s`. We'll wrap this up in a new data type:
+
+    newtype State s a = State { runState :: s -> (a,s) }
+
+Now we can modify `getRandomChar` to return a `State`, and we can run through that state using `runState`:
+
+    randomChar :: (RandomGen g) => State g Char
+    randomChar = State $ randomR ('a','z')
+
+    ghci> runState randomChar (mkStdGen 42)
+    ('n',1720602 40692)
+
+
+<!-- in progress 
+ * should i bother trying to justify implementing Monad typeclass? 
+ * could try on grounds that i want to chain together previous values, within the context of threaded state.
+ * but in reality i new the state pattern fit, just not how to work it. Should probably come clean
+
+->
+Remember our `getRandomStringWithLength` function called `replicate i getRandomChar` to get a `[g -> (Char, g)]`? Well if we use our new function, `replicate i randomChar`, we get `[State g Char]`. So somewhere along the line we're going to want a function `State g Char -> (g -> [State g Char]) -> State g String`.
+
+    instance Monad (State s) where
+        return a = State $ \s -> (a, s)
+        a >>= f  = State $ \s ->
+                    let (a', s') = runState a s
+                        b        = f a'
+                    in runState b s'
+
+
+
+<!-- ODDS and ENDS -->
+
+Notice we have to take the generator produced by each call to `randomR`, and send that through to the next call? In [my take on monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html#monads) I concluded "Monads let us apply functions inside a context which depend on previous results". Each function here depends on the generator from the previous result, so it sounds like a good fit for a monad. I vaguely remember being able to map and fold monads, so we could apply one over a list of fields. I can even take a guess that we'll need the State monad, as we need to maintain the state of the generator between calls. Unfortunately I have absolutely no idea how to use the state monad. So it's time for plan B.
+
+## Hacking together something that works
+
+Let's start small; generating a single, random character, and returning a new generator along with it (so we can continue the sequence):
+
+```haskell
+getRandomChar :: RandomGen g => g -> (Char, g)
+getRandomChar = randomR ('a','z')
+```
+
+/* MAYBE TACKLE THE FOLD FIRST? DO FIXED LENGTH RANDOM STRING? */
+```haskell
+getRandomString :: RandomGen g => g -> (String, g)
+getRandomString g = 
+    let (charsToGen, g') = randomR (1, 10) g
+        chars            = replicate charsToGen getRandomChar
+    in  foldr apply ([], g') chars
+
+apply :: (a -> (b, a)) -> ([b], a) -> ([b], a)
+apply f (xs, g) = let (x, g') = f g
+                  in  (x:xs, g')
+```
+
+
+
+-- handles this by giving us generators we can pass around that will generate streams of pseudo-random numbers.
+
+## References
+
+* ["How to use random numbers?", Albert Y. C. Lai](http://www.vex.net/~trebla/haskell/random.xhtml)
+
