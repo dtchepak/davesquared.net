@@ -9,19 +9,19 @@ categories: ["functional programming", "imho"]
 
 I've heard Erik Meijer quoted as saying the world is imperative and mutable, and so we should embrace side-effects^[Erik Meijer from GOTO Night August 23, 2012 in Chicago: [one](https://twitter.com/codemiller/status/238780672439885824), [two](https://twitter.com/codemiller/status/238783944043151360), [three](https://twitter.com/puffnfresh/status/238779939053252608)]. I've also heard what I interpret as [pretty much the opposite from Rich Hickey](http://www.infoq.com/presentations/Value-Values). So, which is it? 
 
-I have no idea, so instead I thought I'd write a story.
+I'm not sure, but maybe a story about dinosaurs will help.
 
-## Luckily no one was killed
+## Somehow we all escaped with our lives
 
-It was a brisk winter's night. I had just parked my car down at The Rocks, a beautiful part of Sydney right on the Harbour, and had started hurrying down George Street to attend the monthly Drop Bear Awareness Society meetup. I had only gone a couple of hundred metres when hordes of people started flooding out of Circular Quay, accompanied by yells, screams and sirens. I was swept along with the crowd, herded by police and emergency services into Town Hall station and onto waiting trains. As my train pulled away from the platform I only knew one thing for certain; people were talking about a "monster" with a disturbing amount of credulity.
+It was a brisk winter's night. I had just parked my car down at The Rocks, a beautiful part of Sydney right on the Harbour, and had started hurrying down George Street to attend the monthly Drop Bear Awareness Society meetup. I had only gone a couple of hundred metres when hordes of people started flooding out of Circular Quay directly across the road from me, accompanied by yells, screams and sirens. I was swept along with the crowd, herded by police and emergency services into Town Hall station and onto waiting trains. As my train pulled away from the platform I only knew one thing for certain; people were talking about a "monster" with a disturbing amount of credulity.
 
-Turns out that a 50 metre high dinosaur-like monster had chosen that day to emerge from the depths of Sydney Harbour and take a brief stroll through the CBD. It was apparently on land for about 10 minutes, after which time it had grown bored and decided go back out to sea and head to Melbourne where it could destroy something more tasteful. 
+Turns out that a 50 metre high dinosaur-like monster had chosen that day to emerge from the depths of Sydney Harbour and take a brief stroll through the CBD. It was apparently on land for about 10 minutes, after which time it had grown bored and decided go head to Melbourne where it could destroy something more tasteful. 
 
 I returned to my car the next day. It was flattened; the imprint of a giant footprint clearly visible in the twisted wreckage. But I wasn't going to give up on my beloved car. It took weeks of extensive work at the smash repairer, but I finally got my car back, pretty much as good as new.
 
 ## State, mutations and time
 
-There are two ways of looking at this story (three if you count "as an unimaginative, poorly-told piece of tripe"). One is from the perspective of mutable state, as commonly associated with imperative programming^[Imperative programming can also be done without mutable state, although [some definitions](http://en.wikipedia.org/wiki/Imperative_programming) include mutability as an essential feature.]. I had a working car, then the car's state changed to "smashed by monstrous dinosaur", the it changed back to working. It was the same car, its state was just changed, and rather forcibly at that. We can even write a program to express what happened:
+There are two ways of looking at this story (three if you count "as an unimaginative, poorly-told piece of tripe"). One is from the perspective of mutable state, as commonly associated with imperative programming^[Imperative programs are just sequences of instructions and can also be done without mutable state, although [some definitions](http://en.wikipedia.org/wiki/Imperative_programming) include mutability as an essential feature.]. I had a working car, then the car's state changed to "smashed by monstrous dinosaur", then it changed back to working. It was the same car, its state was just changed, and rather forcibly at that. We can even write a program to express what happened:
 
 ```csharp
 var car = new Car("British Leyland Mini 1000");
@@ -34,63 +34,72 @@ Console.WriteLine(car.State); // prints "Working"
 
 The `SmashWith` and `Repair` methods have side-effects; they mutate the `State` property of the car as the program executes. One interesting result of this is that the `State` property is always tied to the concept of "now"; its value is inextricably linked to the point in time at which it is called. We have several states in this program, but whenever we talk about state, we are only referring to the current state.
 
-I like to think of the concept of time being an *implied* part of this representation. Any state change requires a change in time, but this representation never refers to time explicitly. The time is always "now", and evaluating the next statement is always done in that context.
+I tend to think of the concept of time being an *implied* part of this representation. Any state change requires a change in time, but this representation never refers to time explicitly. The time is always "now", and evaluating the next statement is always done in that context. From the perspective of "now", this representation is completely valid.
 
-Because time is implicit in this representation, it is possible for operations to interfere. Any contention for the state between operations, such as concurrent access or temporal coupling (for example, `Repair` can only work when the car is smashed. Or a more familiar example, `CloseConnection` can only work when the connection state is open) can result in an inconsistent state or erase a state before it has a chance to be observed.
+For programming though, this perspective is not without its problems. Because time is implicit in this representation, "now" changes from instruction to instruction, and so it is possible for operations to interfere. Any contention for the state between operations, such as concurrent access (multi-threading) or temporal coupling (`Repair` only makes sense when the car is smashed after a call to `SmashWith`) can result in an inconsistent state. To reason about a program, we also have to mentally evaluate it by stepping through all the instances of "now" that can occur.
 
 There is another, equally valid way of thinking about this story. In this telling we make the time variable explicit. The state of the car is a function of time:
 
 ```csharp
 public static CarState GetCarState(Time t) {
+    const CarState InitialState = CarState.Working;
+    const CarState SmashedByDinosaur = CarState.Smashed;
+    const CarState RepairedState = CarState.Working;
     if (t < 0) 
-        return CarState.Working;
+        return InitialState;
     else if (t >= 0 && t < 10) 
-        return CarState.Smashed;
+        return SmashedByDinosaur;
     else 
-        return CarState.Working;
+        return RepairedState;
 }
 ```
 
-Here we still have state changes, but they aren't destructive. Just because my car is now fixed does not mean that is was never smashed by a giant, 50 metre high mostrosaur. That state was still perfectly valid, it was just at a different time. Because time is an explicit input it is not possible to get interfering states. The output depends purely on the input, is defined for all values of `t`.
+Here we still have state changes, but they aren't destructive. Just because my car is now fixed does not mean that is was never smashed by a giant, 50 metre high mostrosaur. That state was still perfectly valid, it was just at a different time. Because time is an explicit input it is not possible to get interfering states. The output depends purely on the input, and is defined for all values of `t`.
 
-One effect of treating state as a function of time is that data becomes immutable. Once we have data for some time `t`, that data is never going to change; we can't change the past. A change in state over time will result in a new piece of data.
-
-## Imperative code with immutable data
-
-We don't have to lose the imperative story by explicitly handling time. We can just make the data immutable:
-
-    var car = new Car("British Leyland Mini 1000");
-    var smashedCar = car.SmashWith(new DinosaurThing());
-    var repairedCar = smashedCar.Repair();
-
-Here we don't interfere with previous states; they are still perfectly valid for the time they occurred. And we can still return the state of our car as a function of time; we can just return the immutable data representing the car at time `t`:
+One effect of treating state as a function of time is that data necessarily becomes immutable. Once we have data for some time `t`, that data is never going to change; we can't change the past. A change in state over time will result in a new piece of data.
 
 ```csharp
 public static Car GetCar(Time t) {
+    // Works nicer in a lazy / non-strict language... :)
     var car = new Car("British Leyland Mini 1000");
     var smashedCar = car.SmashWith(new DinosaurThing());
     var repairedCar = smashedCar.Repair();
     if (time < 0) return car;
-    else if (time >= 0 && t < 10) return smashedChar;
+    else if (time >= 0 && t < 10) return smashedCar;
     else return repairedCar;
 }
 ```
 
-We have different instances of data representing the one car, but we can associate these using identity (the car's VIN, make, model, etc.). The state of a car with a specific identity can be considered a function of time and identity with an immutable data representation as the output. Again, all these states are valid, they actually occurred in the story, and we just need to be explicit on which moment of reality we need to work with.
+And just because we can explicitly handle time does not mean we have to expose it. Immutable data is enough to ensure we don't interfere with previous states:
+
+```csharp
+    var car = new Car("British Leyland Mini 1000");
+    var smashedCar = car.SmashWith(new DinosaurThing());
+    var repairedCar = smashedCar.Repair();
+```
+
+One thing that may seem troubling is we now have different instances of data representing the one car, but we can associate these using identity (the car's VIN, make, model, etc.) rather than by reference as per the mutable-imperative approach. The state of a car with a specific identity can be considered a function of time and identity with an immutable data representation as the output. Again, all these states are valid, they actually occurred in the story, and we just need to be explicit on which moment of reality we need to work with.
 
 ## Imperative world?
 
-So the world is imperative, full of mutations and side-effects. Or is it? It seems equally valid to say that the world is a function of time (and other variables) that outputs immutable states. Are both perspectives two sides of the same coin?
+So the world is imperative, full of mutations and side-effects. But it seems equally valid to say that the world is a function of time (and other variables) that outputs immutable states. Are both perspectives two sides of the same coin, just separated by their treatment of time?
 
-To me the equivalence of these perspectives matches my admittedly-basic-and-quite-probably-wrong interpretation of the [Church-Turing thesis](http://en.wikipedia.org/wiki/Church%E2%80%93Turing_thesis): all computable programs are computable by both a Turing machine and using the λ-calculus. A Turing machine relies on mutable state, λ-calculus on pure functions. They're all able to express the same set of programs, and they can all represent "real world" information and calculations. 
+To me the potential equivalence of these perspectives matches my admittedly-basic-and-quite-probably-wrong interpretation of the [Church-Turing thesis](http://en.wikipedia.org/wiki/Church%E2%80%93Turing_thesis): all computable programs are computable by both a Turing machine and using the λ-calculus. A Turing machine relies on mutable state, λ-calculus on pure functions. They're all able to express the same set of programs, and they can all represent "real world" information and calculations. 
 
-<!-- FINAL EDITS
-I find this realisation quite interesting, as it leads me to the conclusion I can make much greater use of immutable data in my programs and keep the same level
+The question for programmers is which perspective on state makes programs easier to reason about and work with. And if the answer varies from problem to problem, what particular aspects of a problem make it well-suited to that perspective?
 
-A potentially more valuable question for software developers is which perspective makes programs easier to reason about. If the answer to this varies, what is it about a particular problem that makes one perspective a better match than the other? What to we gain and lose by using each perspective? How much is our opinion swayed by the "primacy of the machine"?
--->
+## Intuition
+
+One thing to consider before you answer is how much of our opinion is swayed by what John Backus referred to as "the primacy of the von Neumann computer".^["Can Programming Be Liberated from the von Neumann Style? A Functional Style and Its Algebra of Programs", John Backus, Communications of the ACM August 1978. [PDF link](http://www.cs.cmu.edu/~crary/819-f09/Backus78.pdf)] 
+
+Most of us have been trained from our very first experience with a computer (Assembler? C? C64 Basic? Java?) until now to think about programs in terms of the von Neumann architecture, where we process an instruction at a time and store to and load from mutable registers. In evaluating these perspectives we need to overcome decades of language and architecture bias. Both perspectives are equally valid when talking about the world around us, both can express the entire set of computable programs, and yet most platforms and languages emphasise mutability.
+
+So it seems reasonable to be a little suspect of both our intuition and of the status quo in this case. Intuitively we know that things change their state, but logically we also recognise that a state depends on time, and any change must accompanied by a change in time. 
 
 ## Conclusion
 
 In summary, don't park right next to a large, city-side harbour unless you have comprehensive car insurance.
 
+And let's challenge ourselves about the idea that mutability is somehow essential to programming and to expressing concepts from the "real world".
+
+But mainly the parking thing.
