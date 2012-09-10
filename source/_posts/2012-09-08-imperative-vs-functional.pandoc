@@ -23,31 +23,39 @@ I returned to my car the next day. It was flattened; the imprint of a giant foot
 
 There are two ways of looking at this story (three if you count "as an unimaginative, poorly-told piece of tripe"). One is from the perspective of mutable state, as commonly associated with imperative programming^[Imperative programming can also be done without mutable state, although [some definitions](http://en.wikipedia.org/wiki/Imperative_programming) include mutability as an essential feature.]. I had a working car, then the car's state changed to "smashed by monstrous dinosaur", the it changed back to working. It was the same car, its state was just changed, and rather forcibly at that. We can even write a program to express what happened:
 
-    var car = new Car("British Leyland Mini 1000");
-    Console.WriteLine(car.State); // prints "Working"
-    car.SmashWith(new DinosaurThing()); 
-    Console.WriteLine(car.State); // prints "Smashed"
-    car.Repair();
-    Console.WriteLine(car.State); // prints "Working"
+```csharp
+var car = new Car("British Leyland Mini 1000");
+Console.WriteLine(car.State); // prints "Working"
+car.SmashWith(new DinosaurThing()); 
+Console.WriteLine(car.State); // prints "Smashed"
+car.Repair();
+Console.WriteLine(car.State); // prints "Working"
+```
 
-There is an implied part of this representation of the story: time. Any state change requires a change in time, although this representation does not mention it explicitly. We have several states in this program, but the one state property is over-written at various times so when we talk about state, we are only referring to the latest, current state. We don't have any access to the times these occur, nor to previous states; we only use the latest. Because time is implicit, it is possible for operations to interfere. Two operations executing at the same time or out-of-order can result in an inconsistent state or erase a state before it had a chance to be observed.
+The `SmashWith` and `Repair` methods have side-effects; they mutate the `State` property of the car as the program executes. One interesting result of this is that the `State` property is always tied to the concept of "now"; its value is inextricably linked to the point in time at which it is called. We have several states in this program, but whenever we talk about state, we are only referring to the current state.
 
-There is another, equally valid way of thinking about this story. In this telling we make the time variable explicit. The state of my car is a function of time:
+I like to think of the concept of time being an *implied* part of this representation. Any state change requires a change in time, but this representation never refers to time explicitly. The time is always "now", and evaluating the next statement is always done in that context.
 
-    public static CarState GetCarState(Time t) {
-        if (t < 0) 
-            return CarState.Working;
-        else if (t >= 0 && t < 10) 
-            return CarState.Smashed;
-        else 
-            return CarState.Working;
-    }
+Because time is implicit in this representation, it is possible for operations to interfere. Any contention for the state between operations, such as concurrent access or temporal coupling (for example, `Repair` can only work when the car is smashed. Or a more familiar example, `CloseConnection` can only work when the connection state is open) can result in an inconsistent state or erase a state before it has a chance to be observed.
+
+There is another, equally valid way of thinking about this story. In this telling we make the time variable explicit. The state of the car is a function of time:
+
+```csharp
+public static CarState GetCarState(Time t) {
+    if (t < 0) 
+        return CarState.Working;
+    else if (t >= 0 && t < 10) 
+        return CarState.Smashed;
+    else 
+        return CarState.Working;
+}
+```
 
 Here we still have state changes, but they aren't destructive. Just because my car is now fixed does not mean that is was never smashed by a giant, 50 metre high mostrosaur. That state was still perfectly valid, it was just at a different time. Because time is an explicit input it is not possible to get interfering states. The output depends purely on the input, is defined for all values of `t`.
 
-## Immutability
+One effect of treating state as a function of time is that data becomes immutable. Once we have data for some time `t`, that data is never going to change; we can't change the past. A change in state over time will result in a new piece of data.
 
-One implication of treating state as a function of time is that data becomes immutable. Once we have data for some time `t`, that data is never going to change; we can't change the past. A change in data will require a change in time.
+## Imperative code with immutable data
 
 We don't have to lose the imperative story by explicitly handling time. We can just make the data immutable:
 
@@ -55,13 +63,24 @@ We don't have to lose the imperative story by explicitly handling time. We can j
     var smashedCar = car.SmashWith(new DinosaurThing());
     var repairedCar = smashedCar.Repair();
 
-Here we don't interfere with previous states; they are still perfectly valid for the time they occurred. After all, we can't change the past. And we can still return the state of our car as a function of time. 
+Here we don't interfere with previous states; they are still perfectly valid for the time they occurred. And we can still return the state of our car as a function of time; we can just return the immutable data representing the car at time `t`:
+
+```csharp
+public static Car GetCar(Time t) {
+    var car = new Car("British Leyland Mini 1000");
+    var smashedCar = car.SmashWith(new DinosaurThing());
+    var repairedCar = smashedCar.Repair();
+    if (time < 0) return car;
+    else if (time >= 0 && t < 10) return smashedChar;
+    else return repairedCar;
+}
+```
 
 We have different instances of data representing the one car, but we can associate these using identity (the car's VIN, make, model, etc.). The state of a car with a specific identity can be considered a function of time and identity with an immutable data representation as the output. Again, all these states are valid, they actually occurred in the story, and we just need to be explicit on which moment of reality we need to work with.
 
 ## Imperative world?
 
-So the world is imperative, full of mutations and side-effects. Well, is it really? It seems equally valid to say that the world is a function of time (and other variables) that outputs immutable states. Are both perspectives two sides of the same coin?
+So the world is imperative, full of mutations and side-effects. Or is it? It seems equally valid to say that the world is a function of time (and other variables) that outputs immutable states. Are both perspectives two sides of the same coin?
 
 To me the equivalence of these perspectives matches my admittedly-basic-and-quite-probably-wrong interpretation of the [Church-Turing thesis](http://en.wikipedia.org/wiki/Church%E2%80%93Turing_thesis): all computable programs are computable by both a Turing machine and using the λ-calculus. A Turing machine relies on mutable state, λ-calculus on pure functions. They're all able to express the same set of programs, and they can all represent "real world" information and calculations. 
 
