@@ -1,13 +1,12 @@
 ---
 layout: post
-title: "It's a mutable, imperative world out there"
-date: 2012-09-02 12:49
+title: "It's an imperative, mutable world out there"
+date: 2012-09-11 10:05
 comments: true
-published: false
-categories: ["functional programming", "imho"]
+categories: ["imho"]
 ---
 
-I've heard Erik Meijer quoted as saying the world is imperative and mutable, and so we should embrace side-effects^[Erik Meijer from GOTO Night August 23, 2012 in Chicago: [one](https://twitter.com/codemiller/status/238780672439885824), [two](https://twitter.com/codemiller/status/238783944043151360), [three](https://twitter.com/puffnfresh/status/238779939053252608)]. I've also heard what I interpret as [pretty much the opposite from Rich Hickey](http://www.infoq.com/presentations/Value-Values). So, which is it? 
+I've heard Erik Meijer quoted as saying the world is imperative and mutable, and so we should embrace side-effects^[Erik Meijer from GOTO Night August 23, 2012 in Chicago: [one](https://twitter.com/codemiller/status/238780672439885824), [two](https://twitter.com/codemiller/status/238783944043151360), [three](https://twitter.com/puffnfresh/status/238779939053252608)]. I've also heard what I interpret as pretty much the opposite from Rich Hickey^[[Rich Hickey, GOTO 2012 Keynote: The Value of Values](http://www.infoq.com/presentations/Value-Values)]. So, which is it? 
 
 I'm not sure, but maybe a story about dinosaurs will help.
 
@@ -36,7 +35,7 @@ The `SmashWith` and `Repair` methods have side-effects; they mutate the `State` 
 
 I tend to think of the concept of time being an *implied* part of this representation. Any state change requires a change in time, but this representation never refers to time explicitly. The time is always "now", and evaluating the next statement is always done in that context. From the perspective of "now", this representation is completely valid.
 
-For programming though, this perspective is not without its problems. Because time is implicit in this representation, "now" changes from instruction to instruction, and so it is possible for operations to interfere. Any contention for the state between operations, such as concurrent access (multi-threading) or temporal coupling (`Repair` only makes sense when the car is smashed after a call to `SmashWith`) can result in an inconsistent state. To reason about a program, we also have to mentally evaluate it by stepping through all the instances of "now" that can occur.
+For programming in particular though, this perspective is not without its problems. Because time is implicit in this representation, "now" changes from instruction to instruction, and so it is possible for operations to interfere. Any contention for the state between operations, such as concurrent access (multi-threading) or temporal coupling (`Repair` only makes sense when the car is smashed after a call to `SmashWith`) can result in an inconsistent state. To reason about a program, we also have to mentally evaluate it by stepping through all the instances of "now" that can occur.
 
 There is another, equally valid way of thinking about this story. In this telling we make the time variable explicit. The state of the car is a function of time:
 
@@ -73,16 +72,16 @@ public static Car GetCar(Time t) {
 And just because we can explicitly handle time does not mean we have to expose it. Immutable data is enough to ensure we don't interfere with previous states:
 
 ```csharp
-    var car = new Car("British Leyland Mini 1000");
-    var smashedCar = car.SmashWith(new DinosaurThing());
-    var repairedCar = smashedCar.Repair();
+var car = new Car("British Leyland Mini 1000");
+var smashedCar = car.SmashWith(new DinosaurThing());
+var repairedCar = smashedCar.Repair();
 ```
 
 One thing that may seem troubling is we now have different instances of data representing the one car, but we can associate these using identity (the car's VIN, make, model, etc.) rather than by reference as per the mutable-imperative approach. The state of a car with a specific identity can be considered a function of time and identity with an immutable data representation as the output. Again, all these states are valid, they actually occurred in the story, and we just need to be explicit on which moment of reality we need to work with.
 
 ## Imperative world?
 
-So the world is imperative, full of mutations and side-effects. But it seems equally valid to say that the world is a function of time (and other variables) that outputs immutable states. Are both perspectives two sides of the same coin, just separated by their treatment of time?
+So the world is imperative, full of mutations and side-effects. But it seems equally valid to say that the world is a function of time (and other variables) that outputs immutable states. Perhaps both perspectives are two sides of the same coin, just separated by their treatment of time.
 
 To me the potential equivalence of these perspectives matches my admittedly-basic-and-quite-probably-wrong interpretation of the [Church-Turing thesis](http://en.wikipedia.org/wiki/Church%E2%80%93Turing_thesis): all computable programs are computable by both a Turing machine and using the λ-calculus. A Turing machine relies on mutable state, λ-calculus on pure functions. They're all able to express the same set of programs, and they can all represent "real world" information and calculations. 
 
@@ -90,11 +89,11 @@ The question for programmers is which perspective on state makes programs easier
 
 ## Intuition
 
-One thing to consider before you answer is how much of our opinion is swayed by what John Backus referred to as "the primacy of the von Neumann computer".^["Can Programming Be Liberated from the von Neumann Style? A Functional Style and Its Algebra of Programs", John Backus, Communications of the ACM August 1978. [PDF link](http://www.cs.cmu.edu/~crary/819-f09/Backus78.pdf)] 
+One thing to consider before you answer is how much of our opinion is swayed by what John Backus referred to as "the primacy of the von Neumann computer"^["Can Programming Be Liberated from the von Neumann Style? A Functional Style and Its Algebra of Programs", John Backus, Communications of the ACM August 1978. [PDF link](http://www.cs.cmu.edu/~crary/819-f09/Backus78.pdf)].
 
 Most of us have been trained from our very first experience with a computer (Assembler? C? C64 Basic? Java?) until now to think about programs in terms of the von Neumann architecture, where we process an instruction at a time and store to and load from mutable registers. In evaluating these perspectives we need to overcome decades of language and architecture bias. Both perspectives are equally valid when talking about the world around us, both can express the entire set of computable programs, and yet most platforms and languages emphasise mutability.
 
-So it seems reasonable to be a little suspect of both our intuition and of the status quo in this case. Intuitively we know that things change their state, but logically we also recognise that a state depends on time, and any change must accompanied by a change in time. 
+So it seems reasonable to be a little suspect of both our intuition and of the status quo in this case. Intuitively we understand that things change their state, but logically we also recognise that state depends on time, and a new state at a particular time does not destroy the state at the previous time.
 
 ## Conclusion
 
