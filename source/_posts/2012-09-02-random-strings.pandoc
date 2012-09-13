@@ -42,7 +42,7 @@ The `randomR` function takes as input a tuple with the lower and upper-bounds of
     ghci> randomR ('a','z') g
     ('n',1720602 40692)
 
-Here we've seeded a new generator with the number `42`, and generated a number between `(1,10)` to get `2`, and a character between `('a','z')` to get `'n'`. So we've got random character generation under control.
+Here we've seeded a new generator with the number `42` and generated a number between `(1,10)` to get `2`, and a character between `('a','z')` to get `'n'`. So we've got random character generation under control.
 
 ## Multiple random characters
 
@@ -78,16 +78,16 @@ Here we've used the name `getRandomChar` to refer to the `randomR ('a','z')` fun
 
 We've also got a `getRandomStringWithLength` function which takes an integer (how many characters long the string should be) and a generator, and outputs the resulting string and the last generator produced. It calls `replicate i getRandomChar`, which will return a list of `getRandomChar` functions. If we call `replicate 3 getRandomChar`, we'll get `[getRandomChar, getRandomChar, getRandomChar]`. We need to reduce this list, accumulating characters and the most recent generator as we go.
 
-For that `getRandomStringWithLength` uses a [fold](http://davesquared.net/2012/02/folds-pt1-from-recursion-to-folds.html). The fold's initial value (seed) is an empty list and the first generator passed in (`([],g)`), and from their we `apply` each of the `charGenerators`.
+For that `getRandomStringWithLength` uses a [fold](http://davesquared.net/2012/02/folds-pt1-from-recursion-to-folds.html). The fold's initial value (seed) is an empty list and the first generator passed in (`([],g)`), and from there we `apply` each of the `charGenerators`.
 
-The `apply` function is fairly hideous. It takes the current `getRandomChar` function and the `(string, generator)` value accumulated in the fold, applies the function to that generator, and returns a tuple of `(newString, newGenerator)`. But, hideousness aside, we now have a function that will generate a random string of characters:
+The `apply` function is fairly hideous. It takes the current `getRandomChar` function and the `(string, generator)` value accumulated in the fold, applies the function to that generator, and returns a tuple of `(newString, newGenerator)`. (To be honest I just wrote down the required type signature and that was really the only implementation I could think of that would satisfy it.) But, hideousness aside, we now have a function that will generate a random string of characters:
 
     ghci> getRandomStringWithLength 5 (mkStdGen 42)
     ("oefdn",1421974012 652912057)
 
-## Encapsulating State
+## Encapsulating state
 
-So let's tidy up this mess I've made. The `getRandomChar` function takes some initial generator, and returns a tuple with a character and a new generator. In general terms it's a function `s -> (a,s)`. A more general way to think of this is that for some initial state `s`, we want to return a value `a` and a new state of `s`. We'll wrap this up in a new data type:
+So let's tidy up this mess I've made. The `getRandomChar` function takes some initial generator, and returns a tuple with a character and a new generator. A more general way to think of this is as a function `s -> (a,s)`, so that for some initial state `s`, we want to return a value `a` and a new state of `s`. We'll wrap this computation up in a new data type:
 
     newtype State s a = State { runState :: s -> (a,s) }
 
@@ -99,13 +99,51 @@ Now we can modify `getRandomChar` to return a `State`, and we can run through th
     ghci> runState randomChar (mkStdGen 42)
     ('n',1720602 40692)
 
+## Combining stateful computations
 
-<!-- in progress 
- * should i bother trying to justify implementing Monad typeclass? 
- * could try on grounds that i want to chain together previous values, within the context of threaded state.
- * but in reality i new the state pattern fit, just not how to work it. Should probably come clean
+Now what we want to do is to chain together functions which work on states, so that the state output from one function gets fed into the input of the next function (which we saw in [Multiple random characters](#multiple-random-characters)). In [my take on monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html#monads) I concluded "Monads let us apply functions inside a context which depend on previous results". In this case our next random number depends on the generator produced by the previous call. So let's wire up a monad instance based on our state type, so that when we bind a state to a function, the new state gets passed as the input to that function:
 
-->
+```haskell
+instance Monad (State s) where
+    -- For a monad m:
+    --   (>>=) :: m a -> (a -> m b) -> m b
+    -- For (State s), substitute for m:
+    --   (>>=) :: State s a -> (a -> State s b) -> State s b
+    sa >>= f  = State $ \s ->
+                let (a, s') = runState sa s
+                    sb        = f a
+                in runState sb s'
+
+    -- return :: a -> m a
+    -- return :: a -> State s a
+    return a = State $ \s -> (a, s)
+```
+
+The bind function `>>=` is where all the work gets done. By substituting `State s` into the required type signatue, we can see bind needs to take a state which produces an `a`, and a function which takes an `a` from a state and returns a new state `State s b`, and outputs that `State s b`.
+
+So the first argument is a state context that produces an `a`. Let's call this `sa`. The second argument is a function `f` that given an `a` will produce a state context that will give us a `b`. The output will need to be a new `State s b`, which is a type that holds a function `s -> (b, s)`. So we'll start by creating this state, `State $ \s -> ...`.
+
+This function in this new state, when given a state `s`, will run `sa` to produce a tuple containing an `a` and new state `s'`. If we feed this `a` into the function `f` we'll get a state that produces a `b`, which we'll call `sb`. 
+
+We can't just output `sb` though. Its type is `sb :: State s b`, so the output from out `>>=` function would be `State s (State s b)` rather than `State s b`. We need to get the `b` out of that inner expression; flatten the structure out. To do this we call `runState sb s'`, which gets the `b` out of `sb` by passing through the state `s'` from the previous call. In this way we ensure that the state transformation from `s` to `s'` get passed through to the next bound function.
+
+For completeness, the `return` function takes some value `a` and returns a `State` that, given a state `s`, will always produce that value `a` and the same state `s`. In other words, it takes an ordinary value and puts it into the context of a calculation that takes a state and returns `(value, state)`.
+
+## Using our shiny new monad instance
+
+We can now use our state monad to produces strings of a certain length.
+
+<!-- IN PROGRESS ->
+
+
+
+
+
+
+
+
+
+
 Remember our `getRandomStringWithLength` function called `replicate i getRandomChar` to get a `[g -> (Char, g)]`? Well if we use our new function, `replicate i randomChar`, we get `[State g Char]`. So somewhere along the line we're going to want a function `State g Char -> (g -> [State g Char]) -> State g String`.
 
     instance Monad (State s) where
