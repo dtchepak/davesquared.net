@@ -240,6 +240,6 @@ First, to implement the `Stateful s` monad instance was a matter of mechanically
 
 When it comes to using that instance, I then had to forget how `>>=` works, and focus instead on what it does: it lets me create a new stateful computation based on the value produced by an existing computation. It seems one of those things that is very easy to over-think, and the only way I've found around this is to focus on what (not how) the abstraction doing its thing, and following the types.
 
-If you've found any of this hard to follow, try working through the example and seeing if that clears it up. If you're still stuck send me a note; I'd be really keen to try and help you out.
+The other thing I got from working through this is a bit more of a sense of how useful the monad abstraction is; we get a [whole lot of useful functions](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#g:2) for free, like `sequence` and `replicateM`.
 
-
+If you've found any of this hard to follow, try working through the example and seeing if that clears it up. If you're still stuck send me a note; I'd be really keen to try and help out.
