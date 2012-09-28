@@ -1,9 +1,8 @@
 ---
 layout: post
-title: "State monad and random strings"
-date: 2012-09-02 12:49
+title: "State monad"
+date: 2012-10-01 09:00
 comments: true
-published: false
 categories: ["functional programming", "haskell"]
 ---
 
@@ -12,17 +11,6 @@ During some recent work I found the need to use a State monad. Unfortunately I h
 If you've never encountered monads before then you may want to start with this [introduction to monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html) (yes, yes, Yet Another Monad tutorial. Feel free to [read a good one instead](http://www.haskell.org/haskellwiki/Monad_tutorials_timeline) if you don't like mine :)).
 
 <!-- more -->
-
-## A little context
-
-So I found myself needing to generate random strings to anonymise the data in a bunch of fields. Using a `replaceField` function I was able to replace the field contents with a hard coded string, like this:
-
-    ghci> input
-    ["first: hello","second: world","third: !!!"]
-    ghci> map (replaceField "abc") input
-    ["first: abc","second: abc","third: abc"]
-
-Now I just needed to replace the `"abc"` string with randomly generated strings. 
 
 <div class="note">**Aside:** I think we can actually use [QuickCheck](http://www.haskell.org/haskellwiki/Introduction_to_QuickCheck2) to generate arbitrary strings for us. But where's the fun in that?</div>
 
@@ -80,7 +68,7 @@ We've also got a `getRandomStringWithLength` function which takes an integer (ho
 
 For that `getRandomStringWithLength` uses a [fold](http://davesquared.net/2012/02/folds-pt1-from-recursion-to-folds.html). The fold's initial value (seed) is an empty list and the first generator passed in (`([],g)`), and from there we `apply` each of the `charGenerators`.
 
-The `apply` function is fairly hideous. It takes the current `getRandomChar` function and the `(string, generator)` value accumulated in the fold, applies the function to that generator, and outputs a tuple of `(newString, newGenerator)`. (To be honest I just wrote down the required type signature and that was really the only implementation I could think of that would satisfy it.) But, hideousness aside, we now have a function that will generate a random string of characters:
+The `apply` function is fairly hideous. It takes the current `getRandomChar` function and the `(string, generator)` value accumulated in the fold, applies the function to that generator, and outputs a tuple of `(newString, newGenerator)`. But, hideousness aside, we now have a function that will generate a random string of characters:
 
     ghci> getRandomStringWithLength 5 (mkStdGen 42)
     ("oefdn",1421974012 652912057)
@@ -91,46 +79,66 @@ So let's tidy up this mess I've made. The `getRandomChar` function takes some in
 
     newtype Stateful s a = Stateful { runState :: s -> (a,s) }
 
-Now we can modify `getRandomChar` to output a `Stateful` computation, and we can run through that state using `runState`:
+Now we can modify `getRandomChar` to output a `Stateful` computation, and we can run a state through that computation using `runState`:
 
-    randomChar :: (RandomGen g) => Stateful g Char
-    randomChar = Stateful $ randomR ('a','z')
+```haskell
+randomChar :: (RandomGen g) => Stateful g Char
+randomChar = Stateful $ randomR ('a','z')
 
-    ghci> runState randomChar (mkStdGen 42)
-    ('n',1720602 40692)
+-- ghci> runState randomChar (mkStdGen 42)
+-- ('n',1720602 40692)
+```
 
 ## Combining stateful computations
 
-Now what we want to do is to chain together functions which work on states, so that the state output from one function gets fed into the input of the next function (which we saw in [Multiple random characters](#multiple-random-characters)). In [my take on monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html#monads) I concluded "Monads let us apply functions inside a context which depend on previous results". In this case our next random number depends on the generator produced by the previous call. So let's wire up a monad instance based on our `Stateful` type, so that when we bind two stateful computations, the new state produced by one gets passed as the input to the next:
+Now what we want to do is to chain together functions which work on states, so that the state output from one function gets fed into the input of the next function (which we saw in [Multiple random characters](#multiple-random-characters)). In [my take on monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html#monads) I concluded "Monads let us apply functions inside a context which depend on previous results". In this case our next random number depends on the random generator produced by the previous call. So let's wire up a monad instance based on our `Stateful` type, so that when we combine two stateful computations, the new state produced by one gets passed as the input to the next.
+To do this we'll implement two functions. The first is the bind function `>>=`:
+
+``` haskell
+-- For a monad m:
+(>>=) :: m a -> (a -> m b) -> m b
+
+-- For (Stateful s), substitute for m:
+(>>=) :: Stateful s a -> (a -> Stateful s b) -> Stateful s b
+```
+
+By substituting our monad type `Stateful s` into the type signature, we can see bind needs to take a stateful computation which produces an `a`, and a function which takes an `a` and outputs a new stateful computation `Stateful s b`. The entire bind function ultimately outputs a `Stateful s b`, a stateful computation that combines the result of the initial `Stateful s a` and the `Stateful s b` produced from the `a -> Stateful s b` function, feeding through the correct state at each step. 
+
+The second function we need is `return`, which will take some `a` and return a new computation that always returns that `a`:
+
+``` haskell
+return :: a -> m a
+-- Substituting in for (Stateful s):
+return :: a -> Stateful s a
+```
+
+## Implementing our state monad
+
+Here's an implementation that satisfies these type signatures:
 
 ```haskell
 instance Monad (Stateful s) where
-    -- For a monad m:
-    --   (>>=) :: m a -> (a -> m b) -> m b
-    -- For (Stateful s), substitute for m:
-    --   (>>=) :: Stateful s a -> (a -> Stateful s b) -> Stateful s b
+    -- (>>=) :: Stateful s a -> (a -> Stateful s b) -> Stateful s b
     statefulA >>= f 
         = Stateful $ \s ->
                 let (a, s')   = runState statefulA s
                     statefulB = f a
-                in runState statefulB s'
+                    (b, s'')  = runState statefulB s'
+                in (b, s'')
 
-    -- return :: a -> m a
     -- return :: a -> Stateful s a
     return a = Stateful $ \s -> (a, s)
 ```
 
-The bind function `>>=` is where all the work gets done. By substituting `Stateful s` into the required type signature, we can see bind needs to take a stateful computation which produces an `a`, and a function which takes an `a` and outputs a new stateful computation `Stateful s b`. The entire bind function ultimately outputs a `Stateful s b`, a stateful computation that combines the result of the initial `Stateful s a` and the `Stateful s b` produced from the `a -> Stateful s b` function, feeding through the correct state at each step. Let's go through the steps required to satisfy this function signature.
-
-### Stepping through the bind implementation
-
-The first argument is a stateful computation that produces an `a`. Let's call this `statefulA`. The second argument is a function `f` that given an `a` will produce a stateful computation that will give us a `b`. The final output will need to be a new `Stateful s b`, which is a type that holds a function `s -> (b, s)`. So we'll start by creating this state, `State $ \s -> ...`.
+The first argument is a stateful computation that produces an `a`. Let's call this `statefulA`. The second argument is a function `f` that given an `a` will produce a stateful computation that will give us a `b`. The final output will need to be a new `Stateful s b`, which is a type that holds a function `s -> (b, s)`. So we'll start by creating an instance of this type, `Stateful $ \s -> ...`.
 
 The function in this new stateful computation, when given a state `s`, will run `statefulA` to produce a tuple containing an `a` and new state `s'`. If we feed this `a` into the function `f` we'll get a new stateful computation that produces a `b`, which we'll call `statefulB`. 
 
-We can't just output `statefulB` though. Its type is `statefulB :: Stateful s b`, so the output from our `>>=` function would be `Stateful s (Stateful s b)` rather than `Stateful s b`. We need to get the `b` out of that inner expression; flatten the structure out. To do this we call `runState statefulB s'`, which gets the `b` out of `statefulB` by passing through the new state `s'` from the previous call. In this way we ensure that the state transformation from `s` to `s'` is passed through to the next bound function, which was our aim from the beginning.
+We can't just output `statefulB` though. Its type is `statefulB :: Stateful s b`, but we're in the middle of implementing a function `s -> (b, s)` that we're already wrapping in a `Stateful` context. We don't want to end up with a `Stateful (Stateful s b)`! 
 
-For completeness, the `return` function takes some value `a` and returns a `Stateful` computation that, given a state `s`, will always produce that value `a` and the same state `s`. In other words, it takes an ordinary value and puts it into the context of a stateful computation that takes a state and returns `(value, state)`.
+So instead we output the result of calling `runState statefulB s'`, which gets a tuple containing a `b` and the next state `s''` out of `statefulB` by passing through the state `s'` from the previous call. In this way we ensure that the state transformation from `s` to `s'` to `s''` is passed through the resulting stateful computation, which was our aim from the beginning.
+
+That's the bulk of the work done, but for completeness, the `return` function takes some value `a` and returns a `Stateful` computation that, given a state `s`, will always produce that value `a` and the same state `s`. In other words, it takes an ordinary value and puts it into the context of a stateful computation that takes a state and returns `(value, state)`.
 
 <div class="note">**Aside:** We should also make `Stateful` and instance of `Functor` and `Applicative` (all monads are also functors and applicative functors), but I'll omit that step as this post is long enough already. If you'd like me to go through it let me know. We should also make sure that our monad implementation satisfies the [Monad Laws](http://www.haskell.org/haskellwiki/Monad_Laws), but again, long post, so let's press on.</div>
 
@@ -165,22 +173,73 @@ randomStringWithLength i = undefined -- ???
 
 Our original `getRandomStringWithLength` function called `replicate i getRandomChar` to get a `[g -> (Char, g)]`. If we use our new function, `replicate i randomChar`, we get `[Stateful g Char]`. We'd like a way to convert a `[Stateful g Char]` to a `Stateful g [Char]`. 
 
-Haskell has a built-in function called [`sequence`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Prelude.html#v:sequence), which does just this. For some monad `m`, it has the signature `[m a] -> m [a]`. Substituting in for our `Stateful s` monad, this gives us `[Stateful s a] -> Stateful s [a]`. Which means we can generate a random string from `randomChar` like this:
+Haskell has a built-in function called [`sequence`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Prelude.html#v:sequence), which does just this. For some monad `m`, it has the signature `[m a] -> m [a]`. Substituting in for our `Stateful s` monad when used to produce a `Char`, this gives us `[Stateful s Char] -> Stateful s [Char]`. Now `[Char]` is the same as `String`, which means we can generate a stateful computation for a random string from `randomChar` like this:
 
 ``` haskell
 randomStringWithLength :: (RandomGen g) => Int -> Stateful g String
 randomStringWithLength i = sequence (replicate i randomChar)
                    -- or = (sequence . replicate i) randomChar
                    -- or = replicateM i randomChar
+
+-- ghci> runState (randomStringWithLength 10) (mkStdGen 42)
+-- ("ndfeolyrgn",2052659270 1336516156)
 ```
 
 I assume this pattern of `replicate` and `sequence` is fairly common, has Haskell provides a [`replicateM`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#v:replicateM) function that does just this.
 
+## Now with 12% extra randomness!
 
-<!-- ****** IN PROGRESS ****** -->
+Now let's randomise the string length. 
 
+```haskell
+randomString :: (RandomGen g) => Stateful g String
+randomString = state $ \g ->
+    let (charsToGen, g') = randomR (1,10) g
+    in  runState (randomStringWithLength charsToGen) g'
+```
 
-## References
+This works, but we're back to explicitly passing around the state of the random number generator. That's no good. Instead we can create a stateful computation for getting a random number between 1 and 10 using `Stateful (randomR (1,10))`, and bind that to our `randomStringWithLength` function. This will do the work of passing the random number and new state into our `randomStringWithLength` function:
 
-* ["How to use random numbers?", Albert Y. C. Lai](http://www.vex.net/~trebla/haskell/random.xhtml)
+```haskell
+randomString :: (RandomGen g) => Stateful g String
+randomString = Stateful (randomR (1,10)) >>= (\i -> randomStringWithLength i)
+       -- or just:
+       --   = Stateful (randomR (1,10)) >>= randomStringWithLength
+
+-- ghci> runState randomString (mkStdGen 1234)
+-- ("xxetyzjjrk",995854900 498340277)
+-- ghci> runState randomString (mkStdGen 4321)
+-- ("jbetvvma",876562129 1422611300)
+-- ghci> runState randomString (mkStdGen 1423)
+-- ("ikavsm",962541241 535353314)
+```
+
+## Using the built-in State monad
+
+Haskell's built in state moand is called `State` (rather than `Stateful`) and is in the `Control.Monad.State` module. We can translate our example very quickly by adding an `import`, changing references to the type `Stateful` to `State`, and constructing new stateful computations using the `state` function:
+
+``` haskell
+import Control.Monad.State
+import System.Random
+
+randomChar :: (RandomGen g) => State g Char
+randomChar = state $ randomR ('a','z')
+
+randomStringWithLength :: (RandomGen g) => Int -> State g String
+randomStringWithLength i = replicateM i randomChar
+
+randomString :: (RandomGen g) => State g String
+randomString = state (randomR (1,10)) >>= randomStringWithLength
+```
+
+## Parting thoughts
+
+Until I walked through the steps I had a tough time understanding how the state monad worked. One thing that helped me to understand it was to force myself to switch between the different levels of abstraction. 
+
+First, to implement the `Stateful s` monad instance was a matter of mechanically substituting in types for `>>=` and `return`, then building up expressions that satisfied those types, taking care to make sure I used all the variables involved so I didn't drop out any terms. 
+
+When it comes to using that instance, I then had to forget how `>>=` works, and focus instead on what it does: it lets me create a new stateful computation based on the value produced by an existing computation. It seems one of those things that is very easy to over-think, and the only way I've found around this is to focus on what (not how) the abstraction doing its thing, and following the types.
+
+If you've found any of this hard to follow, try working through the example and seeing if that clears it up. If you're still stuck send me a note; I'd be really keen to try and help you out.
+
 
