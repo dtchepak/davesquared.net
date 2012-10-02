@@ -1,16 +1,19 @@
 ---
 layout: post
 title: "State monad"
-date: 2012-10-01 09:00
+date: 2012-10-02 21:55
 comments: true
 categories: ["functional programming", "haskell"]
 ---
 
-During some recent work I found the need to use a State monad. Unfortunately I had no idea how to do this. In this post we'll retrace the steps I took while trying to generate random strings with Haskell. We'll start by coding specific, non-monadic pieces to solve the problem, then generalise this by implementing our own State monad, before finally switching over to use Haskell's State monad. By the end of it we'll hopefully all understand the State monad (which is more than I can say for when I first started tackling this problem :)).
+During some recent work I found the need to use the State monad. Unfortunately I had no idea how to do this. 
 
-If you've never encountered monads before then you may want to start with this [introduction to monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html) (yes, yes, Yet Another Monad tutorial. Feel free to [read a good one instead](http://www.haskell.org/haskellwiki/Monad_tutorials_timeline) if you don't like mine :)).
+In this post we'll retrace the steps I took while trying to generate random strings with Haskell. We'll start by coding specific, non-monadic pieces to solve the problem, then generalise this by implementing our own State monad, before finally switching over to use Haskell's implementation. By the end of it we'll hopefully all understand the State monad (which is more than I can say for when I first started tackling this problem :)).
 
 <!-- more -->
+
+If you've never encountered monads before then you may want to start with my [introduction to monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html) (yes, yes, Yet Another Monad tutorial. Feel free to [read a good one instead](http://www.haskell.org/haskellwiki/Monad_tutorials_timeline) if you don't like mine :)).
+
 
 <div class="note">**Aside:** I think we can actually use [QuickCheck](http://www.haskell.org/haskellwiki/Introduction_to_QuickCheck2) to generate arbitrary strings for us. But where's the fun in that?</div>
 
@@ -22,7 +25,7 @@ To get a (pseudo-)random value we can use Haskell's `System.Random` module:
     ghci> :t randomR
     randomR :: (RandomGen g, Random a) => (a, a) -> g -> (a, g)
 
-The `randomR` function takes as input a tuple with the lower and upper-bounds of the random value to generate, and a random number generator. It's output is a tuple consisting of a random value within those bounds, and a new generator which will generate the next random value in the sequence. (This will work for any type `a` that is an instance of the `Random` type class, and any generator `g` which is an instance of `RandomGen`.) We can use it like this:
+The `randomR` function takes as input a tuple with the lower and upper-bounds of the random value to generate, and a random number generator. Its output is a tuple consisting of a random value within those bounds, and a new generator which will generate the next random value in the sequence. (This will work for any type `a` that is an instance of the `Random` type class, and any generator `g` which is an instance of `RandomGen`.) We can use it like this:
 
     ghci> let g = mkStdGen 42
     ghci> randomR (1,10) g
@@ -138,7 +141,7 @@ We can't just output `statefulB` though. Its type is `statefulB :: Stateful s b`
 
 So instead we output the result of calling `runState statefulB s'`, which gets a tuple containing a `b` and the next state `s''` out of `statefulB` by passing through the state `s'` from the previous call. In this way we ensure that the state transformation from `s` to `s'` to `s''` is passed through the resulting stateful computation, which was our aim from the beginning.
 
-That's the bulk of the work done, but for completeness, the `return` function takes some value `a` and returns a `Stateful` computation that, given a state `s`, will always produce that value `a` and the same state `s`. In other words, it takes an ordinary value and puts it into the context of a stateful computation that takes a state and returns `(value, state)`.
+That's the bulk of the work done, but for completeness let's go look at the `return` function. It takes some value `a` and returns a `Stateful` computation that, given a state `s`, will always produce that value `a` and the same state `s`. In other words, it takes an ordinary value and puts it into the context of a stateful computation that takes a state and returns `(value, state)`.
 
 <div class="note">**Aside:** We should also make `Stateful` and instance of `Functor` and `Applicative` (all monads are also functors and applicative functors), but I'll omit that step as this post is long enough already. If you'd like me to go through it let me know. We should also make sure that our monad implementation satisfies the [Monad Laws](http://www.haskell.org/haskellwiki/Monad_Laws), but again, long post, so let's press on.</div>
 
@@ -173,7 +176,7 @@ randomStringWithLength i = undefined -- ???
 
 Our original `getRandomStringWithLength` function called `replicate i getRandomChar` to get a `[g -> (Char, g)]`. If we use our new function, `replicate i randomChar`, we get `[Stateful g Char]`. We'd like a way to convert a `[Stateful g Char]` to a `Stateful g [Char]`. 
 
-Haskell has a built-in function called [`sequence`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Prelude.html#v:sequence), which does just this. For some monad `m`, it has the signature `[m a] -> m [a]`. Substituting in for our `Stateful s` monad when used to produce a `Char`, this gives us `[Stateful s Char] -> Stateful s [Char]`. Now `[Char]` is the same as `String`, which means we can generate a stateful computation for a random string from `randomChar` like this:
+Haskell has a built-in function called [`sequence`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Prelude.html#v:sequence) which does just this. It has the signature `[m a] -> m [a]`, for any monad `m`. Substituting in for our `Stateful s` monad, when producing a `Char`, this gives us `[Stateful s Char] -> Stateful s [Char]`. Now `[Char]` is the same as `String`, which means we can generate a stateful computation for a random string from `randomChar` like this:
 
 ``` haskell
 randomStringWithLength :: (RandomGen g) => Int -> Stateful g String
@@ -189,7 +192,7 @@ I assume this pattern of `replicate` and `sequence` is fairly common, has Haskel
 
 ## Now with 12% extra randomness!
 
-Now let's randomise the string length. 
+Let's randomise the string length: 
 
 ```haskell
 randomString :: (RandomGen g) => Stateful g String
@@ -216,7 +219,7 @@ randomString = Stateful (randomR (1,10)) >>= (\i -> randomStringWithLength i)
 
 ## Using the built-in State monad
 
-Haskell's built in state moand is called `State` (rather than `Stateful`) and is in the `Control.Monad.State` module. We can translate our example very quickly by adding an `import`, changing references to the type `Stateful` to `State`, and constructing new stateful computations using the `state` function:
+Haskell's built-in state monad is called `State` (rather than `Stateful`) and is in the `Control.Monad.State` module. We can translate our example very quickly by adding an `import`, changing references from the type `Stateful` to `State`, and constructing new stateful computations using the `state` function:
 
 ``` haskell
 import Control.Monad.State
@@ -234,12 +237,12 @@ randomString = state (randomR (1,10)) >>= randomStringWithLength
 
 ## Parting thoughts
 
-Until I walked through the steps I had a tough time understanding how the state monad worked. One thing that helped me to understand it was to force myself to switch between the different levels of abstraction. 
+Until I walked through the steps I had a tough time understanding how the State monad worked. One thing that helped me to understand it was to force myself to switch between the different levels of abstraction. 
 
-First, to implement the `Stateful s` monad instance was a matter of mechanically substituting in types for `>>=` and `return`, then building up expressions that satisfied those types, taking care to make sure I used all the variables involved so I didn't drop out any terms. 
+First, implementing the `Stateful s` monad instance was a matter of mechanically substituting in types for `>>=` and `return`, then building up expressions that satisfied those types, taking care to make sure I used all the variables involved so I didn't drop out any terms. 
 
-When it comes to using that instance, I then had to forget how `>>=` works, and focus instead on what it does: it lets me create a new stateful computation based on the value produced by an existing computation. It seems one of those things that is very easy to over-think, and the only way I've found around this is to focus on what (not how) the abstraction doing its thing, and following the types.
+When it came to using that instance, I found it helped to forget how `>>=` works, and focus instead on what it does: it lets us create a new stateful computation based on the value produced from an existing computation. It seems to be one of those things that is very easy to over-think, and the only way I've found around this is to focus on what (not how) the abstraction doing its thing, and following the types.
 
-The other thing I got from working through this is a bit more of a sense of how useful the monad abstraction is; we get a [whole lot of useful functions](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#g:2) for free, like `sequence` and `replicateM`.
+Another thing I got from working through this is a bit more of a sense of how useful the monad abstraction is; we get a [whole lot of useful functions](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#g:2) for free, like `sequence` and `replicateM`. The State monad itself ensures we can combine these and our own functions while ensuring our state gets reliably passed through the entire computation.
 
-If you've found any of this hard to follow, try working through the example and seeing if that clears it up. If you're still stuck send me a note; I'd be really keen to try and help out.
+If you've found any of this hard to follow please send me an email or leave a comment; I'd be really keen to try and help out.
