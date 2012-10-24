@@ -85,7 +85,7 @@ module Jekyll
       if @filetype
         source += " #{highlight(code, @filetype)}</figure>"
       else
-        source += "#{tableize_code(code.lstrip.rstrip.gsub(/</,'&lt;'))}</figure>"
+        source += "#{inline_code(code.lstrip.rstrip.gsub(/</,'&lt;'))}</figure>"
       end
       source = safe_wrap(source)
       source = context['pygments_prefix'] + source if context['pygments_prefix']
