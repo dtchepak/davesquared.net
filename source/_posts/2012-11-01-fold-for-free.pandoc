@@ -4,6 +4,7 @@ title: "Fold for free"
 date: 2012-10-24 12:57
 comments: true
 categories: ["functional programming", "haskell"]
+published: false
 ---
 
 I found this beautiful little example while reading John Hughes' ["Why Functional Programming Matters"](http://www.cs.kent.ac.uk/people/staff/dat/miranda/whyfp90.pdf) [PDF].
