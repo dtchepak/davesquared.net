@@ -1,0 +1,103 @@
+---
+layout: post
+title: "Fold for free"
+date: 2012-10-24 12:57
+comments: true
+categories: ["functional programming", "haskell"]
+---
+
+I found this beautiful little example while reading John Hughes' ["Why Functional Programming Matters"](http://www.cs.kent.ac.uk/people/staff/dat/miranda/whyfp90.pdf) [PDF].
+
+## List recursion
+
+Here are a few list processing functions written using recursion:
+
+```haskell
+sum [] = 0
+sum (a:as) = a + sum as
+
+length [] = 0
+length (a:as) = 1 + length as
+
+map f [] = []
+map f (a:as) = (f a) : map f as
+```
+
+They all have the same recursive structure; a base case for the empty list `[]`, and a case that breaks the list into head and tail `a:as`. The second case performs some function on the list head and on the result of a recursive call on the rest of the list.
+
+The functions differ in the value they return for the empty list case, and the function they use to combine the head of the list and the result of the recursive call on the tail.
+
+## Expressing `sum` without explicit recursion
+
+Let's take a closer look at the `sum` function with this in mind. 
+
+```haskell
+sum [] = 0
+sum (a:as) = a + sum as
+```
+
+It returns `0` for the empty list case, and uses `(+)` as its combining function. If we imagine we have some function `foo` which takes care of all the recursion stuff for us, then our `sum` function becomes a function of `foo`, `(+)`, and `0`.
+
+```haskell
+sum = foo (+) 0
+```
+
+## Solving for `foo`
+
+We now have two definitions for `sum`, a recursive one and one in terms of `foo`. We can solve these two equations by substituting the second `sum` definition into the original. Everywhere we had `sum`, we'll put `foo (+) 0`. We've said they are equivalent, so we know this is ok.
+
+
+```haskell
+sum [] = 0
+sum (a:as) = a + sum as
+
+let sum = foo (+) 0
+
+(foo (+) 0) [] = 0
+(foo (+) 0) (a:as) = a + ((foo (+) 0) as)
+```
+
+Let's generalise this a little. `foo` is a function which takes another function (`(+)` in this case) and a value (`0` here). We can write this as `foo f x`, where `f = (+)` and `x = 0`.
+
+```haskell
+(foo (+) 0) [] = 0
+(foo (+) 0) (a:as) = a + ((foo (+) 0) as)
+
+-- Let: 
+--   foo (+) 0 = foo f x
+-- So: 
+--   f = (+)
+--   x = 0
+
+(foo f x) [] = x
+(foo f x) (a:as) = a `f` ((foo f x) as)
+```
+
+All we've done is substitute for different values, so we can be happy we haven't changed anything thanks to the equivalences we've declared between expressions.
+
+Finally, we can remove redundant parentheses and move `f` to its more common prefix position:
+
+```haskell
+foo f x [] = x
+foo f x (a:as) = f a (foo f x as)
+```
+
+And while we're at it let's call `foo` by its more common name:
+
+
+```haskell
+foldr f x [] = x
+foldr f x (a:as) = f a (foldr f x as)
+```
+
+So while I've [previously struggled to derive a right fold implementation](http://davesquared.net/2012/02/folds-pt1-from-recursion-to-folds.html), we've derived a correct one by performing straightforward substitution into an existing recursive function.
+
+<!--
+## Why I find this beautiful
+
+* shows value of programming with expressions
+* shows we can apply fundamental maths truths to problems (not subjective)
+* shows RT
+* get a valuable function for free. No giant leaps of insight required, we just declare an equality and solve to find the definition of the new function.
+
+-->
