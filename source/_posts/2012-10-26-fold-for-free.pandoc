@@ -1,13 +1,12 @@
 ---
 layout: post
 title: "Fold for free"
-date: 2012-10-24 12:57
+date: 2012-10-26 12:30
 comments: true
 categories: ["functional programming", "haskell"]
-published: false
 ---
 
-I found this beautiful little example while reading John Hughes' ["Why Functional Programming Matters"](http://www.cs.kent.ac.uk/people/staff/dat/miranda/whyfp90.pdf) [PDF].
+I found this beautiful little example while reading John Hughes' ["Why Functional Programming Matters"](http://www.cs.kent.ac.uk/people/staff/dat/miranda/whyfp90.pdf) [PDF]. All the cool stuff in this post is stolen shamelessly from section 3 of that paper, while any mistakes and not-so-cool stuff is mine.
 
 ## List recursion
 
@@ -20,8 +19,11 @@ sum (a:as) = a + sum as
 length [] = 0
 length (a:as) = 1 + length as
 
-map f [] = []
-map f (a:as) = (f a) : map f as
+multiply [] = 1
+multiply (a:as) = a * multiply as
+
+allTrue [] = True
+allTrue (a:as) = a && allTrue as
 ```
 
 They all have the same recursive structure; a base case for the empty list `[]`, and a case that breaks the list into head and tail `a:as`. The second case performs some function on the list head and on the result of a recursive call on the rest of the list.
@@ -93,12 +95,27 @@ foldr f x (a:as) = f a (foldr f x as)
 
 So while I've [previously struggled to derive a right fold implementation](http://davesquared.net/2012/02/folds-pt1-from-recursion-to-folds.html), we've derived a correct one by performing straightforward substitution into an existing recursive function.
 
-<!--
-## Why I find this beautiful
+## Beautiful
 
-* shows value of programming with expressions
-* shows we can apply fundamental maths truths to problems (not subjective)
-* shows RT
-* get a valuable function for free. No giant leaps of insight required, we just declare an equality and solve to find the definition of the new function.
+To me this is a wonderful illustration of how programming with [expressions](http://en.wikipedia.org/wiki/Referential_transparency_(computer_science)) (functional programming) lets us use fundamental mathematical truths to reason about and reliably transform our code. We managed to get a very valuable function for free -- no giant leaps of insight required. We declared an equality that represented the recursive part of our call and solved it to get `foldr`, just as we would solve a standard algebraic equation.
 
--->
+I find this wonderfully elegant and beautiful.
+
+## Full circle
+
+To bring this full circle, we can now rewrite the recursive list processing functions from the beginning of this post. Using our derived fold function means we can avoid having to specify the mechanics of the recursion.
+
+<div class="note">**Aside:** we'd typically use a [left fold](http://davesquared.net/2012/02/folds-pt2-from-loops-to-folds.html) for some of these cases where it would help them be executed more efficiently, but for these particular cases they are mathematically equivalent.</div>
+
+``` haskell
+sum = foldr (+) 0
+length = foldr (const (+1)) 0
+multiply = foldr (*) 1
+allTrue = foldr (&&) True
+
+-- It doesn't stop there. We can do a sorts of list processing
+-- using our fold function...
+map f = foldr ((:) . f) []
+append = flip (foldr (:))
+```
+
