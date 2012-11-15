@@ -1,0 +1,112 @@
+---
+layout: post
+title: "Catamorphisms"
+date: 2012-11-15 23:20
+comments: true
+categories: ["functional programming", "haskell"]
+---
+
+According to Wikipedia a [catamorphism](http://en.wikipedia.org/wiki/Catamorphism) "denotes the unique homomorphism from an initial algebra into some other algebra".
+
+Uh huh. Sure.
+
+I've got an admittedly very basic understanding of this concept, but I thought I'd share the small amount I have been able to learn and apply, as I've found it to be a useful tool for working with types.
+
+<!-- more -->
+
+## Cat a what?
+
+The word catamorphism comes from the Greek [κατά](http://en.wiktionary.org/wiki/%CE%BA%CE%B1%CF%84%CE%AC), meaning "downwards", and "morphism" which we tend to use to mean "transformation". So it's a transformation that takes something down, or reduces something.
+
+What's this mean in terms of functional programming? Remember from a while back, an [endomorphism](http://davesquared.net/2012/07/composition-via-scary-sounding-maths-terms.html#a-monoid-for-endomorphisms), or "inside transformation", transforms a value of some type into a value of the same type? Well a catamorphism takes a value of a type with some structure, and reduces that to a value of another type.
+
+## Call me Option
+
+To explore this idea, let's define our own version of the `Maybe` type:
+
+```haskell
+data Option a = Empty | Full a
+```
+
+A value of this type can either be `Empty`, or `Full someValue`. Now let's say we want to convert an `Option a` to some type `b`. We need to get at the structure of our `Option` type, and work out how to convert each alternative to a `b`. We can do this using pattern matching:
+
+```haskell
+option :: b -> (a -> b) -> Option a -> b
+option valIfEmpty _ Empty = valIfEmpty
+option _ f (Full a) = f a
+```
+
+The first argument to `option` is the default value of type `b` that will be returned when the option is `Empty`. The second argument is a function that will convert the value in a `Full value` to a `b`. The final argument is the option we are reducing.
+
+We then have two patterns to match for `Option a` values. The first pattern is matched when the option is `Empty`, in which case the default value is returned. The second pattern is when we have a `Full value`, where we return the result of applying the function from the second argument `f` to that value. Here's a quick example of it in action:
+
+    ghci> option "empty" show (Full 42)
+    "42"
+    ghci> option "empty" show Empty
+    "empty"
+
+So we've taken a type that has two possible components, and `Empty` and `Full value`, and created a function that transforms it into a type with a potentially reduced number of  components. A downward transformation. A catamorphism. And we can now use this transformation to break apart our `Option` type without having to repeat that pattern matching everywhere.
+
+<div class="note">**Aside:** Haskell has a built-in `maybe` function that works the same way for the `Maybe` type.</div>
+
+## Catamorphisms and identity
+
+Catamorphisms have an interesting property: if we use the type's value constructors as arguments to the type's catamorphism, we get the identity function for that type.
+
+Our `Option` type has two value constructors. We can construct a value of type `Option a` using the `Empty` constructor, or using `Full value`. Let's use these as arguments to the `option` function:
+
+    ghci> :t Empty
+    Empty :: Option a
+    ghci> :t Full
+    Full :: a -> Option a
+    ghci> :t option
+    option :: b -> (a -> b) -> Option a -> b
+
+    ghci> option Empty Full (Full 42)
+    Full 42
+    ghci> option Empty Full (Empty)
+    Empty
+    ghci> quickCheck $ \x -> id x == option Empty Full x
+    +++ OK, passed 100 tests.
+
+Whatever value we pass to `option Empty Full`, we always get the same value back. This is a result of the `option` catamorphism deconstructing the `Option` type, so feeding in the constructors for that type reconstructs the type unchanged.
+
+We can follow this pattern of matching value constructors to implement a catamorphism for any type:
+
+```haskell
+data Foo = Bar Int | Zap String [Int] | Giraffe String 
+    deriving (Show, Eq)
+
+-- Add an argument for each value constructor:
+foo :: (Int -> b) -> (String -> [Int] -> b) -> (String -> b) -> Foo -> b
+foo f _ _ (Bar x) = f x
+foo _ f _ (Zap x y) = f x y
+foo _ _ f (Giraffe x) = f x
+
+{-  ghci> quickCheck $ \x -> id x == foo Bar Zap Giraffe x
+    +++ OK, passed 100 tests.
+-}
+```
+## The list catamorphism
+
+To finish up, let's look at a very well known catamorphism. In Haskell there are two ways to construct a list. The first is to use `:` (cons) to add an element to an existing list, `x : list`. The second is using the empty list constructor `[]`. Now let's have a look at this function:
+
+```haskell
+foldr :: (a -> b -> b) -> b -> [a] -> b
+```
+
+The first two arguments to [fold right](http://davesquared.net/2012/02/folds-pt1-from-recursion-to-folds.html) match the value constructors for lists. The first takes a list item and a `b` used for accumulating the result of recursive calls, mirroring the calls used to construct the list. The second is the value used in the case of the empty list `[]`.
+
+    ghci> quickCheck $ \x -> id x == foldr (:) [] x
+    +++ OK, passed 100 tests.
+
+Which is why `foldr` is also know as the list catamorphism.
+
+## Parting thoughts
+
+Catamorphisms, at least as I understand them, aren't nearly as frightening as they sound. A catamorphism for a type is function for transforming it, deconstructing the type into its components and providing us the option to reduce the type to a simpler structure (reduced number of components). One result of this is that plugging in the type's value constructors will reassemble the type, giving us an identity function for the type.
+
+If you've read any of my posts on list folds you'll probably have some appreciation for how useful catamorphisms can be. Whereas `foldr` lets us encapsulate list recursion, catamorphisms for other types like `Maybe` (or `Option`) let us deal with the constituent parts of a type, without having to repeat pattern matching on the type every time we wish to transform it.
+
+Hope you found this interesting! As always, please ask away if you have any questions or if I've failed to explain something adequately.
+
