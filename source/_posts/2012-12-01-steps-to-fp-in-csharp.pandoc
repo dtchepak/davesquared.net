@@ -1,0 +1,49 @@
+---
+layout: post
+title: "Some small, practical steps to get FP goodness in C#"
+date: 2012-11-21 19:00
+comments: true
+categories: ["functional programming", ".net", "linq"]
+published: false
+---
+
+I've spent [a lot of this year](/2012) exploring various functional programming concepts. For this post I thought I'd change things up a bit -- I'm going to avoid mentioning any theory and skip straight to a few small, practical applications of functional programming concepts that you can use immediately in your existing .NET code. All these examples can be applied without understanding any of the theory, even though there is solid theory underpinning it all. They'll also provide us with a good stepping stone for starting to apply more of these ideas in our everyday code.
+
+<!-- more -->
+
+## FP stuff we already use
+
+We're all pretty comfortable with the fundamentals of LINQ. We have some nice extension methods to work with `IEnumerable<T>` types like arrays and lists. These methods do things like filter lists and map functions across lists:
+
+```csharp
+var food = GetMenuItems();
+var stuffToOrder = food
+                    .Where(x => x.Contains("Bacon"))
+                    .Select(x => new Order(x.Name, x.Price));
+```
+
+LINQ also gives us *query comprehension* syntax, which lets us lose the lambdas:
+
+```csharp
+var stuffToOrder =
+    from food in GetMenuItems()
+    where food.Contains("Bacon")
+    select new Order(food.Name, food.Price);
+```
+
+Under-the-hood, query comprehensions are transformed into a sequence of `Select`, `Where` and `SelectMany` calls. What I didn't know until relatively recently is that this syntax is not restricted to `IEnumerable<T>`. So long as the compiler can resolve the `Select` and other methods for a type, then it will happily compile.
+
+-- lists with zero or one item
+
+## Step 0: Nuget some functional bits
+
+## Step 1: Replace null checks in individual calls
+
+## Step 2: Replace private nullables with Options
+
+## Step 3: Combine options
+
+## Step 4: Expose options
+
+
+
