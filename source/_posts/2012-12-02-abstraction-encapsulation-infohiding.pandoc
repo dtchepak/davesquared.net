@@ -1,0 +1,70 @@
+---
+layout: post
+title: "Abstraction, encapsulation, and information hiding "
+date: 2012-11-28 17:32
+comments: true
+categories: ["imho"]
+published: false
+---
+
+For some strange reason I ended up trying to work out the difference between abstraction, encapsulation and information hiding. Here are my thoughts on it (largely to confound [@xerxesb](https://twitter.com/xerxesb") by writing a short post about a topic for which he has a zero care factor ;)). 
+
+A big thanks to [@rioter](https://twitter.com/rioter) for helping me work through some 
+
+<!-- more -->
+
+## Why bother?
+
+What's the point of debating semantics? We can probably along fine by ignoring any subtle differences between these terms.
+
+On the other hand, we're programmers we're meant to use abstraction, encapsulation and information hiding as valuable tools to apply to our work. I'd like to understand why they're important so I can use them effectively, and answer questions like what it means to violate encapsulation (and when I may want to) and when to go to the effort to create an abstraction in the code. If I can't understand the terms, I'm not convinced I can adequeately apply the concepts to my work.
+
+## Abstraction
+
+An abstraction is a more general (less specific) form of something concrete. More general implies it is applicable in more cases, which in turns implies a degree of reusability.
+
+Consider summing an array of integers. We might want to use a `for` loop between the start and end index to traverse the array, and keep a running total as we go. This is a fairly concrete concept, but we can abstract away some of these details. Sum doesn't have to have an array; it can work on different collections of numbers. We could introduce `IEnumerable<T>` and implement sum over this abstraction. 
+
+Or we could pick out the more general concept of traversing a structure and applying a function over an accumulated result, which [gives us fold](http://davesquared.net/2012/10/fold-for-free.html). We can now write a specific `sum` implementation that uses this abstraction, as well as reusing it to give us `map`, `length`, `filter` and more. We've moved from a specific problem (summing list elements) to a more abstract one (applying functions over collections), and in the meantime solved our original, specific problem.
+
+This definition plays nicely with other fields as well. In art, abstract is a non-concrete, or non-specific, representation of something. An abstract in writing is a summary of the general ideas of a concrete article.
+
+## Encapsulation
+
+The [dictionary definition of encapsulation](https://www.google.com.au/search?q=define%3Aencapsulation) tends to refer surrounding something, as if it were in a capsule. For programming, this suggests that there is a boundary around some data and/or behaviour, and we can only access it via the interface at the boundary. For example, we could have the following C# class:
+
+```csharp
+public class Foo {
+    public string bar;
+}
+```
+
+The `Foo` class encapsulates the `bar` field; the only way we can modify the `bar` is via a reference to a `Foo` instance. If we could modify `bar` in some way other than the `Foo` capsule, say, a `Zap.ClearBar()` method, then we have violated encapsulation.
+
+## Information hiding
+
+Information hiding is limiting the scope of some information (data or behaviour). I think this implies a degree of encapsulation, and these two concepts seem to go hand-in-hand:
+
+```csharp
+public class Foo {
+    private string bar;
+    public void SetHello() { bar = "hello"; }
+    public void SetGoodbye() { bar = "goodbye"; }
+    public bool IsGreeting() { return bar = "hello"; }
+}
+```
+
+Here we've hidden the information that `bar` is a string within the `Foo` encapsulation.
+
+## Why the confusion?
+
+I think a lot of the confusion I faced trying to define these terms for myself were a result of how often they overlap and are used interchangeably. We can represent abstract concepts using classes, which also happen to encapsulate behaviour and hide the information about the specific data in those classes. This overlaps tends to blur the lines between the concepts, and we begin using the terms interchangeably.
+
+## The value of these tools
+
+We rely on abstractions when we want to take something specific and solve a more general problem. This is valuable because it allows us to ignore some of the details about the specific problem we're solving, which may have been obscuring a solution. It also gives us a more generally applicable approach to a problem, so potentially gives us something we can reuse in different ways to result in less code.
+
+Encapsulation and information-hiding tend to go hand-in-hand. We hide details within encapsulations, so that we can change them independently of the interface at the boundary. If we pick these interfaces carefully it can help give us loosely coupled code. Unlike abstraction though, it does not come with the implication of potential reuse of the concept in different situations.
+
+
+There are some interesting responses to [this question on StackOverflow](http://stackoverflow.com/questions/24626/abstraction-vs-information-hiding-vs-encapsulation), but I still found the distinctions quite difficult to .

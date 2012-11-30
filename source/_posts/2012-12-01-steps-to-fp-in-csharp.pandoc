@@ -1,17 +1,97 @@
 ---
 layout: post
-title: "Some small, practical steps to get FP goodness in C#"
+title: "Some optional, functional goodness in C#"
 date: 2012-11-21 19:00
 comments: true
 categories: ["functional programming", ".net", "linq"]
 published: false
 ---
 
-I've spent [a lot of this year](/2012) exploring various functional programming concepts. For this post I thought I'd change things up a bit -- I'm going to avoid mentioning any theory and skip straight to a few small, practical applications of functional programming concepts that you can use immediately in your existing .NET code. All these examples can be applied without understanding any of the theory, even though there is solid theory underpinning it all. They'll also provide us with a good stepping stone for starting to apply more of these ideas in our everyday code.
+For this post I wanted to show you a small yet extremely useful bit of functional programming that you can apply right away to your current C# (or VB.NET) project. While there's solid theory underpinning it, we won't need to go in to any of that to be able to apply it, so we'll jump straight to the practice. (I love the theory, so this is quite a sacrifice I'm making for you! ;)) As an added bonus, we'll also get a good stepping stone for starting to apply more of these practical FP ideas in our everyday code.
 
 <!-- more -->
 
-## FP stuff we already use
+## Are you null? Then do stuff!
+
+Dealing with a [`null`](http://lambda-the-ultimate.org/node/3186) is a fact of life in our C# projects. It is not unusual to end up with code that has one or more `null` checks. Let's start with a small example:
+
+```csharp
+public Order GetOrderWhilePeckish(IWaiter waiter) {
+    var menu = waiter.GetCurrentMenu();
+    if (menu == null) {
+        return null;
+    }
+    return new Order(menu.Everything());
+}
+```
+
+Here we get the menu from a waiter. If there is no menu available, then we don't place an order. Otherwise, we order everything on the menu.
+
+There are two issues with this. First is the noise; the guard clause obscures much of what the method is doing. This gets worse as the number of nullable references increases (we can end up with an explosion of guard clauses, or [arrow code](http://www.codinghorror.com/blog/2006/01/flattening-arrow-code.html)).
+
+The second issue is that we are using `null` to indicate that there is no current menu, which is a value of some significance. We can also get `null` cropping because we haven't initialised a reference, which is generally due to a mistake rather than any particular significance. It would be nice to separate these cases, so that `GetCurrentMenu()` can return either `no menu` or `some menu`.
+
+Let's try and address these problems.
+
+## Null, or empty?
+
+Rather than treating `GetCurrentMenu()` as something that returns a `Menu` object, let's treat its output as a list of menus. This list is either going to contain a single `Menu`, or be empty. But we'll make sure it never returns `null`.
+
+```csharp
+private IEnumerable<IMenu> ToList(IMenu menu) {
+    // Produce a single item or empty list; never null.
+    if (menu != null) yield return menu;
+}
+
+public Order GetOrderWhilePeckish(IWaiter waiter) {
+    var menuOrNothing = ToList(waiter.GetCurrentMenu());
+    return menuOrNothing
+            .Select(menu => new Order(menu.Everything()))
+            .SingleOrDefault();
+}
+```
+
+We're now dealing with a list of menus (that just happens to contain 0 or 1 items), so we can use all the standard LINQ extension methods like `Select` to transform each item in our list into the required order. Or if no menu is available, we get an empty list of orders back. To complete this step of the refactor, we need to convert our list back into a nullable `Order`, which we do using `SingleOrDefault()`. This will return our single order or `null`.
+
+<div class="note">*Note:* You might be thinking it would be better to update our `GetOrderWhilePeckish` method to return a list of `Order` objects to indicate that it too can return no orders. This is a good line of thought! At this point though we're just making a small refactor; we don't have to change our callers, including those in our tests.</div>
+
+And because we're all LINQified now, we can also use the LINQ query comprehension syntax:
+
+```csharp
+public Order GetOrderWhilePeckish(IWaiter waiter) {
+    var orderOrNothing =
+        from menu in ToList(waiter.GetCurrentMenu())
+        select new Order(menu.Everything());
+    return orderOrNothing.SingleOrDefault();
+}
+```
+
+## Intermission
+
+It may be a bit hard to see the benefit of this refactor at this point. We've eliminated a null check, but the code isn't significantly simpler. We'll get to more complex examples in a minute, but first let's formalise the concept of "none or one", rather that commandeering lists for that purpose.
+
+## A little nuget
+
+It turns out there is already a type in .NET to represent "none or one", but to use it effectively we'll want to install a nuget package or two.
+
+
+* f#, fsharpx
+* mention official f# oss project / community
+* check .net 4.0 ref/version probs
+
+## Another option
+
+* convert list example to option
+
+## Different type, same LINQ goodness
+
+* show where clause
+* show select many example (multiple froms)
+
+## Gateway to functional programming
+
+
+=====
 
 We're all pretty comfortable with the fundamentals of LINQ. We have some nice extension methods to work with `IEnumerable<T>` types like arrays and lists. These methods do things like filter lists and map functions across lists:
 
