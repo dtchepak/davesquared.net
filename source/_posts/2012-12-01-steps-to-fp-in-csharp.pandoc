@@ -81,49 +81,62 @@ It turns out there is already a type in .NET to represent "none or one", but to 
 
 ## Another option
 
-* convert list example to option
+The type we want to represent our "none or one" value is called [`option`](http://msdn.microsoft.com/en-us/library/dd233245.aspx) from F#, and it is exposed to C# as `FSharpOption`. The FSharpx library gives us some convenient functions for working with this type. The only changes we need to make to our previous code is to call `ToFSharpOption()` instead of `ToList()`, and replace `SingleOrDefault()` with `GetOrDefault()`.
+
+```csharp
+public Order GetOrderWhilePeckish(IWaiter waiter) {
+    var orderOrNothing =
+        from menu in (waiter.GetCurrentMenu()).ToFSharpOption()
+        select new Order(menu.Everything());
+    return orderOrNothing.GetOrDefault();
+}
+```
+
+<div class="note">*Note:* If you are using an older version of FSharpx you will need to use `orderOrNothing.GetOrElse(() => null)` instead of `GetOrDefault()`.</div>
 
 ## Different type, same LINQ goodness
 
-* show where clause
-* show select many example (multiple froms)
+Let's look at a more complicated example. Our restraunt patron is down on their luck, but is desperate for a shot of bacon. They'll see if the waiter has a menu, and if so then check it for the cheapest item. If that item contains bacon, then we'll order it. In all other cases our patron will not place an order.
+
+```csharp
+public Order GetOrderForBaconFanWhoIsDownOnTheirLuck(IWaiter waiter) {
+    var currentMenu = waiter.GetCurrentMenu();
+    if (currentMenu == null) {
+        return null;
+    }
+    var cheapestItem = currentMenu.CheapestItem();
+    if (cheapestItem == null) {
+        return null;
+    }
+    return cheapestItem.Contains("Bacon") ? new Order(cheapestItem) : null;
+}
+```
+
+We can convert this from bottom-to-top in small steps, but I've found it easiest to start at the top and work down through the whole thing.
+
+```csharp
+public Order GetOrderForBaconFanWhoIsDownOnTheirLuck(IWaiter waiter) {
+    var maybeOrder = 
+        from currentMenu in waiter.GetCurrentMenu().ToFSharpOption()
+        from cheapestItem in currentMenu.CheapestItem().ToFSharpOption()
+        where cheapestItem.Contains("Bacon")
+        select new Order(cheapestItem);
+    return maybeOrder.GetOrDefault();
+}
+```
+
+This reads much like our initial description of this scenario: from current menu get cheapest item and place and order if it contains bacon. If any of these is `null` no order will be placed.
+
+The `FSharpOption` type supports all the standard LINQ: `Select`, `SelectMany`, `Where`, `let`-bindings etc.
+
+## More benefits
+
+So far we've focussed on refactoring the insides of methods, rather than changing signatures. This has simplified our code a bit and also made our intentions more explicit by calling out places where we expect null.  
+
+We can start getting a lot more benefit by pushing options into interfaces. Rather than `waiter.GetCurrentMenu()` return `null` or an menu, we can make it return `FSharpOption<Menu>`. Callers then have to explicitly deal with the empty case, and the compiler will keep them honest. 
 
 ## Gateway to functional programming
 
 
 =====
-
-We're all pretty comfortable with the fundamentals of LINQ. We have some nice extension methods to work with `IEnumerable<T>` types like arrays and lists. These methods do things like filter lists and map functions across lists:
-
-```csharp
-var food = GetMenuItems();
-var stuffToOrder = food
-                    .Where(x => x.Contains("Bacon"))
-                    .Select(x => new Order(x.Name, x.Price));
-```
-
-LINQ also gives us *query comprehension* syntax, which lets us lose the lambdas:
-
-```csharp
-var stuffToOrder =
-    from food in GetMenuItems()
-    where food.Contains("Bacon")
-    select new Order(food.Name, food.Price);
-```
-
-Under-the-hood, query comprehensions are transformed into a sequence of `Select`, `Where` and `SelectMany` calls. What I didn't know until relatively recently is that this syntax is not restricted to `IEnumerable<T>`. So long as the compiler can resolve the `Select` and other methods for a type, then it will happily compile.
-
--- lists with zero or one item
-
-## Step 0: Nuget some functional bits
-
-## Step 1: Replace null checks in individual calls
-
-## Step 2: Replace private nullables with Options
-
-## Step 3: Combine options
-
-## Step 4: Expose options
-
-
 
