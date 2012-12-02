@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Some optional, functional goodness in C#"
-date: 2012-12-02 23:30
+date: 2012-12-02 23:35
 comments: true
 categories: ["functional programming", ".net", "linq"]
 ---
@@ -10,7 +10,7 @@ For this post I wanted to show you a small yet extremely useful bit of functiona
 
 <!-- more -->
 
-## Are you null? Then do stuff!
+## Are you null? If not then do stuff!
 
 Dealing with a [null](http://lambda-the-ultimate.org/node/3186) is a fact of life in our C# projects. It is not unusual to end up with code that has one or more null checks. Let's start with a small example:
 
@@ -37,7 +37,7 @@ Let's try and address these problems.
 Rather than treating `GetCurrentMenu()` as something that returns a `Menu` object, let's treat its output as a list of menus. This list is either going to contain a single `Menu`, or be empty. But we'll make sure it never returns `null`.
 
 ```csharp
-private IEnumerable<IMenu> ToList(IMenu menu) {
+private IEnumerable<Menu> ToList(Menu menu) {
     // Produce a single item or empty list; never null.
     if (menu != null) yield return menu;
 }
@@ -50,7 +50,7 @@ public Order GetOrderWhilePeckish(IWaiter waiter) {
 }
 ```
 
-We're now dealing with a list of menus (that just happens to contain 0 or 1 items), so we can use all the standard LINQ extension methods like `Select` to transform each item in our list into the required order. Or if no menu is available, we get an empty list of orders back. To complete this step of the refactor, we need to convert our list back into a nullable `Order`, which we do using `SingleOrDefault()`. This will return our single order or `null`.
+We're now dealing with a list of menus (that just happens to contain 0 or 1 items), so we can use all the standard LINQ extension methods like `Select` to transform each item in our list into the required order. Or if no menu is available, we get an empty list of orders back. To complete this step of the refactor, we need to convert our list back into a nullable reference to an `Order`, which we do using `SingleOrDefault()`. This will return our single order or `null`.
 
 <div class="note">**Note:** You might be thinking it would be better to update our `GetOrderWhilePeckish` method to return a list of `Order` objects to indicate that it too can return no orders. This is a good line of thought! At this point though we're just making a small refactor; we don't have to change our callers, including those in our tests.</div>
 
@@ -136,18 +136,18 @@ The `FSharpOption` type supports all the standard LINQ: `Select`, `SelectMany`, 
 
 So far we've focussed on refactoring the insides of methods, rather than changing signatures. This has simplified our code a bit and also made our intentions more explicit by calling out places where we expect null.  
 
-We can start getting a lot more benefit by pushing options into interfaces. Rather than `waiter.GetCurrentMenu()` return `null` or a menu, we can make it return `FSharpOption<Menu>`. Callers then have to explicitly deal with the empty case, and the compiler will keep them honest. 
+We can start getting a lot more benefit by pushing options into interfaces. Rather than `waiter.GetCurrentMenu()` returning `null` or a menu, we can make it return `FSharpOption<Menu>`. Callers then have to explicitly deal with the empty case, and the compiler will keep them honest. 
 
 Having `FSharpOption<T>` in our APIs also clears up our calling code. We no longer need to use `.ToFSharpOption()` or `GetOrDefault()`.
 
 The other thing we gain is the ability to compose these types to perform some interesting operations. For example, say we want to check whether either of two properties is present, we can compose them using `first.OrElse(second)`, then use `HasValue()` to check if either are non-empty, or `GetOrElse(blah)` to use access the first value present (defaulting to `blah`).
 
-There are [lots of handy functions on `FSharpOption`](https://github.com/fsharp/fsharpx/blob/master/tests/FSharpx.CSharpTests/OptionTests.cs), but for now I should just note that you can construct instances of options using `myObj.Some()` for non-empty, and `FSharpOption<T>.None` for empty values.
+There are [lots of handy functions on `FSharpOption`](https://github.com/fsharp/fsharpx/blob/master/tests/FSharpx.CSharpTests/OptionTests.cs), but for now I should just note that we can construct instances of options using `myObj.Some()` for non-empty, and `FSharpOption<T>.None` for empty values.
 
 ## Gateway to functional programming
 
-As we've seen, options can be introduced to clean up some null checks with zero impact on the rest of our code. As we become more comfortable with the ways of using options we can start using them in private fields, then in public interfaces. After that, we can start trying other types that FSharp and FSharpx provide, such as `FSharpChoice`. 
+As we've seen, options can be introduced to clean up some null checks with zero impact on the rest of our code. As we become more comfortable with the ways of using options we can start using them in private fields, then in public interfaces, which starts making our code safer and more intention-revealing. After that, we can start trying other types that FSharp and FSharpx provide, such as `FSharpChoice`. 
 
-This gives us a great, risk-free way of gradually becoming accustomed to some functional programming techniques. In turn this familiarity gives us new ways of thinking about problems which will undoubtedly come in handy, even if it is not something we end up using all the time.
+This gives us a great, risk-free way of gradually becoming accustomed to some functional programming techniques. In turn this familiarity gives us new ways of thinking about problems which will undoubtedly come in handy, even if we don't end up using FP all the time.
 
 
