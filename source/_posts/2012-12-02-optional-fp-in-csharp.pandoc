@@ -1,10 +1,9 @@
 ---
 layout: post
 title: "Some optional, functional goodness in C#"
-date: 2012-11-03 00:00
+date: 2012-11-02 23:30
 comments: true
 categories: ["functional programming", ".net", "linq"]
-published: false
 ---
 
 For this post I wanted to show you a small yet extremely useful bit of functional programming that you can apply right away to your current C# (or VB.NET) project. While there's solid theory underpinning it, we won't need any of that to be able to apply it, so we'll jump straight to the practice. (I love the theory, so this is quite a sacrifice I'm making for you! ;)) As an added bonus, we'll also get a good stepping stone for starting to apply more of these practical FP ideas in our everyday code.
