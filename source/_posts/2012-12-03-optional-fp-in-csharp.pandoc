@@ -72,12 +72,14 @@ It may be a bit hard to see the benefit of this refactor at this point. We've el
 
 ## A little nuget
 
-It turns out there is already a type in .NET to represent "none or one", but to use it effectively we'll want to install a nuget package or two.
+It turns out there is already a type in .NET to represent "none or one", but to use it effectively we'll want to install a nuget package or two: [FSharp.Core](http://nuget.org/packages/FSharp.Core) and [FSharpx.Core](http://nuget.org/packages/FSharpx.Core) (you can also use your existing F# installation instead of the FSharp.Core package).
 
+```
+PM> Install-Package FSharp.Core
+PM> Install-Package FSharpx.Core
+```
 
-* f#, fsharpx
-* mention official f# oss project / community
-* check .net 4.0 ref/version probs
+<div class="note">*Note:* at the time of writing, some recent FSharpx nuget packages have been built against .NET2 instead of .NET4, which caused some assembly load failures. If you find this, use `Install-Package FSharpx.Core -Version 1.6.109` instead, or [make your own build](https://github.com/fsharp/fsharpx).</div>
 
 ## Another option
 
