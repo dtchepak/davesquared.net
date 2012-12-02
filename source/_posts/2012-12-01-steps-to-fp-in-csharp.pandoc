@@ -135,8 +135,13 @@ So far we've focussed on refactoring the insides of methods, rather than changin
 
 We can start getting a lot more benefit by pushing options into interfaces. Rather than `waiter.GetCurrentMenu()` return `null` or an menu, we can make it return `FSharpOption<Menu>`. Callers then have to explicitly deal with the empty case, and the compiler will keep them honest. 
 
+Having `FSharpOption<T>` in our APIs also clears up our calling code. We no longer need to use `.ToFSharpOption()` or `GetOrDefault()`.
+
+The other thing we gain is the ability to compose these types to perform some interesting operations. For example, say we want to check whether either of two properties is present, we can compose them using `first.OrElse(second)`, then use `HasValue()` to check if either are non-empty, or `GetOrElse(blah)` to use access the first value present.
+
 ## Gateway to functional programming
 
+As we've seen, this can be introduced to clean up some null checks with zero impact to the rest of your code. As we become more comfortable with the ways of using options we can start using them in private fields, then in public interfaces. After that, we can start trying other types that FSharp and FSharpx provides, such as `FSharpChoice`. 
 
-=====
+This gives us a great, risk-free way to gradually become accustomed to some functional programming techniques. In turn this familiarity gives us new ways of thinking about problems which will undoubtedly come in handy, even if it is not something you use all the time.
 
