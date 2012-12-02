@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Some optional, functional goodness in C#"
-date: 2012-11-02 23:30
+date: 2012-12-02 23:30
 comments: true
 categories: ["functional programming", ".net", "linq"]
 ---
@@ -140,9 +140,9 @@ We can start getting a lot more benefit by pushing options into interfaces. Rath
 
 Having `FSharpOption<T>` in our APIs also clears up our calling code. We no longer need to use `.ToFSharpOption()` or `GetOrDefault()`.
 
-The other thing we gain is the ability to compose these types to perform some interesting operations. For example, say we want to check whether either of two properties is present, we can compose them using `first.OrElse(second)`, then use `HasValue()` to check if either are non-empty, or `GetOrElse(blah)` to use access the first value present.
+The other thing we gain is the ability to compose these types to perform some interesting operations. For example, say we want to check whether either of two properties is present, we can compose them using `first.OrElse(second)`, then use `HasValue()` to check if either are non-empty, or `GetOrElse(blah)` to use access the first value present (defaulting to `blah`).
 
-There are lots of handy functions on `FSharpOption`, but for now I should just note that you can construct instances of options using `myObj.Some()` for non-empty, and `FSharpOption<T>.None` for empty values.
+There are [lots of handy functions on `FSharpOption`](https://github.com/fsharp/fsharpx/blob/master/tests/FSharpx.CSharpTests/OptionTests.cs), but for now I should just note that you can construct instances of options using `myObj.Some()` for non-empty, and `FSharpOption<T>.None` for empty values.
 
 ## Gateway to functional programming
 
