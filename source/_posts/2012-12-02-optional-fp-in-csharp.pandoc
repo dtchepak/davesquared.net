@@ -78,9 +78,9 @@ PM> Install-Package FSharp.Core
 PM> Install-Package FSharpx.Core
 ```
 
-<div class="note">**Note:** at the time of writing, some recent FSharpx nuget packages have been built against .NET2 instead of .NET4, which caused me some assembly load failures. If you find this, use `Install-Package FSharpx.Core -Version 1.6.109` instead, or [make your own build](https://github.com/fsharp/fsharpx). Alternatively, we can always write our own option type without much trouble. Let me know if you'd like me to go through an implementation.</div>
-
 Then we just need `using FSharpx;` at the top of our file, and we're ready to go.
+
+<div class="note">**Aside:** Alternatively, we can always write our own option type without much trouble. Let me know if you'd like me to go through an implementation.</div>
 
 ## Another option
 
@@ -94,8 +94,6 @@ public Order GetOrderWhilePeckish(IWaiter waiter) {
     return orderOrNothing.GetOrDefault();
 }
 ```
-
-<div class="note">**Note:** If you are using an older version of FSharpx you will need to use `orderOrNothing.GetOrElse(() => null)` instead of `GetOrDefault()`.</div>
 
 ## Different type, same LINQ goodness
 
