@@ -89,7 +89,7 @@ The type we want to represent our "none or one" value is called [`option`](http:
 ```csharp
 public Order GetOrderWhilePeckish(IWaiter waiter) {
     var orderOrNothing =
-        from menu in (waiter.GetCurrentMenu()).ToFSharpOption()
+        from menu in waiter.GetCurrentMenu().ToFSharpOption()
         select new Order(menu.Everything());
     return orderOrNothing.GetOrDefault();
 }
