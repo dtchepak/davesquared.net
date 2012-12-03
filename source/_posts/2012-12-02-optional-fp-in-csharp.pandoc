@@ -84,7 +84,7 @@ Then we just need `using FSharpx;` at the top of our file, and we're ready to go
 
 ## Another option
 
-The type we want to represent our "none or one" value is called [`option`](http://msdn.microsoft.com/en-us/library/dd233245.aspx) from F#, and it is exposed to C# as `FSharpOption`. The FSharpx library gives us some convenient functions for working with this type. The only changes we need to make to our previous code is to call `ToFSharpOption()` instead of `ToList()`, and replace `SingleOrDefault()` with `GetOrDefault()`.
+The type we want to represent our "none or one" value is called [`option`](http://msdn.microsoft.com/en-us/library/dd233245.aspx) from F#, and it is exposed to C# as `FSharpOption`. The FSharpx library gives us some convenient functions for working with this type. The only changes we need to make to our previous code is to call the `ToFSharpOption()` extension method instead of `ToList()`, and replace `SingleOrDefault()` with `GetOrDefault()`.
 
 ```csharp
 public Order GetOrderWhilePeckish(IWaiter waiter) {
@@ -94,6 +94,10 @@ public Order GetOrderWhilePeckish(IWaiter waiter) {
     return orderOrNothing.GetOrDefault();
 }
 ```
+
+<div class="note">**Note:** Calling `ToFSharpOption()` will work fine on a null reference because it is an extension method; it's syntactic sugar for calling `FSharpOption.ToFSharpOption(menu)`, just like our `ToList(menu)` call from before.</div>
+
+Logically this works just like our list example. The only difference is we're using the `FSharpOption<T>` type instead of `IEnumerable<T>`.
 
 ## Different type, same LINQ goodness
 
