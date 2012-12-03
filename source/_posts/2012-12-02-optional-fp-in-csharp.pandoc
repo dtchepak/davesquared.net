@@ -2,6 +2,7 @@
 layout: post
 title: "Some optional, functional goodness in C#"
 date: 2012-12-02 23:35
+updated: 2012-12-03 08:47
 comments: true
 categories: ["functional programming", ".net", "linq"]
 ---
