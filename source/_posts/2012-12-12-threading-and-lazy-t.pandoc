@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Threading and Lazy<T>"
+title: "Threading and Lazy&lt;T&gt;"
 date: 2012-12-12 19:00
 comments: true
 categories: [".net"]
@@ -13,8 +13,9 @@ categories: [".net"]
 Here's the test case we'll use to demonstrate these options:
 
 ```csharp
+//We'll change threadSafetyMode for each test run. Currently it's at the default.
 readonly LazyThreadSafetyMode threadSafetyMode 
-    = LazyThreadSafetyMode.ExecutionAndPublication; // Default value for Lazy<T>
+    = LazyThreadSafetyMode.ExecutionAndPublication;
 int i = 0;
 
 [Test]
@@ -40,7 +41,9 @@ private int GetLazyValue() {
 }
 ```
 
-The func used to initialise lazy value takes at least 100ms to run, and increments and returns a counter value `i`. We then try and access the lazy value directly, and while the initialisation code is running, we also try and access it from an async `Task<T>`.
+The func used to initialise lazy value takes at least 100ms to run, and increments and returns a counter value `i`. We then try and access the lazy value directly, and while the initialisation code is running, we also try and access it from an async `Task<T>`. We'll then output what each method returns, as well as the final value of the counter `i`.
+
+## Default thread safety
 
 The default thread safety mode when you call `new Lazy<T>(func)`, or `new Lazy<T>(func, true)`, is `LazyThreadSafetyMode.ExecutionAndPublication`. Running in this mode ensures the initialisation code only runs once:
 
@@ -51,6 +54,8 @@ The default thread safety mode when you call `new Lazy<T>(func)`, or `new Lazy<T
 
 Both the task and direct access agree on the initialised value of `0`, and the `i` counter has only incremented once to give `1`.
 
+## Safe on publication
+
 If we now update the safety mode to `LazyThreadSafetyMode.PublicationOnly`, we get this:
 
     direct lazy value access
@@ -59,9 +64,11 @@ If we now update the safety mode to `LazyThreadSafetyMode.PublicationOnly`, we g
     getting lazy value
     v: 0, task: 0, i: 2
 
-Here we can see the initialisation code has run twice; there are two `getting lazy value` messages, and `i` has been incremented twice to `2`. Both the task and direct access agree on the value `0` though. So the first initialisation value returned wins.
+Here we can see the initialisation code has run twice; there are two `"getting lazy value"` messages, and `i` has been incremented twice to `2`. Both the task and direct access agree on the value `0` though. So the first initialisation value returned wins.
 
-Finally, `LazyThreadSafetyMode.None` (which is what we get when we call `new Lazy<T>(func, false)`), gives this output:
+## All bets are off
+
+Finally, `LazyThreadSafetyMode.None` (which is what we get when we call `new Lazy<T>(func, false)`) gives this output:
 
     direct lazy value access
     task running
@@ -71,6 +78,8 @@ Finally, `LazyThreadSafetyMode.None` (which is what we get when we call `new Laz
       ----> System.InvalidOperationException : ValueFactory attempted to access the Value property of this instance.
 
 This option provides no thread safety, so trying to access or set the value concurrently fails with an exception.
+
+## Summary
 
 These options are [explained in more detail on MSDN](http://msdn.microsoft.com/en-us/library/dd997286.aspx), but a quick summary is:
 
