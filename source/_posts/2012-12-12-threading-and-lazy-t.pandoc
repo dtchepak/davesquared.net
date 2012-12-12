@@ -83,6 +83,6 @@ This option provides no thread safety, so trying to access or set the value conc
 
 These options are [explained in more detail on MSDN](http://msdn.microsoft.com/en-us/library/dd997286.aspx), but a quick summary is:
 
-* `ExecutionAndPublication` ensures initialisation code is only executed once
+* `ExecutionAndPublication` ensures initialisation code is only executed once. This is the default.
 * `PublicationOnly` lets multiple threads race to initialise the value, and the first one finished wins.
-* `None` has no thread safety, and can through exceptions on concurrent initialisation.
+* `None` has no thread safety, and can throw exceptions on concurrent initialisation.
