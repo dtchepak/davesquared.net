@@ -2,6 +2,7 @@
 layout: post
 title: "Lazy&lt;T&gt; monad instance in C#"
 date: 2012-12-13 00:07
+updated: 2012-12-13 09:20
 comments: true
 categories: [".net", "functional programming", "linq"]
 ---
@@ -18,7 +19,7 @@ As mentioned [last post](http://davesquared.net/2012/12/threading-and-lazy-t.htm
 
 ## Lazy LINQ extension methods
 
-To play nicely with LINQ we need to implement a couple of extension methods for `Lazy<T>`: `Select` and `SelectMany`. Any types for which these functions are implemented are monads, which means we can combine them in interesting ways^[There are a few simple rules for how these functions should act and combine to make a valid monad instance, but we won't go into them here.]. In Haskell, `Select` is known as `fmap` and `SelectMany` is known as `>>=` (pronounced "bind").
+To play nicely with LINQ we need to implement a couple of extension methods for `Lazy<T>`: `Select` and `SelectMany`. Types for which these functions are implemented are monads^[A monad also needs a function which takes a value of `T` and returns a new instance of the monad with that value. This is called `return` in Haskell. We can use the `Lazy<T>` constructor for this. There are also a few simple rules for how these functions should act and combine to make a valid monad instance, but we won't go into them here.], which means we can combine them in interesting ways. In Haskell, `Select` is known as `fmap`, `SelectMany` is known as `>>=` (pronounced "bind").
 
 ### Mapping inside with `Select`
 
