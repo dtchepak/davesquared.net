@@ -12,17 +12,71 @@ First up, sorry.
 
 Monads are not hard. They are not trivial either -- few things are if you look deep enough -- but they are definitely no more difficult than any other concepts in programming. We should not take this as some damning indictment of our intellect if we don't understand monads; rather, that it's just something unfamiliar, something we haven't learned yet. 
 
+## Types we can map functions over
+
 Let's start with a [generic/parameterised type](http://en.wikipedia.org/wiki/Parameterized_type) that we'll call `SomeType<A>`. This represents a type that has, or calculates, values of some arbitrary type `A`.^[A good example is an array or list; it can be list of `int`, or of `string`, or of `Foo`. In other words, it is a `List<A>`, where `A` is some specific type.]
 
-Now say we have our `SomeType<A>`, and a function that takes an `A` as an argument and returns a `B`. We may be able to map this function inside our type, and convert it to a `SomeType<B>`.
+Now say we have our `SomeType<A>`, and a function that takes an `A` as an argument and returns a `B`. If we apply the function to the value or values inside our `SomeType<A>`, we can convert it to a `SomeType<B>`.
 
-    //Pseudo-code
-    SomeType<int> a = new SomeType<int>(6);
-    SomeType<string> b = map(addOneAndConvertToString, a);
+A type that supports mapping a function like this is called a *functor*. It needs to support the map operation:
 
-A type that supports mapping a function like this is called a *functor*. It just needs to support the map operation:
+    //C-style language:
+    SomeType<B> map(Func<A,B> f, SomeType<A> a);
 
+    //Haskell:
+    map :: (a -> b) -> f a -> f b
+
+    //Pseudo-English:
     Given SomeType<A>,
     And a function that takes an A and returns a B,
     Then return SomeType<B>
+
+    //Example:
+    map(add1ThenConvertToString, [1,2,3]) = ["2","3","4"]
+
+This is called `Select` in C#, `fmap` in Haskell, and `map` almost everywhere else.
+
+## Mapping and flattening
+
+Now say we have a function that takes an `A` and returns a `SomeType<B>`. Again we'd like to map this function over `SomeType<A>` and get a `SomeType<B>`.
+
+Our previous map doesn't quite work, because if we convert all our `A`s into `SomeType<B>`s, we'll get a `SomeType<SomeType<B>>`. What we want is to the flatten out this structure to get a `SomeType<B>`. Taking lists as an example again:
+
+    map(toArray, [1,2,3]) = [[1], [2,2], [3,3,3]]
+    flatten(map(toArray, [1,2,3])) = [1,2,2,3,3,3]
+
+Because this combination of map and flatten can be quite useful, it is often packaged into one operation called "bind" in most literature, `SelectMany` in C#, `flatMap` in Scala, and the incredibly descriptive `>>=` in Haskell.
+
+Types that support bind are called *monads*.
+
+## Unit
+
+Types that are instances of monads also need a way of creating an instance of that type from a value. For OO-style languages this can be a constructor.
+
+    new SomeType<A>(A value);
+
+This function is commonly called unit, or `return` or `pure` in Haskell.
+
+## What is a monad?
+
+A monad is a type that supports the map, bind and unit functions. Because they support map, all monads are also functors. We can write out this contract in C#-style:
+
+```csharp
+interface Functor<A> {
+    Functor<B> Select<B>(Func<A,B> f, Functor<A> fa);
+}
+interface Monad<A> : Functor<A> {
+    Monad<B> SelectMany<B>(Func<A,Monad<B>> f, Monad<A> ma);
+    Monad<A> Unit(A value); // Or just use a constructor
+}
+```
+
+## Why bother?
+
+Types that have monad instances are useful because of the functionality they offer. The fact they are monads gives us helpful ways to compose them (using `map` and `bind`), and there are lots of functions we get for free when a type implements the monad interface, but this is not the key benefit.
+
+Lists support map and bind (or `Select` and `SelectMany` in C# terms). But the useful thing about them is the can store zero or more values. The `Option<A>` or `Maybe<A>` types have monad instances, but their benefit is they represent zero or one value. An async call that will eventually return a value of type `A` has a monad instance, but it's benefit is it lets us represent and compose asynchronous computations, before we actually go off an execute it.
+
+In other words, it is not the monad bit of types that is generally the most interesting, it is the types themselves. Supporting the monad interface just gives us some useful ways of using them.
+
 
