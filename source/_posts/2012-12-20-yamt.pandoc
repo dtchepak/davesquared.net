@@ -1,0 +1,28 @@
+---
+layout: post
+title: "YAMT"
+date: 2012-12-19 21:30
+comments: true
+categories: ["functional programming"]
+---
+
+<!-- more -->
+
+First up, sorry.
+
+Monads are not hard. They are not trivial either -- few things are if you look deep enough -- but they are definitely no more difficult than any other concepts in programming. We should not take this as some damning indictment of our intellect if we don't understand monads; rather, that it's just something unfamiliar, something we haven't learned yet. 
+
+Let's start with a [generic/parameterised type](http://en.wikipedia.org/wiki/Parameterized_type) that we'll call `SomeType<A>`. This represents a type that has, or calculates, values of some arbitrary type `A`.^[A good example is an array or list; it can be list of `int`, or of `string`, or of `Foo`. In other words, it is a `List<A>`, where `A` is some specific type.]
+
+Now say we have our `SomeType<A>`, and a function that takes an `A` as an argument and returns a `B`. We may be able to map this function inside our type, and convert it to a `SomeType<B>`.
+
+    //Pseudo-code
+    SomeType<int> a = new SomeType<int>(6);
+    SomeType<string> b = map(addOneAndConvertToString, a);
+
+A type that supports mapping a function like this is called a *functor*. It just needs to support the map operation:
+
+    Given SomeType<A>,
+    And a function that takes an A and returns a B,
+    Then return SomeType<B>
+
