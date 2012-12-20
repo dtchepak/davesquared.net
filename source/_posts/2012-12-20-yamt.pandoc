@@ -12,6 +12,18 @@ First up, sorry.
 
 Monads are not hard. They are not trivial either -- few things are if you look deep enough -- but they are definitely no more difficult than any other concepts in programming. We should not take this as some damning indictment of our intellect if we don't understand monads; rather, that it's just something unfamiliar, something we haven't learned yet. 
 
+=====
+
+A monad instance is a type that supports the map function. Given `SomeType<A>`, and a function that takes an `A` and returns a `B`, we can apply this function inside the type to get a `SomeType<B>`.
+
+A monad instance also supports mapping functions that take an `A` and return a `SomeType<B>`, still returning a `SomeType<B>` once this is done. This is called the bind function (`SelectMany` in C#, `>>=` in Haskell, `flatMap` in Scala).
+
+We also need to be able to create instances of our type give an value of type `A`. This can be a constructor call in OO-style languages (`new SomeType<A>(A value)`), or is a separate function called `unit`, or `return` or `pure` in Haskell.
+
+
+
+=====
+
 ## Types we can map functions over
 
 Let's start with a [generic/parameterised type](http://en.wikipedia.org/wiki/Parameterized_type) that we'll call `SomeType<A>`. This represents a type that has, or calculates, values of some arbitrary type `A`.^[A good example is an array or list; it can be list of `int`, or of `string`, or of `Foo`. In other words, it is a `List<A>`, where `A` is some specific type.]
