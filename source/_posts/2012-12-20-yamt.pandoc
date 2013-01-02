@@ -32,20 +32,13 @@ Now say we have a function that takes an `A` and returns a `SomeType<B>`. Again 
 
 Our previous `map` function doesn't quite work, because if we convert each `A` into a `SomeType<B>`, we'll get a `SomeType<SomeType<B>>`. We want to flatten out this structure to get a `SomeType<B>`. 
 
-An example is a function which takes an integer that represents a product category, and returns the names of all the products in that category. In other words, given an integer, it returns a list of strings (`Int -> [String]`).
+An example is a function which takes an integer that represents a product category, and returns the names of all the products in that category. In other words, given an integer, it returns a list of strings (`Int -> [String]`). If we map this function across a list of integers, we'll get a list of lists. What we'd like to do is flatten this into a list of strings representing all the products in those categories (which we do with `concat` in Haskell).
 
 ```haskell
-> findProductsIn 42
+ghci> findProductsIn 42
 ["earl grey", "english breakfast"]
-```
-
-If we map this function across a list of integers, we'll get a list of lists. What we'd like to do is flatten this into a list of strings representing all the products in those categories.
-
-```haskell
 ghci> map findProductsIn [42,101,418]
 [["earl grey","english breakfast"],["country","western"],["teapot"]]
-
--- The concat function flattens lists in haskell
 ghci> concat (map findProductsIn [42,101,418])
 ["earl grey","english breakfast","country","western","teapot"]
 ```
@@ -69,7 +62,7 @@ map  :: (A -> B)           -> SomeType<A> -> SomeType<B>
 bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
 ```
 
-Bind works very similarly to `map`, with an additional "flattening" step.
+Bind works very similarly to `map`, only with an additional "flattening" step.
 
 ## `return`
 
