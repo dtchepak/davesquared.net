@@ -30,9 +30,9 @@ For example, we can map a function `intToWord` over `[1,2,3]` and get `["one", "
 
 Now say we have a function that takes an `A` and returns a `SomeType<B>`. Again we'd like to map this function over `SomeType<A>` and get a `SomeType<B>`.
 
-Our previous `map` function doesn't quite work, because if we convert all our `A`s into `SomeType<B>`s, we'll get a `SomeType<SomeType<B>>`. We want to flatten out this structure to get a `SomeType<B>`. 
+Our previous `map` function doesn't quite work, because if we convert each `A` into a `SomeType<B>`, we'll get a `SomeType<SomeType<B>>`. We want to flatten out this structure to get a `SomeType<B>`. 
 
-Say we have a function which takes an integer that represents a product category, and returns the names of all the products in that category. In other words, given an integer, it returns a list of strings (`Int -> [String]`).
+An example is a function which takes an integer that represents a product category, and returns the names of all the products in that category. In other words, given an integer, it returns a list of strings (`Int -> [String]`).
 
 ```haskell
 > findProductsIn 42
@@ -62,10 +62,14 @@ csharp> new [] {42,101,418}.SelectMany(x => FindProductsIn(x));
 {"earl grey","english breakfast","country","western","teapot"}
 ```
 
-<div class="note">**Aside:** Notice the similarities between the signature of `map` and `bind`:
-    map  :: (A -> B)            -> SomeType<A> -> SomeType<B>
-    bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
-<div>
+Notice the similarities between the signature of `map` and `bind`:
+
+```haskell
+map  :: (A -> B)           -> SomeType<A> -> SomeType<B>
+bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
+```
+
+Bind works very similarly to `map`, with an additional "flattening" step.
 
 ## `return`
 
