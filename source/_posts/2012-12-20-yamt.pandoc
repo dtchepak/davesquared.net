@@ -1,26 +1,50 @@
 ---
 layout: post
-title: "YAMT"
-date: 2012-12-19 21:30
+title: "YAMT (sorry)"
+date: 2013-01-02 14:55
 comments: true
 categories: ["functional programming"]
 ---
 
+I keep seeing material stating how terribly difficult monads are to understand. This perturbs me. Monads are not hard. They are not trivial either -- few things are if you look deep enough -- but they are definitely no more difficult than any other concepts in programming.
+
 <!-- more -->
 
-First up, sorry.
+## What is a monad?
 
-Monads are not hard. They are not trivial either -- few things are if you look deep enough -- but they are definitely no more difficult than any other concepts in programming. We should not take this as some damning indictment of our intellect if we don't understand monads; rather, that it's just something unfamiliar, something we haven't learned yet. 
+A monad is two functions, `bind` and `return`, that work on a particular type and obey [three laws](http://www.haskell.org/haskellwiki/Monad_Laws).
+
+The `bind` function maps functions that take an `A` and return a `SomeType<B>` over a `SomeType<A>` to produce a `SomeType<B>`. This function is also called `SelectMany` in C#, `>>=` in Haskell, `flatMap` in Scala.
+
+    -- Haskell:
+    (>>=) :: m a -> (a -> m b) -> m b
+
+    -- C# extension method:
+    public static M<B> SelectMany(this M<A> ma, Func<A, M<B>> f);
+
+The `return` function creates instances of our type from a value of type `A`. This can be a constructor call in languages that use classes (`new SomeType<A>(A value)`), or is a separate function called `unit`, `return`, `point` or `pure` in other languages (Haskell uses `return`).
+
+    -- Haskell:
+    return :: a -> m a
+
+    -- C#:
+    public static M<A> Return(A a);
+    //or:
+    class SomeType<A> { public SomeType<A>(A value) { ... } }
+
+A type has a monad instance if a pair of functions with these signatures exist for it. A decent approximation is a type implementing the "monad interface" by declaring those two methods.
+
+## More helpful than it seems
+
+I initially found this definition unhelpful.
+
 
 =====
 
 A monad instance is a type that supports the map function. Given `SomeType<A>`, and a function that takes an `A` and returns a `B`, we can apply this function inside the type to get a `SomeType<B>`.
 
-A monad instance also supports mapping functions that take an `A` and return a `SomeType<B>`, still returning a `SomeType<B>` once this is done. This is called the bind function (`SelectMany` in C#, `>>=` in Haskell, `flatMap` in Scala).
 
-We also need to be able to create instances of our type give an value of type `A`. This can be a constructor call in OO-style languages (`new SomeType<A>(A value)`), or is a separate function called `unit`, or `return` or `pure` in Haskell.
-
-
+A monad instance is therefore an implementation of `map`, bind, and `unit` (or an equivalent constructor) for a type. 
 
 =====
 
@@ -32,8 +56,8 @@ Now say we have our `SomeType<A>`, and a function that takes an `A` as an argume
 
 A type that supports mapping a function like this is called a *functor*. It needs to support the map operation:
 
-    //C-style language:
-    SomeType<B> map(Func<A,B> f, SomeType<A> a);
+    //C#:
+    SomeType<B> Map(Func<A,B> f, SomeType<A> a);
 
     //Haskell:
     map :: (a -> b) -> f a -> f b
@@ -71,7 +95,7 @@ This function is commonly called unit, or `return` or `pure` in Haskell.
 
 ## What is a monad?
 
-A monad is a type that supports the map, bind and unit functions. Because they support map, all monads are also functors. We can write out this contract in C#-style:
+A monad is an implementation of map, bind and unit functions for a type. Because they support map, all monads are also functors. We can write out this contract in C#-style:
 
 ```csharp
 interface Functor<A> {
