@@ -12,11 +12,78 @@ I keep seeing material stating how terribly difficult monads are to understand. 
 
 ## What is a monad?
 
-A monad is a pair of functions, `bind` and `return`, that work on a particular type and obey [three laws](http://www.haskell.org/haskellwiki/Monad_Laws). 
+A monad is a pair of functions, `bind` and `return`, that work on a particular type and obey [three laws](http://www.haskell.org/haskellwiki/Monad_Laws). A type has a monad instance if a pair of functions with these signatures exists for it. 
 
-We'll go into the signatures of these functions in a moment, but for now we'll just say that a type has a monad instance if a pair of functions with these signatures exists for it. 
+The `bind` function takes two arguments, a `SomeType<A>` and a function that converts an `A` to a `SomeType<B>`, and it returns a `SomeType<B>`. Bind is know as `SelectMany` in C#, `flatMap` in Scala, and the incredibly descriptive `>>=` in Haskell. It is 
+
+The `return` function creates instances of `SomeType<A>` type from a value of type `A`. This can be a constructor call in languages that use classes (`new SomeType<A>(A value)`), or is a separate function called `unit`, `return`, `point` or `pure` in other languages (Haskell uses `return`).
 
 A useful approximation is an interface with two methods on it. A type can implement this "monad interface" by providing implementations for those two methods. As far as I can tell, the term "monad" refers to the general interface, while a "monad instance" is a specific implementation of this interface for a type.
+
+## `bind` vs. `map`
+
+I find the `bind` function easiest to understand when compared to `map` (also `fmap` in Haskell, or `Select` in C#).
+
+`map` let's us take a function that converts a value of type `A` to a value of type `B`, and use it to convert a `SomeType<A>` to a `SomeType<B>`, by applying the `A -> B` conversion function to the value or values inside the `SomeType<A>`.
+
+Now say we have a function that takes an `A` and returns a `SomeType<B>`. Again we'd like to map this function over `SomeType<A>` and get a `SomeType<B>`. Our previous `map` function doesn't quite work, because if we convert each `A` into a `SomeType<B>`, we'll get a `SomeType<SomeType<B>>`. We want to flatten out this structure to get a `SomeType<B>`. 
+
+For example, let's take a function that returns a list of product names for a particular product category. In other words, it takes an integer and returns a list of strings. Given a list of categories, we'd like to get a list of products in those categories. 
+
+```javascript
+> findProductsIn(42)
+["earl grey", "english breakfast"]
+
+// map gives us a list of lists
+> map(findProductsIn, [42,106,418])
+[["earl grey","english breakfast"],["country","western"],["teapot"]]
+
+> flatten(map(findProductsIn, [42,106,418]))
+["earl grey","english breakfast","country","western","teapot"]
+
+> bind(findProductsIn, [42,106,418]))
+["earl grey","english breakfast","country","western","teapot"]
+```
+
+<div class="note">
+**Aside:** Notice the similarities between `map` and `bind`:
+
+    map  :: (A -> B)           -> SomeType<A> -> SomeType<B>
+    bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
+
+They both apply functions to the value or values in `SomeType<A>`, but `map` works works with functions `A -> B` while `bind` works with functions `A -> SomeType<B>`.
+</div>
+
+
+
+======
+
+It is quite similar to `map` (or `Select` in C#), but it maps functions from `A` to `SomeType<B>` instead of functions from `A` to `B`.
+
+### `bind`
+
+The `bind` function is similar to `map` (or `Select` in C#). Given a `SomeType<A>`, `map` takes a function that converts an `A` to a `B`, and applies this function inside the `SomeType<A>` to produce a `SomeType<B>`.
+
+`bind` also converts a `SomeType<A>` to a `SomeType<B>`, but works with conversion functions that take an `A` and return a `SomeType<B>`.^[Here are the type signatures of `map` and `bind`:
+
+    -- Haskell:
+    map  :: (A -> B)           -> SomeType<A> -> SomeType<B>
+    bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
+    // C#:
+    class SomeType<A> {
+        SomeType<B> Select<B>(Func<A, B> f);
+        SomeType<B> SelectMany<B>(Func<A, SomeType<B>> f);
+    }
+]
+
+Bind is also known as `SelectMany` in C#, `flatMap` in Scala, and the incredibly descriptive `>>=` in Haskell.
+
+### `return`
+
+
+### Monadic interface
+
+
 
 ## Prelude to a bind
 
