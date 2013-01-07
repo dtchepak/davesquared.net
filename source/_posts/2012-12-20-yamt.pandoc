@@ -6,134 +6,139 @@ comments: true
 categories: ["functional programming"]
 ---
 
-I keep seeing material stating how terribly difficult monads are to understand. This perturbs me. Monads are not hard. They are not trivial either -- few things are if you look deep enough -- but they are definitely no more difficult than any other concepts in programming.
+Monads are not trivial to understand -- few things are if you look deep enough -- but I don't think they are anywhere near as difficult as they are made out to be. 
+
+I've [previously attempted to describe monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html), but it was fairly Haskell-specific, and I wanted to try a more language-agnostic explanation.
 
 <!-- more -->
 
 ## What is a monad?
 
-A monad is a pair of functions, `bind` and `return`, that work on a particular type and obey [three laws](http://www.haskell.org/haskellwiki/Monad_Laws). A type has a monad instance if a pair of functions with these signatures exists for it. 
+A monad is a pair of functions, commonly called `bind` and `unit`^[`bind` is also known as `SelectMany` in C#, `flatMap` in Scala, and the incredibly descriptive `>>=` in Haskell. `unit` is also known as `return`, `point` or `pure`.], that work on a particular type and obey [three laws](http://www.haskell.org/haskellwiki/Monad_Laws). 
 
-The `bind` function takes two arguments, a `SomeType<A>` and a function that converts an `A` to a `SomeType<B>`, and it returns a `SomeType<B>`. Bind is know as `SelectMany` in C#, `flatMap` in Scala, and the incredibly descriptive `>>=` in Haskell. It is 
+Say we have a type `SomeType<A>`, which is a type that has or calculates a value or values of another type.^[This is known as a [parameterised or generic type](http://en.wikipedia.org/wiki/Parameterized_type). An example is lists; we can have a list of `int`, or a list of `string`. Another example is asynchronous calls; one could calculate a result that is a `Foo`, while another calculates a `Bar`.]
 
-The `return` function creates instances of `SomeType<A>` type from a value of type `A`. This can be a constructor call in languages that use classes (`new SomeType<A>(A value)`), or is a separate function called `unit`, `return`, `point` or `pure` in other languages (Haskell uses `return`).
+The `bind` function takes two arguments: a `SomeType<A>`, and a function that converts an `A` to a `SomeType<B>`, and it returns a `SomeType<B>`.
 
-A useful approximation is an interface with two methods on it. A type can implement this "monad interface" by providing implementations for those two methods. As far as I can tell, the term "monad" refers to the general interface, while a "monad instance" is a specific implementation of this interface for a type.
+The `unit` function returns values of `SomeType<A>` from a value of type `A`. This can be a constructor call in languages that use classes (`new SomeType<A>(A value)`).
 
-## `bind` vs. `map`
+A type has a monad instance if a pair of functions with these signatures exist for it (that satisfy the 3 laws). A useful approximation is an interface with two methods on it. A type can implement this interface by providing implementations for these two methods. As far as I can tell, the term "monad" refers to the general interface, while a "monad instance" a specific implementation of this interface for a type.
 
-I find the `bind` function easiest to understand when compared to `map` (also `fmap` in Haskell, or `Select` in C#).
+<div class="note">**Example:** `IEnumerable<T>` in C# has a monad instance; it has a `SelectMany` function for `IEnumerable<T>` with the required `bind` signature^[We looked at [how `SelectMany` matches the bind signature](/2012/06/fp-newbie-learns-monads.html#seriously-thats-it) in a previous post], and we can use the array, `List<T>` or other constructors as `unit`.</div>
 
-`map` let's us take a function that converts a value of type `A` to a value of type `B`, and use it to convert a `SomeType<A>` to a `SomeType<B>`, by applying the `A -> B` conversion function to the value or values inside the `SomeType<A>`.
+This tells us what monads are, not what they do, but it is important we don't confuse the two questions. What is a monad? A monad is a pair of functions with certain signatures.
 
-Now say we have a function that takes an `A` and returns a `SomeType<B>`. Again we'd like to map this function over `SomeType<A>` and get a `SomeType<B>`. Our previous `map` function doesn't quite work, because if we convert each `A` into a `SomeType<B>`, we'll get a `SomeType<SomeType<B>>`. We want to flatten out this structure to get a `SomeType<B>`. 
+## What does a monad do?
 
-For example, let's take a function that returns a list of product names for a particular product category. In other words, it takes an integer and returns a list of strings. Given a list of categories, we'd like to get a list of products in those categories. 
+There are two parts to what monads do for us. One is related to the particular monad instance we are talking about; what does the specific implementation of the `bind` method for a type do? The other is what the general monad "interface" lets us do.
+
+## What does `bind` do?
+
+The first step to understanding what monads give us is the `bind` function.
+
+The `bind` function looks quite similar to `map`, or `Select` in C#. The `map` function transforms a `SomeType<A>` to a `SomeType<B>`, by applying a function that converts an `A` to a `B`, which we'll write `A -> B`. 
+
+`bind` also transforms a `SomeType<A>` to a `SomeType<B>`, but by applying a function that converts an `A -> SomeType<B>`. If we tried to use `map` with a function `A -> SomeType<B>` we'd get a `SomeType<SomeType<B>>` back.
 
 ```javascript
-> findProductsIn(42)
-["earl grey", "english breakfast"]
-
-// map gives us a list of lists
-> map(findProductsIn, [42,106,418])
-[["earl grey","english breakfast"],["country","western"],["teapot"]]
-
-> flatten(map(findProductsIn, [42,106,418]))
-["earl grey","english breakfast","country","western","teapot"]
-
-> bind(findProductsIn, [42,106,418]))
-["earl grey","english breakfast","country","western","teapot"]
+> productsInCategory(42);
+[ 'earl grey', 'english breakfast' ]
+> [42,101,418].map(productsInCategory);
+[ [ 'earl grey', 'english breakfast' ],
+  [ 'country', 'western' ],
+  [ 'teapot' ] ]
 ```
 
-<div class="note">
-**Aside:** Notice the similarities between `map` and `bind`:
+Using `bind` still applies the conversion function, but flattens the result back to a `SomeType<B>`:
 
-    map  :: (A -> B)           -> SomeType<A> -> SomeType<B>
-    bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
+```javascript
+> [42,101,418].bind(m.productsInCategory);
+[ 'earl grey',
+  'english breakfast',
+  'country',
+  'western',
+  'teapot' ]
+```
 
-They both apply functions to the value or values in `SomeType<A>`, but `map` works works with functions `A -> B` while `bind` works with functions `A -> SomeType<B>`.
-</div>
+This difference lets `bind` do something `map` can't -- we can chain together multiple computations that return `SomeType` types, letting each function in the chain access the results of previous calls, and return a `SomeType` that represents the composition of all those computations.
 
+```javascript
+sample = function() {
+    return bestSellingCategories().bind(function(category) {
+    return productsInCategory(category.id).bind(function (product) {
+    return [product + onSpecial(product, category)];
+}); }); };
+[ 'earl grey [ON SALE!]',
+  'english breakfast [ON SALE!]',
+  'country',
+  'western [ON SALE!]',
+  'teapot' ]
+```
 
+We could do the same nesting with `map` rather than `bind`, but then we'd end up with a `List<List<string>>` again.
 
-======
+This `bind` pattern is useful for more than just lists. For example, say we have a monad instance for `Async<A>`, a type which represents an async operation that, when told to run, will return an `A`. We have a `getOrder(int orderId)` function that returns an `Async<Order>`, and a `getShippingInfo(ShippingReference ref)` function that returns an `Async<ShippingInfo>`. We want to create a new function that returns an `Async<Bool>` that indicates whether a particular order can be modified.
 
-It is quite similar to `map` (or `Select` in C#), but it maps functions from `A` to `SomeType<B>` instead of functions from `A` to `B`.
+```javascript
+function canModifyOrder(int orderId) {
+    return getOrder(orderId).bind(function (order) {
+    return getShippingInfo(order.ShippingRef).bind(function (info) {
+    return unit(!order.IsPaid && !info.HasShipped);
+}); }); }
+```
 
-### `bind`
+We could use the same code if, rather than dealing with `Async<A>`, we were dealing with an `Option<A>` or `Maybe<A>` type, which [represents a value that could be empty](http://davesquared.net/2012/12/optional-fp-in-csharp.html). If either `getOrder()` or `getShippingInfo()` returned empty, then the result of the computation would be empty.
 
-The `bind` function is similar to `map` (or `Select` in C#). Given a `SomeType<A>`, `map` takes a function that converts an `A` to a `B`, and applies this function inside the `SomeType<A>` to produce a `SomeType<B>`.
+## Composing computations
 
-`bind` also converts a `SomeType<A>` to a `SomeType<B>`, but works with conversion functions that take an `A` and return a `SomeType<B>`.^[Here are the type signatures of `map` and `bind`:
+This pattern crops up [lots](http://davesquared.net/2012/08/reader-monad.html) and [lots](http://davesquared.net/2012/10/state-monad.html) and [lots](http://davesquared.net/2012/12/optional-fp-in-csharp.html) and  [lots](http://en.wikipedia.org/wiki/Monad_(functional_programming)#Examples) of times, so much so that some languages have built-in syntax to support it[^monadSyntax].
 
-    -- Haskell:
-    map  :: (A -> B)           -> SomeType<A> -> SomeType<B>
-    bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
-    // C#:
-    class SomeType<A> {
-        SomeType<B> Select<B>(Func<A, B> f);
-        SomeType<B> SelectMany<B>(Func<A, SomeType<B>> f);
+[^monadSyntax]: Some examples of monad-comprehension syntax:
+
+        --Haskell
+        canModifyOrder orderId = do
+            order <- getOrder orderId
+            info <- getShippingInfo (shippingRef order)
+            return not (isPaid order) && not (hasShipped order)
+        //C#
+        var canModifyOrder =
+            from order in GetOrder(orderId)
+            from info in GetShippingInfo(order.ShippingRef)
+            select !order.IsPaid && !info.HasShipped
+        //Scala (approximate, I don't speak Scala)
+        var canModifyOrder = for {
+            order <- getOrder(orderId)
+            info <- getShippingInfo(order.shippingRef())
+        } yield (!order.IsPaid && !info.HasShipped)
+
+This brings us to our first, major benefit of monads -- they provide a common pattern for types to chain together calls that use the values computed by the type, by providing an implementation of `bind` and `unit`. 
+
+The process of computation for these types is sometimes called a *computation context*, or a *monadic effect*, which is carried through each step in the chain of calls. For `List<A>`, the context is a collection of values, for `Option<A>` it is zero or one values, for `Asyc<A>`, it is a value that will be calculated asynchronously later on. The monad instance encapsulates this, so all we need to do is call `bind` and we know the type's implementation will do the correct thing.
+
+## Why monads matter
+
+There are benefits to the monad "interface" beyond just want specific implementations of `bind` and `unit` provide for a type. There are [surprisingly many functions](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#g:2) that can be implemented using only these two functions.
+
+For example, `map` itself can be implemented for any monad:
+
+```javascript
+function map(f, monad) {
+    return monad.bind(function(x) {
+        return monad.unit(f(x));
     }
-]
+}
 
-Bind is also known as `SelectMany` in C#, `flatMap` in Scala, and the incredibly descriptive `>>=` in Haskell.
-
-### `return`
-
-
-### Monadic interface
-
-
-
-## Prelude to a bind
-
-I find the `bind` function easiest to understand when compared to `map` (also `fmap` in Haskell, or `Select` in C#).
-
-`map` let's us take a function that converts a value of type `A` to a value of type `B`, and use it to convert a `SomeType<A>` to a `SomeType<B>`, by applying the `A -> B` conversion function to the value or values inside the `SomeType<A>`.
-
-For example, we can map a function `intToWord` over `[1,2,3]` and get `["one", "two", "three"]`. The `intToWord` function got applied to every element in the list of integers, and we ended up with a list of words.
-
-## Mapping and flattening, or `bind`
-
-Now say we have a function that takes an `A` and returns a `SomeType<B>`. Again we'd like to map this function over `SomeType<A>` and get a `SomeType<B>`. Our previous `map` function doesn't quite work, because if we convert each `A` into a `SomeType<B>`, we'll get a `SomeType<SomeType<B>>`. We want to flatten out this structure to get a `SomeType<B>`. 
-
-For example, let's take a function that returns a list of product names for a particular product category. In other words, it takes an integer and returns a list of strings. Given a list of categories, we'd like to get a list of products in those categories. 
-
-```javascript
-> findProductsIn(42)
-["earl grey", "english breakfast"]
-
-// map gives us a list of lists
-> map(findProductsIn, [42,106,418])
-[["earl grey","english breakfast"],["country","western"],["teapot"]]
-
-> flatten(map(findProductsIn, [42,106,418]))
-["earl grey","english breakfast","country","western","teapot"]
-
-> bind(findProductsIn, [42,106,418]))
-["earl grey","english breakfast","country","western","teapot"]
+> map(function(x) { return x+1; }, [1,2,3]);
+[ 2, 3, 4 ]
 ```
 
-This combination of mapping and flattening can be quite useful, and is often packaged into one function called "bind" in most places, `SelectMany` in C#, `flatMap` in Scala, and the incredibly descriptive `>>=` in Haskell.
+Another useful one is `sequence`, which will transform `[SomeType<A>]` into `SomeType<[A]>`.
 
-<div class="note">
-**Aside:** Notice the similarities between `map` and `bind`:
 
-    map  :: (A -> B)           -> SomeType<A> -> SomeType<B>
-    bind :: (A -> SomeType<B>) -> SomeType<A> -> SomeType<B>
+## Conclusion
 
-They both apply functions to the value or values in `SomeType<A>`, but `map` works works with functions `A -> B` while `bind` works with functions `A -> SomeType<B>`.
-</div>
 
-## `return`
-
-The `return` function creates instances of our type from a value of type `A`. This can be a constructor call in languages that use classes (`new SomeType<A>(A value)`), or is a separate function called `unit`, `return`, `point` or `pure` in other languages (Haskell uses `return`).
-
-For lists, `return 2` will produce `[2]`, a list containing `2` as an element. In C#, this is like `new List<int> { 2 }`.
-
-## It's the type that makes the monad
-
-So far we've been looking at examples of `bind` and `return` for list types. That is just one particular implementation of the monad "interface".
+==============
 
 ## What does this give us?
 
@@ -141,14 +146,11 @@ So a monad consists of a `bind` and `return` function. That's it. How can this b
 
 First, it gives us ways of combining
 
-There are [surprisingly many functions](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#g:2) that can be implemented using only these two functions.
 
 //e.g. map, sequence
 
 
-
-
-## Why bother?
+## It the type that makes the monad
 
 Types that have monad instances are useful because of the functionality they offer. The fact they are monads gives us helpful ways to compose them (using `map` and `bind`), and there are lots of functions we get for free when a type implements the monad interface, but this is not the key benefit.
 
