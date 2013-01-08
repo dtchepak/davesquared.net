@@ -114,13 +114,15 @@ This pattern crops up a lot -- for [functions that take the same argument type](
     } yield (!order.IsPaid && !info.HasShipped)
     ```
 
-So `bind` and `unit` (i.e. monads) give us a common pattern for chaining together types that have or compute values, where each computation in the chain can access the results of previous computations. 
+So `bind` and `unit` (i.e. monads) give us a common pattern for chaining together types that have or compute values, where each step in the chain can access the results of previous step. 
 
 ## Composing computations
 
-Different types will vary in how they compute their values. `List<A>` gives zero or more values (e.g. a list with 0, 1, or multiple values), `Option<A>` gives zero or one value, `Async<A>` will compute a single value asynchronously at some point in the future. Each monad instance for a type encapsulates what it means to compose computations of that type, so all we need to do is call `bind` and we know the resulting computation will do the correct thing.
+Different types will vary in how they hold or compute their values. `List<A>` holds zero or more values (e.g. a list with 0, 1, or multiple values), `Option<A>` holds zero or one value, `Async<A>` will compute a single value asynchronously at some point in the future. Each monad instance for a type encapsulates what it means to compose computations of that type, so by calling `bind` and `unit` we know the resulting type will do the correct thing.
 
-From what I can tell, this process of computation is called a *computation context*, or a *monadic effect*. Using `bind` ensures that this context or effect is maintained in the resulting computation. Binding two `Async<>` computations together will ensure that the first call is made, and the result of that is fed into the second `Async<>` computation. We have maintained the "async-ness" of the computation.
+From what I can tell, this is referred to as maintaining a *computation context*, or *monadic effect*. Once we start binding together lists, we are ultimately going to produce a new list as the result. If we are binding together async calls, our final result will be a computation that gets its result from async calls.
+
+This helps us to keep some separation between the logic used for the monadic effect (kept in `bind`, `unit` and the type), and how we want to use and combine those values (which we state in our calls to `bind` and `unit`). Monads keep those aspects decoupled for us.
 
 ## Over 30 functions for the price of 2
 
@@ -180,18 +182,6 @@ So the monad abstraction gives us a number of functions for combining types for 
 
 
 ==============
-
-## What does this give us?
-
-So a monad consists of a `bind` and `return` function. That's it. How can this be useful?
-
-First, it gives us ways of combining
-
-
-//e.g. map, sequence
-
-
-## It the type that makes the monad
 
 Types that have monad instances are useful because of the functionality they offer. The fact they are monads gives us helpful ways to compose them (using `map` and `bind`), and there are lots of functions we get for free when a type implements the monad interface, but this is not the key benefit.
 
