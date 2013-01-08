@@ -23,3 +23,9 @@ figure:not(.code) {
 section.footnotes {
     font-size: 0.7em;
 }
+
+.footnoteRef {
+    font-size: 0.8em;
+    vertical-align: super;
+    padding-left: 0.1em;
+}
