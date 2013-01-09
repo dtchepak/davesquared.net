@@ -132,7 +132,7 @@ This helps us to keep some separation between the logic used for the monadic eff
 
 There are benefits to the monad "interface" beyond just what specific implementations of `bind` and `unit` provide for a type. There are [surprisingly many functions](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#g:2) that can be implemented using only these two functions.
 
-For example, `map` itself can be implemented for any monad^[So all monads are [functors](http://davesquared.net/2012/05/fp-newbie-learns-functors.html)]:
+For example, `map` itself can be implemented for any monad^[So all monads are [functors](http://davesquared.net/2012/05/fp-newbie-learns-functors.html).]:
 
 ```javascript
 function map(f, monad) {
@@ -145,7 +145,7 @@ function map(f, monad) {
 [ 2, 3, 4 ]
 ```
 
-We can also take any two argument function that works on standard `A` and `B` types, and turn that into a function that works with `SomeType<A>` and `SomeType<B>`.^[All monads are [applicative functors](http://davesquared.net/2012/05/fp-newbie-learns-applicatives.html)]
+We can also take any two argument function that works on standard `A` and `B` types, and turn that into a function that works with `SomeType<A>` and `SomeType<B>`.^[All monads are [applicative functors](http://davesquared.net/2012/05/fp-newbie-learns-applicatives.html).]
 
 ```javascript
 lift2 = function(m, f, ma, mb) {
