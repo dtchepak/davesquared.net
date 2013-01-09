@@ -47,12 +47,12 @@ The `bind` function looks quite similar to `map`, or `Select()` in C#. The `map`
   [ 'teapot' ] ]
 ```
 
-<div class="note">**Note:** For this post whenever we use `bind` we are referring to one provided by a monad instance, not [JavaScript's built-in `bind` function](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind). Thanks to [José for pointing this out](https://twitter.com/jfroma/status/288858160712802304).</div>
+<div class="note">**Note:** For this post whenever we use a `bind` function we are referring to one provided by a monad instance, not [JavaScript's built-in `bind` function](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind). Thanks to [José for pointing this out](https://twitter.com/jfroma/status/288858160712802304).</div>
 
 Using `bind` still applies the conversion function, but flattens the result back to a `SomeType<B>`:
 
 ```javascript
-> [42,101,418].bind(m.productsInCategory);
+> [42,101,418].bind(productsInCategory);
 [ 'earl grey',
   'english breakfast',
   'country',
