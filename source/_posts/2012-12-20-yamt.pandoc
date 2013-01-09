@@ -166,20 +166,18 @@ This is written using only `bind` and `return`, and so lets us reuse any existin
 Another we can write using only those functions is `sequence`, which will transform `List<SomeType<A>>` into `SomeType<List<A>>`[^sequenceEg]. This lets us do things like take an array of asynchronous operations, and transform them into an async operation that will produce an array of results.
 
 [^sequenceEg:]
-    ```javascript
-    sequence = function(m, list) {
-        return list.reduce(function(acc, monad) {
-            return m.bind(function(x) { 
-                return m.map(function (ms) { return ms.concat(x); }, acc);
-            }, monad);
-        }, m.unit([]));
-    };
+        sequence = function(m, list) {
+            return list.reduce(function(acc, monad) {
+                return m.bind(function(x) { 
+                    return m.map(function (ms) { return ms.concat(x); }, acc);
+                }, monad);
+            }, m.unit([]));
+        };
 
-    > sequence(OptionMonad, [new Option(1), new Option(3), new Option(5)]);
-    '{Just [1,3,5]}'
-    > sequence(OptionMonad, [new Option(1), Option.Empty, new Option(5)]);
-    '{Empty}'
-    ```
+        > sequence(OptionMonad, [new Option(1), new Option(3), new Option(5)]);
+        '{Just [1,3,5]}'
+        > sequence(OptionMonad, [new Option(1), Option.Empty, new Option(5)]);
+        '{Empty}'
 
 So the monad abstraction gives us a number of functions for combining types for free, all thanks to `bind` and `unit`.
 
