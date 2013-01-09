@@ -6,9 +6,11 @@ comments: true
 categories: ["functional programming"]
 ---
 
-Monads are not trivial to understand -- few things are if you look deep enough -- but I don't think they are anywhere near as difficult as they are made out to be. In this post we'll look at what monads are, how they work, and why they are useful (which I think is in increasing order of difficulty). I'm very much still learning this stuff myself, so please post any corrections in the comments.
+Monads are not trivial to understand -- few things are if you look deep enough -- but I don't think they are anywhere near as difficult as they are made out to be. In this post we'll look at what monads are, how they work, and why they are useful. 
 
-I've [previously attempted to describe monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html), but it was fairly Haskell-specific, and I wanted to try a more language-agnostic explanation.
+My [previous attempt to describe monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html) used Haskell examples, so I thought I'd try a more language-agnostic explanation. In this case most of the code samples are written in the closest we have to a universal language: JavaScript.
+
+I'm very much still learning this stuff myself, so please comment if you have any corrections or if any part of this doesn't make sense.
 
 <!-- more -->
 
@@ -31,9 +33,7 @@ This tells us what monads are, not what they do, but at least we've answered the
 
 ## What does `bind` do?
 
-The first thing we need to work out is what `bind` does.
-
-The `bind` function looks quite similar to `map`, or `Select` in C#. The `map` function transforms a `SomeType<A>` to a `SomeType<B>`, by applying a function that converts an `A` to a `B`, which we'll write `A → B`, to the value or values in `SomeType<A>`. 
+The `bind` function looks quite similar to `map`, or `Select()` in C#. The `map` function transforms a `SomeType<A>` to a `SomeType<B>`, by applying a function that converts an `A` to a `B`, which we'll write `A → B`, to the value or values in `SomeType<A>`. 
 
 `bind` also transforms a `SomeType<A>` to a `SomeType<B>`, but by applying a function that converts an `A → SomeType<B>`. If we tried to use `map` with a function `A → SomeType<B>` we'd get a `SomeType<SomeType<B>>` back.
 
@@ -118,11 +118,13 @@ So `bind` and `unit` (i.e. monads) give us a common pattern for chaining togethe
 
 ## Composing computations
 
-Different types will vary in how they hold or compute their values. `List<A>` holds zero or more values (e.g. a list with 0, 1, or multiple values), `Option<A>` holds zero or one value, `Async<A>` will compute a single value asynchronously at some point in the future. Each monad instance for a type encapsulates what it means to compose computations of that type, so by calling `bind` and `unit` we know the resulting type will do the correct thing.
+Different types vary in how they hold or compute their values. `List<A>` holds zero or more values (e.g. a list with 0, 1, or multiple values), `Option<A>` holds zero or one value, `Async<A>` will compute a single value asynchronously at some point in the future. Each monad instance for a type encapsulates what it means to compose computations of that type, so by calling `bind` and `unit` we know the resulting computation will do the correct thing.
 
 From what I can tell, this is referred to as maintaining a *computation context*, or *monadic effect*. Once we start binding together lists, we are ultimately going to produce a new list as the result. If we are binding together async calls, our final result will be a computation that gets its result from async calls.
 
-This helps us to keep some separation between the logic used for the monadic effect (kept in `bind`, `unit` and the type), and how we want to use and combine those values (which we state in our calls to `bind` and `unit`). Monads keep those aspects decoupled for us.
+This helps us to keep some separation between the logic used for the monadic effect (encapsulated in `bind`, `unit` and the type), and how we want to use and combine those values (which we state in our calls to `bind` and `unit`). Monads keep those aspects decoupled for us.
+
+<div class="note">**Aside:** Maintaining a computation context is also a downside to monads. If we want to combine different types of computations into a new context, say, an `Option<A>` and an `Async<A>` into an `Async<Option<A>>`, then we need a specific [monad transformer](http://en.wikibooks.org/wiki/Haskell/Monad_transformers) to define how this should work. This isn't a huge deal, but it is more complex than combining `map` calls that we can compose using standard [function composition](http://davesquared.net/2012/07/left-to-right-composition.html), which is why you'll sometimes hear that "monads don't compose".</div>
 
 ## Over 30 functions for the price of 2
 
@@ -157,36 +159,44 @@ lift2 = function(m, f, ma, mb) {
 '{Empty}'
 ```
 
-This is written using only `bind` and `return`, and so lets us reuse any existing function with any monad we have. We can right similar `lift` functions to support functions with any number of arguments.
+This is written using only `bind` and `return`, and so lets us reuse any existing function with any monad we have. We can write similar `lift` functions to support functions with any number of arguments.
 
-Another useful one is `sequence`, which will transform `List<SomeType<A>>` into `SomeType<List<A>>`.
+Another we can write using only those functions is `sequence`, which will transform `List<SomeType<A>>` into `SomeType<List<A>>`[^sequenceEg]. This lets us do things like take an array of asynchronous operations, and transform them into an async operation that will produce an array of results.
 
-```javascript
-sequence = function(m, list) {
-    return list.reduce(function(acc, monad) {
-        return m.bind(function(x) { 
-            return m.map(function (ms) { return ms.concat(x); }, acc);
-        }, monad);
-    }, m.unit([]));
-};
+[^sequenceEg:]
+    ```javascript
+    sequence = function(m, list) {
+        return list.reduce(function(acc, monad) {
+            return m.bind(function(x) { 
+                return m.map(function (ms) { return ms.concat(x); }, acc);
+            }, monad);
+        }, m.unit([]));
+    };
 
-> sequence(OptionMonad, [new Option(1), new Option(3), new Option(5)]);
-'{Just [1,3,5]}'
-> sequence(OptionMonad, [new Option(1), Option.Empty, new Option(5)]);
-'{Empty}'
-```
+    > sequence(OptionMonad, [new Option(1), new Option(3), new Option(5)]);
+    '{Just [1,3,5]}'
+    > sequence(OptionMonad, [new Option(1), Option.Empty, new Option(5)]);
+    '{Empty}'
+    ```
 
 So the monad abstraction gives us a number of functions for combining types for free, all thanks to `bind` and `unit`.
 
 ## Conclusion
 
+A monad is a pair of functions, `bind` and `unit`, that give us useful ways of combining types that hold or produce values (which we broadly label "computations"). 
 
-==============
+    //C#-style:
+    SomeType<B> bind(Func<A,SomeType<B>> f, SomeType<A> a);
+    SomeType<A> unit(A value);
 
-Types that have monad instances are useful because of the functionality they offer. The fact they are monads gives us helpful ways to compose them (using `map` and `bind`), and there are lots of functions we get for free when a type implements the monad interface, but this is not the key benefit.
+    -- Haskell-style:
+    bind :: (a -> m b) -> m a -> m b
+    unit :: a -> m a
 
-Lists support map and bind (or `Select` and `SelectMany` in C# terms). But the useful thing about them is the can store zero or more values. The `Option<A>` or `Maybe<A>` types have monad instances, but their benefit is they represent zero or one value. An async call that will eventually return a value of type `A` has a monad instance, but it's benefit is it lets us represent and compose asynchronous computations, before we actually go off an execute it.
+A monad instance for a type that computes values lets us chain together those types to produce an aggregated computation, where each computation can access previous results. It also decouples the logic of how we want to put together multiple computations, from the implementation details of how "put together" works. 
 
-In other words, it is not the monad bit of types that is generally the most interesting, it is the types themselves. Supporting the monad interface just gives us some useful ways of using them.
+The combination of `bind` and `unit` also give us many functions we can use with our type for free, like `map`, `lift` and `sequence`.
 
+So where to from here? It's probably worth looking at specific monad instances like the [Option / Maybe monad](http://davesquared.net/2012/12/optional-fp-in-csharp.html) that can start giving immediate benefits with no risk. I've found starting there has made it easier for me to start thinking in terms of binding and mapping into types, which in turn makes it easier to see where [other monads](http://en.wikipedia.org/wiki/Monad_(functional_programming)#Other_examples) can be useful.
 
+Hope this has helped!
