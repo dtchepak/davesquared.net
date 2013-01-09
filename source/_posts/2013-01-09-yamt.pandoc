@@ -2,6 +2,7 @@
 layout: post
 title: "YAMT (sorry)"
 date: 2013-01-09 12:21
+updated: 2013-01-09 15:15
 comments: true
 categories: ["functional programming"]
 ---
@@ -45,6 +46,8 @@ The `bind` function looks quite similar to `map`, or `Select()` in C#. The `map`
   [ 'country', 'western' ],
   [ 'teapot' ] ]
 ```
+
+<div class="note">**Note:** For this post whenever we use `bind` we are referring to one provided by a monad instance, not [JavaScript's built-in `bind` function](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind). Thanks to [José for pointing this out](https://twitter.com/jfroma/status/288858160712802304).</div>
 
 Using `bind` still applies the conversion function, but flattens the result back to a `SomeType<B>`:
 
