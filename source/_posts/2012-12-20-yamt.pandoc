@@ -25,9 +25,7 @@ The `bind` function takes two arguments: a `SomeType<A>`, and a function that co
 
 The `unit` function returns values of `SomeType<A>` from a value of type `A`. This can be a constructor call in languages that use classes (`new SomeType<A>(A value)`).
 
-The [monad laws](http://www.haskell.org/haskellwiki/Monad_Laws) specify some properties that need to hold when we implement these two functions.^[The monad laws state that `bind(f, unit(a)) == f(a)`, that `bind(unit, m) == m`, and that `bind` should be [associative](http://davesquared.net/2012/04/associativity.html).]
-
-A type has a monad instance if a pair of functions with these signatures exist for it (that satisfy the 3 laws). A useful approximation is an interface with two methods on it. A type can implement this interface by providing implementations for these two methods. As far as I can tell, the term "monad" refers to the general interface, while a "monad instance" is a specific implementation of this interface for a type.
+A type has a monad instance if a pair of functions with these signatures exist for it (that satisfy the [three laws](http://www.haskell.org/haskellwiki/Monad_Laws) to make sure they work together sensibly^[The monad laws specify three properties that need to hold when combining these functions: that `bind(f, unit(a)) == f(a)`, that `bind(unit, m) == m`, and that `bind` is [associative](http://davesquared.net/2012/04/associativity.html).]). A useful approximation is an interface with two methods on it. A type can implement this interface by providing implementations for these two methods. As far as I can tell, the term "monad" refers to the general interface, while a "monad instance" is a specific implementation of this interface for a type.
 
 <div class="note">**Example:** `IEnumerable<T>` in C# has a monad instance; it has a `SelectMany` function for `IEnumerable<T>` which matches the `bind` signature^[We looked at [how `SelectMany` matches the bind signature](/2012/06/fp-newbie-learns-monads.html#seriously-thats-it) in a previous post], and we can use the array, `List<T>` or other constructors as `unit`.</div>
 
@@ -59,7 +57,7 @@ Using `bind` still applies the conversion function, but flattens the result back
   'teapot' ]
 ```
 
-This difference lets `bind` do something `map` can't -- we can chain together multiple computations that return `SomeType` types, letting each function in the chain access the results of previous calls, and return a `SomeType` that represents the composition of all those computations.
+This difference lets `bind` do something `map` can't -- we can chain together multiple functions that return `SomeType` types, letting each function in the chain access the results of previous calls, and return a `SomeType` that represents the composition of all those computations.
 
 ```javascript
 sample = function() {
@@ -132,7 +130,7 @@ This helps us to keep some separation between the logic used for the monadic eff
 
 There are benefits to the monad "interface" beyond just what specific implementations of `bind` and `unit` provide for a type. There are [surprisingly many functions](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#g:2) that can be implemented using only these two functions.
 
-For example, `map` itself can be implemented for any monad^[So all monads are [functors](http://davesquared.net/2012/05/fp-newbie-learns-functors.html).]:
+For example, `map` itself can be implemented for using only `bind` and `unit`, and therefore for any monad^[So all monads are [functors](http://davesquared.net/2012/05/fp-newbie-learns-functors.html).]:
 
 ```javascript
 function map(f, monad) {
@@ -161,23 +159,26 @@ lift2 = function(m, f, ma, mb) {
 '{Empty}'
 ```
 
-This is written using only `bind` and `return`, and so lets us reuse any existing function with any monad we have. We can write similar `lift` functions to support functions with any number of arguments.
+This is written using only `bind` and `unit`, and so lets us reuse any existing function with any monad instance we have. We can write similar `lift` functions to support functions with any number of arguments.
 
 Another we can write using only those functions is `sequence`, which will transform `List<SomeType<A>>` into `SomeType<List<A>>`[^sequenceEg]. This lets us do things like take an array of asynchronous operations, and transform them into an async operation that will produce an array of results.
 
-[^sequenceEg:]
-        sequence = function(m, list) {
-            return list.reduce(function(acc, monad) {
-                return m.bind(function(x) { 
-                    return m.map(function (ms) { return ms.concat(x); }, acc);
-                }, monad);
-            }, m.unit([]));
-        };
+[^sequenceEg]: An implementation of `sequence`:
 
-        > sequence(OptionMonad, [new Option(1), new Option(3), new Option(5)]);
-        '{Just [1,3,5]}'
-        > sequence(OptionMonad, [new Option(1), Option.Empty, new Option(5)]);
-        '{Empty}'
+    ```javascript
+    sequence = function(m, list) {
+        return list.reduce(function(acc, monad) {
+            return m.bind(function(x) { 
+                return m.map(function (ms) { return ms.concat(x); }, acc);
+            }, monad);
+        }, m.unit([]));
+    };
+
+    > sequence(OptionMonad, [new Option(1), new Option(3), new Option(5)]);
+    '{Just [1,3,5]}'
+    > sequence(OptionMonad, [new Option(1), Option.Empty, new Option(5)]);
+    '{Empty}'
+    ```
 
 So the monad abstraction gives us a number of functions for combining types for free, all thanks to `bind` and `unit`.
 
