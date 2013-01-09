@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "YAMT (sorry)"
-date: 2013-01-02 14:55
+date: 2013-01-09 12:21
 comments: true
 categories: ["functional programming"]
 ---
@@ -24,6 +24,8 @@ Say we have `SomeType<A>`, which represents a type that has or calculates a valu
 The `bind` function takes two arguments: a `SomeType<A>`, and a function that converts an `A` to a `SomeType<B>`, and it returns a `SomeType<B>`.
 
 The `unit` function returns values of `SomeType<A>` from a value of type `A`. This can be a constructor call in languages that use classes (`new SomeType<A>(A value)`).
+
+The [monad laws](http://www.haskell.org/haskellwiki/Monad_Laws) specify some properties that need to hold when we implement these two functions.^[The monad laws state that `bind(f, unit(a)) == f(a)`, that `bind(unit, m) == m`, and that `bind` should be [associative](http://davesquared.net/2012/04/associativity.html).]
 
 A type has a monad instance if a pair of functions with these signatures exist for it (that satisfy the 3 laws). A useful approximation is an interface with two methods on it. A type can implement this interface by providing implementations for these two methods. As far as I can tell, the term "monad" refers to the general interface, while a "monad instance" is a specific implementation of this interface for a type.
 
