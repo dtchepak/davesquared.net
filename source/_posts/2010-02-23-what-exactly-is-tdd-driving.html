@@ -4,7 +4,7 @@ title: "What exactly is TDD driving?"
 blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-4738090660889734946"
 categories: ["imho", "tdd", "dev practices"]
 date: "2010-02-23T22:13:00.0+11:00"
-updated: "2010-12-24T23:25:59.181+11:00"
+updated: "2013-01-20 13:33"
 ---
 
 <p>Over the last few months I've been toying around with some fairly wacky ideas about Test Driven Development. Ever since first discovering TDD a few years back (early 2006 I think) I've been hooked. It is such an awesome idea, with the seductive promise of helping to write cleaner, more elegant code with less bugs, less bloat, and more malleable designs.</p>
@@ -13,9 +13,9 @@ updated: "2010-12-24T23:25:59.181+11:00"
 
 <p>And so, in a valiant effort to avoid blaming my own lack of competence, I've started to challenge one of the fundamental tenants of classical<b>*</b> TDD: what if TDD does not really drive design?</p>
 
-<div class="note"><b>*</b> By <a href="http://www.martinfowler.com/articles/mocksArentStubs.html#ClassicalAndMockistTesting">classical TDD</a>, I am referring to the case-by-case build up of the unit under test, potentially building the system bottom up, and in constrast to mockist TDD, BDD, and to a lesser extent <a href="http://davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based</a> TDD. This was how I got my introduction to TDD, and is the style I normally see for introductory training, articles and posts.</div>
+<div class="note"><b>*</b> By <a href="http://www.martinfowler.com/articles/mocksArentStubs.html#ClassicalAndMockistTesting">classical TDD</a>, I am referring to the case-by-case build up of the unit under test, potentially building the system bottom up, and in contrast to mockist TDD, BDD, and to a lesser extent <a href="http://davesquared.net/2009/06/moving-to-scenario-based-unit-testing.html">scenario-based</a> TDD. This was how I got my introduction to TDD, and is the style I normally see for introductory training, articles and posts.</div>
 
-<p><b>Warning:</b> this post is taking a fairly whacky idea and running with it far beyond what is reasonable. The purpose of this is to challenge myself to argue against a long-held belief of mine. It is a rant, so please take it with a grain of salt. :)</p>
+<p><b>Warning:</b> this post is taking a fairly wacky idea and running with it far beyond what is reasonable. The purpose of this is to challenge myself to argue against a long-held belief of mine. It is a rant, so please take it with a grain of salt. :)</p>
 
 <h2>Driving what?</h2>
 
@@ -33,7 +33,7 @@ updated: "2010-12-24T23:25:59.181+11:00"
 
 <p>Now the driving of the API design I'll pay -- it is hard to argue that any form of TDD does not pay off here. However most of the feedback here is with the API of the class under test. The API of any collaborators introduced while refactoring is purely up to our design knowledge.</p>
 
-<p>I'm not completely sold on the idea, but I can't quite shake the feeling that my tests aren't really helping drive my design as much as I'd initially thought. By concentrating on implementing the code for each case of data, pehaps the main thing I am building up and getting feedback on is my implementation?</p>
+<p>I'm not completely sold on the idea, but I can't quite shake the feeling that my tests aren't really helping drive my design as much as I'd initially thought. By concentrating on implementing the code for each case of data, perhaps the main thing I am building up and getting feedback on is my implementation?</p>
 
 <h2>So what's wrong with driving implementation?</h2>
 
@@ -63,7 +63,7 @@ updated: "2010-12-24T23:25:59.181+11:00"
 
 <p>Here the context/setup is providing valuable feedback on your design. Is it hard to setup? Are there too many dependencies? Are there too many / too complicated interactions? Is this abstraction right for this step of the problem? The test cases also provide design feedback -- is your class under test doing too much? Violating the Single Responsibility Principle (SRP)? And we also get verification of the correctness of our implementation via our assertions.</p>
 
-<p>Having the collaborations defined in the context/setup also helps ease refactoring. We can introduce new or change existing abstractions and collaborators by tweaking the context, leaving the actual test, responsibility and assertion unchanced (alleviating some of the problems faced extracting classes that I mentioned earlier).</p>
+<p>Having the collaborations defined in the context/setup also helps ease refactoring. We can introduce new or change existing abstractions and collaborators by tweaking the context, leaving the actual test, responsibility and assertion unchanged (alleviating some of the problems faced extracting classes that I mentioned earlier).</p>
 
 <p>I've tried to write up an example of this approach by <a href="http://davesquared.net/2009/10/calculators-and-tale-of-two-tdds-pt-2.html">tackling the StringCalculator kata</a>. Of course, the problem with writing up bloggable examples like this is they end up hopelessly over-engineered for their size and complexity, but hopefully with some imagination you can see how scaling this to more complex problems provides a way of driving a neatly abstracted design (in some cases insanely abstracted ;)).</p>
 
@@ -83,4 +83,4 @@ updated: "2010-12-24T23:25:59.181+11:00"
 
 <p>This has been a wild rant. I definitely don't believe all the points above as strongly as I have written them, but I can't quite shake the idea that somewhere in this rambling is a grain of truth that might help someone out.</p>
 
-<p>Bottom line is that TDD is awesome -- my pursuit of learning it has taught me so much and rekindled a once-waning love for programming, but it's tough. If you have problems with it don't be afraid to try completely whacky ideas and approaches in an effort to get different forms of feedback on different aspects of your code. If this post encourages you to do that, then my mission has been accomplished for today. :)</p>
+<p>Bottom line is that TDD is awesome -- my pursuit of learning it has taught me so much and rekindled a once-waning love for programming, but it's tough. If you have problems with it don't be afraid to try completely wacky ideas and approaches in an effort to get different forms of feedback on different aspects of your code. If this post encourages you to do that, then my mission has been accomplished for today. :)</p>
