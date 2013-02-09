@@ -2,16 +2,14 @@
 layout: post
 title: "YAMT (sorry)"
 date: 2013-01-09 12:21
-updated: 2013-01-09 15:15
+updated: 2013-02-10 10:10
 comments: true
 categories: ["functional programming"]
 ---
 
-Monads are not trivial to understand -- few things are if you look deep enough -- but I don't think they are anywhere near as difficult as they are made out to be. In this post we'll look at what monads are, how they work, and why they are useful. 
+This post is written to try and solidify my own understanding of what monads are, how they work, and why they are useful. I'm very much still learning this stuff myself, so please comment if you have any corrections or if any part of this doesn't make sense.
 
 My [previous attempt to describe monads](http://davesquared.net/2012/06/fp-newbie-learns-monads.html) used Haskell examples, so I thought I'd try a more language-agnostic explanation. In this case most of the code samples are written in the closest we have to a universal language: JavaScript.
-
-I'm very much still learning this stuff myself, so please comment if you have any corrections or if any part of this doesn't make sense.
 
 <!-- more -->
 
