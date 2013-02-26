@@ -1,0 +1,126 @@
+---
+layout: post
+title: "From two functions to tuples with a mad Haskeller"
+date: 2013-02-26 23:58
+comments: true
+categories: ["functional programming", "haskell"]
+---
+
+I love finding neat little bits of Haskell that do things in ways I haven't really thought of before. This usually happens when I come across a simple yet slightly clumsy way of doing something, and embark on some mad experiments to find alternative approaches (usually ending in a trip to #haskell.au on Freenode). These alternatives may not result in anything usable, but they often prove to be fun learning experiences for me.
+
+A recent example of this was the following adventure in passing the same input to two functions, and getting the output as a tuple.
+
+!["Stand back… I'm going to try functional programming!"  
+Original image source: [Muppet Wiki](http://muppet.wikia.com/wiki/Bunsen_Honeydew)](/images/2013/beaker_and_bunsen_lambda.png)
+
+<!-- more -->
+
+## The boring way
+
+```haskell
+boring :: Int -> (Int, String)
+boring x = (x+1, show x)
+
+--    ghci> boring 9
+--    (10,"9")
+```
+
+Here we've piped the input through the `+1` function to get the first part of the tuple, and through the `show` function for the second. We can generalise this to work with any two functions:
+
+```haskell
+stillBoring :: (b -> c) -> (b -> d) -> b -> (c, d)
+stillBoring f g x = (f x, g x)
+
+--    ghci> stillBoring (+1) show 9 
+--    (10,"9")
+```
+
+## Combining arrows
+
+It turns out `stillBoring` is already provided in Haskell, albeit in a an awesomely unboring way. This is the type of the `&&&` operator from `Control.Arrow`:
+
+    (&&&) :: Arrow a => a b c -> a b c' -> a b (c, c')
+
+I struggled to see the connection between this and the `stillBoring` type signature, until it was pointed out that the `a` in this particular case is function application `(->)`. If we substitute this in it begins to look more like what I'm used to seeing:
+
+```haskell
+    (&&&)       :: Arrow a => a b c -> a b c' -> a b (c, c')
+
+-- let a = (->):
+    (&&&)       :: ((->) b c) -> ((->) b c') -> ((->) b (c, c'))
+
+-- re-write with (->) in infix position:
+    (&&&)       :: (b -> c) -> (b -> c') -> b -> (c, c')
+
+-- for comparison:
+    stillBoring :: (b -> c) -> (b -> d)  -> b -> (c, d)
+```
+
+This is what we needed, to take two functions that both take the same type, and turn it into a function that takes a single input and returns each function's output as a tuple (`b -> (c, c')`).
+
+```haskell
+ghci> ((+1) &&& show) 9 
+(10,"9")
+```
+
+## Super-unboring two argument functions
+
+We've been dealing with single argument functions `a -> b` so far. What if we have functions that take two arguments, `a -> b -> c`, and we want to get a tuple from those?^[This `liftA2 (&&&)` solution provided courtesy of [Tony Morris](https://twitter.com/dibblego) on #haskell.au on Freenode.]
+
+```haskell
+    liftA2 :: Applicative f => (a -> b -> c) -> f a -> f b -> f c
+
+    liftA2 (&&&)
+      :: (Applicative f, Arrow a) =>
+         f (a b c) -> f (a b c') -> f (a b (c, c'))
+
+-- let a = (->) as before:
+    liftA2 (&&&)
+      :: (Applicative f, Arrow a) =>
+         f (b -> c) -> f (b -> c') -> f (b -> (c, c'))
+
+-- let f = ((->) t), a.k.a. Reader
+    liftA2 (&&&)
+      :: (Applicative f, Arrow a) =>
+         ((->) t) (b -> c) -> ((->) t) (b -> c') -> ((->) t) (b -> (c, c'))
+
+-- re-write with (->) in infix position:
+    liftA2 (&&&)
+      :: (Applicative f, Arrow a) =>
+         (t -> b -> c) -> (t -> b -> c') -> t -> b -> (c, c')
+```
+
+So now, given two two-argument functions, we get a new function that takes two arguments, feeds each of those to the original functions, and puts the output from one in the first tuple position, and the output from the other in the second position.
+
+
+```haskell
+-- boring:
+ghci> (40+2, 40*2) 
+(42,80)
+
+-- not boring:
+ghci> liftA3 (&&&) (+) (*) 40 2 
+(42,80)
+```
+
+## Mad Haskell meets practical application
+
+This experiment actually started while writing a function to find list duplicates for [Tony Morris' State exercise](https://github.com/tonymorris/course/blob/master/src/L03/State.hs) (feel free to [join in](https://groups.google.com/group/haskell-exercises)).
+
+Given an item `x` from a list, we had to produce a `State` that calculated whether the item was a member of the `Data.Set` from the previous state, and the new state with `x` added to the `Data.Set`. The [full context is on GitHub](https://github.com/dtchepak/course/blob/872ab3ce3d36f44bc07b6139d2645d7bff4c5725/src/L03/State.hs#L106), but the relevant snippets are below:
+
+```haskell
+--Creating tuple by passing `x` and `s` to `S.member` and `S.insert`:
+meh :: Ord a => a -> State (S.Set a) Bool
+meh x = state (\s -> (x `S.member` s, x `S.insert` s))
+
+--Applying first &&& trick:
+hmm :: Ord a => a -> State (S.Set a) Bool
+hmm x = state $ S.member x &&& S.insert x
+
+--Applying multi-arg trick for fun and profit:
+woah :: Ord a => a -> State (S.Set a) Bool
+woah = state . (liftA2 (&&&) S.member S.insert)
+```
+
+`State` is just one common case where we need to produce tuples, and now we have a few (possibly slightly mad) ways to compose functions to get us them.
