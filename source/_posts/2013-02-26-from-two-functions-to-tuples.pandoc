@@ -2,6 +2,7 @@
 layout: post
 title: "From two functions to tuples with a mad Haskeller"
 date: 2013-02-26 23:58
+updated: 2013-02-27 11:52
 comments: true
 categories: ["functional programming", "haskell"]
 ---
@@ -99,7 +100,7 @@ ghci> (40+2, 40*2)
 (42,80)
 
 -- not boring:
-ghci> liftA3 (&&&) (+) (*) 40 2 
+ghci> liftA2 (&&&) (+) (*) 40 2 
 (42,80)
 ```
 
