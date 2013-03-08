@@ -57,7 +57,7 @@ Note that we need to put the `()` after the test name. This forces the type of o
 
 The `unit` type is pretty similar to `void` in C#, except we can actually create an instance of `unit` by typing an empty pair of parentheses: `()`. So `unit -> unit` means a function which takes `()` and returns `()`.
 
-There's a few different ways of writing this, such as the alternative below. Pick whatever you prefer.
+There are a few different ways of writing this, such as the alternative below. Use whatever style you prefer.
 
 ```fsharp
 [<Test>]
