@@ -1,0 +1,134 @@
+---
+layout: post
+title: "Reasoning and mutability"
+date: 2013-03-02 21:35
+comments: true
+published: false
+categories: ["functional programming"]
+---
+
+One thing I often hear about functional programming is that its requirement for immutability makes programs easier to reason about. To me this seems intuitively true -- it's got to be easier to work out what a program does without having to keep track of changing state while evaluating programs. 
+
+I wanted to challenge my assumptions about this. Could I convince myself that one is unambiguously easier to reason about? And if so, what is it about the other that makes is the other more difficult to reason about?
+
+To do this I tried tracing through some examples of mutable and immutable data structures. I tried to use similar, "object"-styles for both, so that the characteristic difference between them was the mutability of their internal data (rather than getting thrown off by differences between functional and OO styles).
+
+I'd love to get your thoughts for and against these ideas. I am especially likely to be the victim of confirmation bias on this one, so I'm counting on you to keep me honest. Leave comments or send me email please! :)
+
+<!-- more -->
+
+## Counter example
+
+Let's start by looking at a simple example of a counter that has an `inc()` method to increment the counter, and a `value()` method to return its value. One counter will be a mutable data structure, where calling `inc()` will modify a field within the counter. The other will be immutable -- calling `inc()` will return a new immutable counter containing the incremented value.
+
+```javascript
+var counter = function() {
+    var i = 0;
+    return (function() {
+        return {
+            value: function() { return i; },
+            inc: function() { i=i+1; return this; }
+        };
+    })();
+}
+
+var counterI = function() {
+    var ctor = function(i) {
+        return { 
+            value: function() { return i; },
+            inc: function() { return new ctor(i+1); } 
+        };
+    }
+    return ctor(0);
+}
+```
+
+## Equational reasoning
+
+In FP names are given to specific, immutable expressions. The idea is whenever we see a name, we can replace it with the expression it refers to without affecting the program's behaviour (this is known as [referential transparency](http://en.wikipedia.org/wiki/Referential_transparency_(computer_science))). We can use this fact to treat programs as mathematical equations -- if we see an `x` in an expression, we can replace it with whatever expression `x` equals.
+
+```javascript
+var f = function (c) {
+    return c.inc().value() - c.inc().value();
+}
+```
+
+Lets reason through how `f` works when given an immutable `counterI`, by substituting in the meanings of each expression in the function.
+
+    let c{i} = an immutable counter with a value i
+
+    f(c{i}) 
+        = c{i}.inc().value() - c{i}.inc().value()
+        = c{i+1}.value() - c{i+1}.value()           ... by counterI.inc()
+        = (i+1) - (i+1)                             ... by counterI.value()
+        = 0                                         ... by (+), (-)
+
+Here we've taken a fairly mechanical approach to evaluating this expression, but we can also apply mathematical/logical principles:
+
+    let x = c.inc().value()
+    in f(c)
+        = x - x                                     ... by defn of x
+        = 0                                         ... by (-)
+
+And sure enough:
+
+    > f(new counterI().inc().inc())
+    0
+
+So by substituting in values for names and vice versa, we can solve our equation to work out the program result, just as we would for any algebraic equation. 
+
+## Reasoning about evaluation and state
+
+We can't use the same equality of terms with the mutable data, as the meaning of an expression can vary based on when it is called. `c.inc().value()` ≠ `c.inc().value()`.
+
+    > f(new counter().inc().inc())
+    -1
+
+While mutability means we've lost referential transparency and equational reasoning, we can still reason about the code by keeping track of the state as we evaluate each expression. 
+
+    (f(c), c: i)
+        = (c.inc().value() - c.inc().value(), c: i)
+        = (c.value() - c.inc().value(), c: i+1)         ... by counter.inc()
+        = (i+1 - c.inc().value(), c: i+1)               ... by counter.value()
+        = (i+1 - c.value(), c: i+2)                     ... by counter.inc()
+        = (i+1 - (i+1), c: i+2)                         ... by counter.value()
+        = (-1, c: i+2)                                  ... by (+), (-)
+
+So we can still reason about our code, we just have to keep track of the evaluation and the state separately. Not a big deal, and something we are very familiar with (and are probably quite adept at).
+
+## The story so far
+
+We've found a few distinctions between reasoning about mutable and immutable code.
+
+We managed to trace through our immutable example in 2 or 3 steps, while our mutable example took 5. This was because we replaced both occurences of `c.inc()` at once in the immutable case, which we could do because the expressions are equal and referentially transparent. In the mutable case we had to do each step separately, as `c.inc().value()` does not necessarily mean the same thing as another `c.inc().value()`. So mutability is making reasoning more difficult for us by forcing us to evaluate more steps to understand our program.
+
+Immutability also lets us apply algebraic laws and the properties of our code to gain an understanding about its result. We can use properties like `x - x = 0` for substraction to help us understand the behaviour of our program, without ever needing to evaluate the `c.inc().value()` expression. 
+
+In other words, immutability is enabling us to reason about our program independently from its execution. We can think logically about the code and only step through the parts we need. Mutability on the other hand inextricably links the meaning of the program with its method of execution, forcing us to go through the same execution steps at the computer will in order to understand it.
+
+## Order in the court
+
+To further illustrate this coupling between program meaning and execution, let's try re-evaluating our mutable example in different orders.
+
+    Left-hand side first (from above):
+    (f(c), c: i)
+        = (-1, c: i+2)
+
+    Right-hand side first:
+    (f(c), c: i)
+        = (c.inc().value() - c.inc().value(), c: i)
+        = (c.inc().value() - c.value(), c: i+1)        ... RHS inc()
+        = (c.inc().value() - (i+1), c: i+1)            ... by value()
+        = (c.value() - (i+1), c: i+2)                  ... LHS inc()
+        = (i+2 - (i+1), c: i+2)                        ... by counter.value()
+        = (1, c: i+2)                                  ... by (+), (-)
+
+    inc() calls, then value() calls:
+    (f(c), c: i)
+        = (c.inc().value() - c.inc().value(), c: i)
+        = (c.value() - c.value(), c: i+2)              ... both inc() calls
+        = ((i+2) - (i+2), c: i+1)                      ... by value()
+        = (0, c: i+2)                                  ... by (+), (-)
+
+It is insufficient to understand what each piece of the program does, we'll also need to know exactly what way our target language and platform will execute it. The immutable version we can reason about independently of evaluation rules.
+
