@@ -52,7 +52,7 @@ let shouldSayHello () = Assert.AreEqual("Hello World!", SayHello "World")
 
 Here `shouldSayHello` is the name of our test, and we're asserting that our `SayHello` function returns `"Hello World!"` when passed the name `"World"`.
 
-Note that we need to put the `()` after the test name. This forces the type of our `shouldSayHello` function to be `unit -> unit`, which is necessary for the NUnit to pick up the test. Omit that and our test won't appear in our test runner at all, without any hint of an error.
+Note that we need to put the `()` after the test name. This forces the type of our `shouldSayHello` function to be `unit -> unit`, which is necessary for NUnit to pick up the test. Omit that and our test won't appear in our test runner at all, without any hint of an error.
 
 The `unit` type is pretty similar to `void` in C#, except we can actually create an instance of `unit` by typing an empty pair of parentheses: `()`. So `unit -> unit` means a function which takes `()` and returns `()`.
 
@@ -72,7 +72,7 @@ If we compile and run either (or both) of these tests, we see them fail as they 
 
 ## F#ish assertions
 
-The `FsUnit` package we installed at the beginning gives us a more F#ish way of expression assertions, compared with the NUnit's standard `Assert.Something(...)` syntax.
+The `FsUnit` package we installed at the beginning gives us a more F#ish way of expression assertions, compared with NUnit's standard `Assert.Something(...)` syntax.
 
 ```fsharp
 [<Test>]
