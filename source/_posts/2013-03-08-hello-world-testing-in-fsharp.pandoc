@@ -3,7 +3,7 @@ layout: post
 title: "A 'Hello World' introduction to testing in F#"
 date: 2013-03-08 21:45
 comments: true
-categories: ["functional programming", "f#", ".net"]
+categories: ["f#", ".net"]
 ---
 
 I've just started playing around with F#, and I wanted to test some of my code. Here's an introduction to the absolute basics of getting up and running.
