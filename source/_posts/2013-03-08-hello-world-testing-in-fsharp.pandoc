@@ -1,0 +1,103 @@
+---
+layout: post
+title: "A 'Hello World' introduction to testing in F#"
+date: 2013-03-08 21:45
+comments: true
+categories: ["functional programming", "f#", ".net"]
+---
+
+I've just started playing around with F#, and I wanted to test some of my code. Here's an introduction to the absolute basics of getting up and running.
+
+<!-- more -->
+
+## Setting up a test project
+
+So to get started I've set up a `HelloWorld.sln` which contains two projects. The first is my F# library, `HelloWorld.Core`, that contains the logic I want to test. The second is another F# library, `HelloWorld.Tests`, which amazingly enough will hold my tests. In the test project I've referenced the `HelloWorld.Core` project we're testing, and installed the [FsUnit](https://github.com/dmohl/FsUnit) package from [NuGet](http://nuget.org/packages/FsUnit), which installs both NUnit and FsUnit (which provides a more F#ish style of assertions).
+
+![Solution with HelloWorld.Core project, and HelloWorld.Tests project that has a reference to `HelloWorld.Core`, `NUnit` and `FsUnit`](/images/2013/helloworld_fsharp_sln.png)
+
+## Some code to test
+
+Let's open up the default `Library1.fs` file in the `HelloWorld.Core` project. We'll add a `Hello` module with a `SayHello` function that takes a name and returns a `string`.
+
+```fsharp
+namespace HelloWorld.Core
+
+module Hello =
+    let SayHello name = "Hello"
+```
+
+## Setting up a test file
+
+We'll flick over to our `HelloWorld.Test` project now, and open up its `Library1.fs` file. Let's replace the default namespace declaration with a module declaration, and import the `HelloWorld.Core.Hello`, `NUnit.Framework` and `FsUnit` namespaces using the `open` keyword:
+
+```fsharp
+module HelloWorld.Tests.Hello
+
+open HelloWorld.Core.Hello
+open NUnit.Framework
+open FsUnit
+```
+
+We're now ready to start writing some tests.
+
+## Testing F\#
+
+There seems a couple of things we need to do to make sure our test is picked up by NUnit (both via the NUnit and ReSharper runners). First, we need a function of type `unit -> unit` (we'll get to this in a minute), and second, we need to decorate that function with a `[<Test>]` attribute (the equivalent of `[Test]` in C#):
+
+```fsharp
+[<Test>]
+let shouldSayHello () = Assert.AreEqual("Hello World!", SayHello "World")
+```
+
+Here `shouldSayHello` is the name of our test, and we're asserting that our `SayHello` function returns `"Hello World!"` when passed the name `"World"`.
+
+Note that we need to put the `()` after the test name. This forces the type of our `shouldSayHello` function to be `unit -> unit`, which is necessary for the NUnit to pick up the test. Omit that and our test won't appear in our test runner at all, without any hint of an error.
+
+The `unit` type is pretty similar to `void` in C#, except we can actually create an instance of `unit` by typing an empty pair of parentheses: `()`. So `unit -> unit` means a function which takes `()` and returns `()`.
+
+There's a few different ways of writing this, such as the alternative below. Pick whatever you prefer.
+
+```fsharp
+[<Test>]
+let shouldSayHello2 
+    = fun () -> Assert.AreEqual("Hello World!", SayHello "World")
+```
+
+## Running our test
+
+I run the tests by telling ReSharper to run all the tests in the solution. The NUnit runner also works. I haven't figured out how to run just one test via ReSharper.
+
+If we compile and run either (or both) of these tests, we see them fail as they are expecting `"Hello World!"`, but we've hard coded our function to return `"Hello"`. We'll fix this in a little while, but let's look at some alternate ways to express this test first.
+
+## F#ish assertions
+
+The `FsUnit` package we installed at the beginning gives us a more F#ish way of expression assertions, compared with the NUnit's standard `Assert.Something(...)` syntax.
+
+```fsharp
+[<Test>]
+let shouldSayHelloWithFsUnit () 
+    = SayHello "World" |> should equal "Hello World!"
+```
+
+Here we call `SayHello "World"`, and pipe the output to the `should equal "Hello World!"` function using the `|>` operator. This works just the same as our previous test, but looks more F#ish and reads a bit more nicely.
+
+`FsUnit` has a few different assertions, as listed in the [readme on GitHub](https://github.com/dmohl/FsUnit).
+
+## Quoted identifiers for extra niceness
+
+The last thing we can do to make our test nicer to read is to use quoted identifiers which let us use a sentence for the name of our test function.
+
+```fsharp
+[<Test>]
+let ``should say hello`` () 
+    = SayHello "World" |> should equal "Hello World!"
+```
+
+The double backticks let us use spaces in the name of our function for extra readability. They show up nicely in test runners too!
+
+![](/images/2013/helloworld_fsharp_testnames.png)
+
+## To testfinity, and beyond!
+
+And so ends my first, tentative steps into testing F# code using F#. This has been enough to get me started, but the next stop is [FsCheck](http://fscheck.codeplex.com/) for QuickCheck-style property testing.
