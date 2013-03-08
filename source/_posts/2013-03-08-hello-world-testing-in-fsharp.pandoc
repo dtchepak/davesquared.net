@@ -82,7 +82,7 @@ let shouldSayHelloWithFsUnit ()
 
 Here we call `SayHello "World"`, and pipe the output to the `should equal "Hello World!"` function using the `|>` operator. This works just the same as our previous test, but looks more F#ish and reads a bit more nicely.
 
-`FsUnit` has a few different assertions, as listed in the [readme on GitHub](https://github.com/dmohl/FsUnit).
+FsUnit has a few different assertions, as listed in the [readme on GitHub](https://github.com/dmohl/FsUnit).
 
 ## Quoted identifiers for extra niceness
 
