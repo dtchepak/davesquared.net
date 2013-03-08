@@ -2,6 +2,7 @@
 layout: post
 title: "A 'Hello World' introduction to testing in F#"
 date: 2013-03-08 21:45
+updated: 2013-03-08 23:35
 comments: true
 categories: ["f#", ".net"]
 ---
@@ -68,7 +69,12 @@ let shouldSayHello2
 
 I run the tests by telling ReSharper to run all the tests in the solution. The NUnit runner also works. I haven't figured out how to run just one test via ReSharper.
 
-If we compile and run either (or both) of these tests, we see them fail as they are expecting `"Hello World!"`, but we've hard coded our function to return `"Hello"`. We'll fix this in a little while, but let's look at some alternate ways to express this test first.
+If we compile and run either (or both) of these tests, we see them fail as they are expecting `"Hello World!"`, but we've hard coded our function to return `"Hello"`. We can fix this by updating our `SayHello` function in `HelloWorld.Core`:
+
+```fsharp
+module Hello =
+    let SayHello name = "Hello " + name + "!"
+```
 
 ## F#ish assertions
 
