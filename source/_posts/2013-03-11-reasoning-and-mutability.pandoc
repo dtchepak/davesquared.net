@@ -2,6 +2,7 @@
 layout: post
 title: "Reasoning and mutability"
 date: 2013-03-11 23:49
+updated: 2013-03-12 00:25
 comments: true
 categories: ["functional programming", "imho"]
 ---
@@ -223,7 +224,7 @@ As a side note, there may be other ways of getting benefits from message-passing
 
 ## Conclusion
 
-When I first started experimenting with this topic I honestly imagined I would find more grey area between reasoning about mutable and immutable programs. Instead I've formed the opinion that immutable programs are unambiguously easier to reason about, when considering the specific properties each type of program has. 
+When I first started experimenting with this topic I honestly imagined I would find more grey area between reasoning about mutable and immutable programs. Despite the simplistic example (and completely invalid sample size of the experiment ;)), I think we've identified some specific properties of immutable programs that make them easier to reason about that their mutable counterparts.
 
 We can think about immutable programs independently from their execution, meaning we can understand them by evaluating less expressions, and in the context of various algebraic properties using equational reasoning. Mutable programs require us to track state at the same time as evaluating each step of the program, and are affected by ordering and aliasing ambiguities.
 
