@@ -54,20 +54,24 @@ var f = function (c) {
 
 Let's reason through how `f` works when given an immutable `counterI`, by substituting in the meanings of each expression in the function.
 
-    let c{i} = an immutable counter with a value i
+```javascript
+// let c{i} = an immutable counter with a value i
 
-    f(c{i}) 
-        = c{i}.inc().value() - c{i}.inc().value()
-        = c{i+1}.value() - c{i+1}.value()           ... by counterI.inc()
-        = (i+1) - (i+1)                             ... by counterI.value()
-        = 0                                         ... by (+), (-)
+f(c{i}) 
+    = c{i}.inc().value() - c{i}.inc().value()
+    = c{i+1}.value() - c{i+1}.value()           // by counterI.inc()
+    = (i+1) - (i+1)                             // by counterI.value()
+    = 0                                         // by (+), (-)
+```
 
 Here we've taken a fairly mechanical approach to evaluating this expression, but we can also apply mathematical/logical principles:
 
-    let x = c.inc().value()
-    in f(c)
-        = x - x                                     ... by defn of x
-        = 0                                         ... by (-)
+```javascript
+let x = c.inc().value()
+in f(c)
+    = x - x                 // by defn of x
+    = 0                     // by (-)
+```
 
 And sure enough:
 
@@ -78,20 +82,22 @@ So by substituting in values for names and vice versa, we can solve our equation
 
 ## Reasoning about evaluation and state
 
-We can't use the same equality of terms with mutable data, as the meaning of an expression can vary based on when it is called. `c.inc().value()` ≠ `c.inc().value()`.
+We can't use the same equality of terms with mutable data, as the meaning of an expression can vary based on when it is called. One `c.inc().value()` expression does not necessarily equal another `c.inc().value()` expression.
 
     > f(new counter().inc().inc())
     -1
 
 While mutability means we've lost referential transparency and equational reasoning, we can still reason about the code by keeping track of the state as we evaluate each expression. We'll treat this as a pair of values -- the evaluation on the left, and the state on the right.
 
-    (f(c), c: i)
-        = (c.inc().value() - c.inc().value(), c: i)
-        = (c.value() - c.inc().value(), c: i+1)         ... by counter.inc()
-        = (i+1 - c.inc().value(), c: i+1)               ... by counter.value()
-        = (i+1 - c.value(), c: i+2)                     ... by counter.inc()
-        = (i+1 - (i+1), c: i+2)                         ... by counter.value()
-        = (-1, c: i+2)                                  ... by (+), (-)
+```javascript
+(f(c), c: i)
+    = (c.inc().value() - c.inc().value(), c: i)
+    = (c.value() - c.inc().value(), c: i+1)         // by counter.inc()
+    = (i+1 - c.inc().value(), c: i+1)               // by counter.value()
+    = (i+1 - c.value(), c: i+2)                     // by counter.inc()
+    = (i+1 - (i+1), c: i+2)                         // by counter.value()
+    = (-1, c: i+2)                                  // by (+), (-)
+```
 
 So we can still reason about our code, we just have to keep track of the evaluation and the state separately. Not a big deal, and something we are very familiar with (and are probably quite adept at).
 
@@ -117,18 +123,18 @@ To further illustrate this coupling between program meaning and execution, let's
 // Right-hand side first:
 (f(c), c: i)
     = (c.inc().value() - c.inc().value(), c: i)
-    = (c.inc().value() - c.value(), c: i+1)        ... RHS inc()
-    = (c.inc().value() - (i+1), c: i+1)            ... by value()
-    = (c.value() - (i+1), c: i+2)                  ... LHS inc()
-    = (i+2 - (i+1), c: i+2)                        ... by counter.value()
-    = (1, c: i+2)                                  ... by (+), (-)
+    = (c.inc().value() - c.value(), c: i+1)        // RHS inc()
+    = (c.inc().value() - (i+1), c: i+1)            // by value()
+    = (c.value() - (i+1), c: i+2)                  // LHS inc()
+    = (i+2 - (i+1), c: i+2)                        // by counter.value()
+    = (1, c: i+2)                                  // by (+), (-)
 
 // inc() calls, then value() calls:
 (f(c), c: i)
     = (c.inc().value() - c.inc().value(), c: i)
-    = (c.value() - c.value(), c: i+2)              ... both inc() calls
-    = ((i+2) - (i+2), c: i+1)                      ... by value()
-    = (0, c: i+2)                                  ... by (+), (-)
+    = (c.value() - c.value(), c: i+2)              // both inc() calls
+    = ((i+2) - (i+2), c: i+1)                      // by value()
+    = (0, c: i+2)                                  // by (+), (-)
 ```
 
 Here we have three different results from three equally valid evaluations of the program. It is insufficient to understand what each piece of the program does, we also need to know exactly what way our target language and platform will execute it. The immutable version we can reason about independently of evaluation order.
@@ -166,11 +172,10 @@ We increment `a` twice and `b` once, then return the difference between the coun
 var a = new counter();
 var b = a;
 g(a,b)
-
 > 0
 ```
 
-Here `a` and `b` are [aliased](http://en.wikipedia.org/wiki/Aliasing_(computing)) to the same instance^[Thanks to [Tony Sloane](https://twitter.com/inkytonik) for pointing out some problems caused by aliasing to me. Please attribute mistakes in my interpretation to me, because unlike me, Tony knows what he's talking about. :)]. If `a` and `b` were different instances we'd get `1`. The problem is we can not correctly reason about what this code will do without knowing what `a` and `b` refer to.
+Here `a` and `b` are [aliased](http://en.wikipedia.org/wiki/Aliasing_(computing)) to the same instance^[Thanks to [Tony Sloane](https://twitter.com/inkytonik) for pointing out some problems caused by aliasing to me. Please attribute mistakes in my interpretation to me because, unlike me, Tony knows what he's talking about. :)]. If `a` and `b` were different instances we'd get `1`. The problem is we can not correctly reason about what this code will do without knowing what `a` and `b` refer to.
 
 In the immutable case, our output will always follow the formula we arrived at regardless of aliasing, as calls to `inc()` return new instances rather than mutating existing ones.
 
@@ -196,7 +201,7 @@ So far we have been dealing with code in a very limited scope. Within that scope
 
 In contrast mutability forces us to evaluate each step of a program to understand it, tracking of state in parallel with execution, requires call ordering to be specified explicitly, and also is subject to non-obvious behaviour due to potential aliasing of references.
 
-Extrapolating to larger contexts, mutability means we now potentially need to evaluate every step of a program, keeping careful track of each data's state for the duration of its scope, as well as tracking state updates via aliased references, in order understand what any single piece of the program is doing.
+Extrapolating to larger contexts, mutability means we now potentially need to evaluate every step of a program, keeping careful track of each piece of data's state for the duration of its scope, as well as tracking state updates via aliased references, in order understand what any single piece of the program is doing.
 
 Due to a lack of side-effects, immutable code seems like it should always be understandable in isolation; its output depends purely on its input. 
 
@@ -204,9 +209,9 @@ Based on this, it seems a clear-cut case of immutability leading to code that is
 
 ## Mutability strikes back
 
-Perhaps mutability has other advantages, other than about being able to reason about pieces of code in isolation. 
+Perhaps mutability has other advantages that compensate for making it harder to reason about pieces of code in isolation. 
 
-One is its familiarity; most of us learn programming in an imperative manner with mutable data, and this matches our intuition of how the von Neumann machine works^[See "Can Programming Be Liberated from von Neumann Style?" by John Backus for an excellent discussion of this topic. [PDF link](http://www.thocp.net/biographies/papers/backus_turingaward_lecture.pdf)]. I don't think it is fair to understate this point -- programming with pure functions and immutable data requires some different knowledge than that most of us have been applying for the entirety of our careers. My current feeling is that this knowledge is well worth pursuing for the benefits it brings.
+One advantage is familiarity. Most of us learn programming in an imperative manner with mutable data, and this matches our intuition of how the von Neumann machine works^[See "Can Programming Be Liberated from von Neumann Style?" by John Backus for an excellent discussion of this topic. [PDF link](http://www.thocp.net/biographies/papers/backus_turingaward_lecture.pdf)]. I don't think it is fair to understate this point -- programming with pure functions and immutable data requires different approaches than those many of us have been applying for the entirety of our careers. My current feeling is that this knowledge is well worth pursuing for the benefits it brings.
 
 There is also a question of time and space performance^[See [Preview of immutable collections released on NuGet](http://blogs.msdn.com/b/bclteam/archive/2012/12/18/preview-of-immutable-collections-released-on-nuget.aspx)], or more specifically, reasoning about this performance. If our understanding of a program with immutable data is independent of its execution, then we need to reason about certain aspects of its performance separately again.^[A counter-argument to this that the prevalence of multi-core machines (even mobile phones have 4 as of 2012) makes reasoning about evaluation difficult even with mutable, imperative code. Linear reasoning is no longer reliable, especially if we want to take advantage of multiple threads.]
 
@@ -222,8 +227,8 @@ When I first started experimenting with this topic I honestly imagined I would f
 
 We can think about immutable programs independently from their execution, meaning we can understand them by evaluating less expressions, and in the context of various algebraic properties using equational reasoning. Mutable programs require us to track state at the same time as evaluating each step of the program, and are affected by ordering and aliasing ambiguities.
 
-To still leave myself a small paling of fence to sit on, it is worth noting that the last twenty-odd years of software development has been primarily taught in the context of mutable objects, and we have learned to reason about program execution and time and space use in this context. 
+To leave myself a small paling of fence to sit on, it is worth noting that the last twenty-odd years of software development has been primarily taught in the context of mutable objects, and we have learned to reason about program execution and time and space use in this context. 
 
-Whether this gives rise to more intuitive behaviour in large systems compared to being able to apply sound logic to understand each part of a program is something I just don't know. My experience with mutable objects has been less than stellar, which has led me to look much more closely at functional programming, but I just don't yet have enough experience with the latter in large projects to adequately judge the two.
+Whether this gives rise to more intuitive behaviour in large systems compared to being able to apply sound logic to understand each part of a program is something I just don't know. My experiences programming using mutable objects have been less than stellar, which has led me to look much more closely at functional programming, but I just don't yet have enough experience with the latter in large projects to adequately judge the two.
 
 Based on the properties outlined in this post, I definitely feel it is worth getting this experience. To me there is more than enough evidence to suggest a switch to immutable data is worth the potential risk and learning curve for the benefits of more understandable programs. If it turns out I'm wrong then I'm going to be very interested in identifying the characteristics of mutable data I have missed that do in fact make it easier to reason about.
