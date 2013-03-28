@@ -1,0 +1,202 @@
+---
+layout: post
+title: "Side-effect free programming in C#"
+date: 2013-03-18 21:21
+comments: true
+categories: ["functional programming", ".net"]
+published: false
+---
+ 
+How do you do inherently side-effecty things like IO when using functional programming, where each function has to be side-effect free?
+
+There are a few ways to answer that question. One is a succinct, correct answer that probably makes little sense until we've done a bit of FP. Another is a long-winded, rambling answer that makes perfect sense. I thought I'd try the third option: a long-winded, rambling answer that makes little sense.
+
+## Side-effects
+
+A function's output depends purely on its input. For example, `+` is a function because its output will be based entirely on the numbers given as input. If we call it with the same input, we'll always get the same output.
+
+What about the [`inc()` method of a mutable counter](/2013/03/reasoning-and-mutability.html)? It is not a function, because if we call `inc()` once we get a counter set to `1`, but if we call `inc()` again we get a counter set to `2`. 
+
+In other words `inc()` has a side-effect; it does something other than produce an output from its input. This has [some downsides](/2013/03/reasoning-and-mutability.html), so we'd like to avoid it where possible. But how can we avoid side-effects for something like `Console.WriteLine()`? Each time we call it we're mutating the state of the console. 
+
+So how does a language like Haskell, which does not let us express side-effects at all^[With the exception of a few cheats], do IO? Let's see if we can get the same effect (hah!) in C#.
+
+## Simple IO
+
+Let's have a look at a simple program that reads some input and writes to the console:
+
+```csharp
+public static void SideEffecty() {
+    Console.WriteLine("Hi, I'm C#. What's your name?");
+    var name = Console.ReadLine();
+    Console.WriteLine("Nice to meet you " + name);
+}
+
+static void Main(string[] args) {
+    SideEffecty();
+}
+```
+
+The `SideEffecty` method has side-effects all over the place. It doesn't have any output (it is `void`), so we can hardly say that its output depends purely on its input, and even if it did have output it doesn't take any inputs anyway!
+
+How can we make this side-effect free? By cheating: we simply don't execute the offending bit of code.
+
+```csharp
+public static Action NotSoSideEffecty() {
+    return () => {
+        Console.WriteLine("Hi, I'm C#. What's your name?");
+        var name = Console.ReadLine();
+        Console.WriteLine("Nice to meet you " + name);
+    };
+}
+
+static void Main(string[] args) {
+    var program1 = NotSoSideEffecty();
+    var program2 = NotSoSideEffecty();
+    var program3 = NotSoSideEffecty();
+
+    //Uncomment to run the effect:
+    //program3();
+}
+```
+
+We can now execute `NotSoSideEffecty()` without any side-effects at all. We can consider `NotSoSideEffecty` as a function that takes no input (also known as `Unit` or `()` in languages like F#, Scala and Haskell), and returns a *program* that will prompt for some input and write some output.^[Another way of thinking about this is as `NotSoSideEffecty` returning an *effect* as a value, rather than a *side-effect*.] We can call `NotSoSideEffecty` as often as we like; as far as we're concerned it will always return the same output for its (empty) input. 
+
+If we defer all side-effects by wrapping them up in `Action` (for things like writing to console) and `Func<T>` (for things like reading input), we can assemble side-effect free programs that do absolutely nothing until we execute the composed program in our `Main` method.^[We could also write a shim that takes a DLL with an `Action Main()` function and executes that, so our entire program is pure.]
+
+## Slightly inconvenient
+
+I think we could actually get fairly far with this approach, but it is not exactly convenient. We'd have to be very careful about invoking any delegates less they actually represent a side-effect, unless we remember to wrap that invocation within an `Action` too.
+
+What we need is another way of packaging up these IO actions.
+
+## An `IO` type
+
+Rather than using delegate types, we'll create an `IO<T>` type to represent a program that will produce some value of type `T`. An example is `ReadLine()`, which when we run it will produce a `string` it reads from the console. We'll use a placeholder `Unit` type for programs that return `void`, like `WriteLine(string s)` which prints some output but does not return any value.
+
+```csharp
+public sealed class Unit { } /* Meh, close enough */
+
+public sealed class IO<T> {
+    private readonly Func<T> ioAction;
+    public IO(Func<T> ioAction) { this.ioAction = ioAction; }
+}
+
+public static class IO {
+    public static IO<Unit> WriteLine(string s) {
+        return new IO<Unit>(() => { 
+            Console.WriteLine(s); 
+            return new Unit(); 
+        });
+    }
+
+    public static IO<string> ReadLine() { 
+        return new IO<string>(Console.ReadLine);
+    }
+}
+```
+
+Just as before, we're packaging up our side-effects rather than running them immediately. We're not going to be accidentally executing these any time soon though; we haven't provided any way to run them at all!
+
+We've also got a static `IO` class with a few built-in IO programs; `WriteLine` and `ReadLine`. But how do we put these together to build a program that works the same as `NotSoSideEffecty()`?
+
+## Combining `IO` programs
+
+The first thing `NotSoSideEffecty()` does is prompt for input, then read a line of input. We'd like to do this by combining our `IO.WriteLine(string s)` and `IO.ReadLine()` programs. We'll call this combining function `Then`^[`Then` is a valid function: its output depends purely on its input.]:
+
+```csharp
+public sealed class IO<T> {
+    /* ... snipped ... */
+
+    public IO<TNext> Then<TNext>(IO<TNext> next) {
+        // Create a new IO action that runs first action, then runs next action.
+        return new IO<TNext>(() => {
+            ioAction();
+            return next.ioAction();
+        });
+    }
+}
+
+static void Main(string[] args) {
+    var program = IO.WriteLine("Hi, I'm C#. What's your name?")
+                    .Then(IO.ReadLine());
+    /* TODO: run program somehow */
+}
+```
+
+The next thing we need to do is construct a new program that takes the value that will be produced from `ReadLine()` and writes it to console. If we had access to the string from `ReadLine()` we could just write a function that takes `string` and returns an `IO<Unit>`, but we can't get that string without running our programming and performing a side-effect. We'll have to carefully put this together in the `IO<T>` class:
+
+
+```csharp
+public sealed class IO<T> {
+    /* ... snipped ... */
+
+    public IO<TNext> Then<TNext>(Func<T, IO<TNext>> useValue) {
+        // Create new IO action that get value from first action, 
+        // uses the value to get the next action, then runs that.
+        return new IO<TNext>(() => {
+           var value = ioAction();
+           var nextIO = useValue(value);
+           return nextIO.ioAction();
+        });
+    }
+```
+
+Now assuming we sneak in a way of running an IO action, we can replicate our `NotSoSideEffecty()` program:
+
+```csharp
+/* Shhhh, secret side-effecty method in IO<T> class...
+    internal T UnsafePerformIO() { return ioAction(); }
+*/
+
+static void Main(string[] args) {
+    var program = 
+        IO.WriteLine("Hi, I'm C#. What's your name?")
+          .Then(
+              IO.ReadLine()
+                .Then(name => IO.WriteLine("Nice to meet you " + name))
+          );
+
+    program.UnsafePerformIO();
+}
+```
+
+## LINQing it up
+
+We can make our side-effect-free code easier to follow by using LINQ. To play nicely with LINQ we need to provide a `SelectMany` function with the right signature. This will be very similar to our second `Then` function, but it will take an additional `selector` that combines the values from the first and second programs:
+
+```csharp
+// In IO<T> class:
+
+public IO<TB> SelectMany<TA, TB>(Func<T, IO<TA>> useValue, 
+                                 Func<T, TA, TB> selector) {
+    return new IO<TB>(() => {
+       var value = ioAction();
+       var nextIO = useValue(value);
+       var nextValue = nextIO.ioAction();
+       return selector(value, nextValue);
+    });
+}
+```
+
+And now we can use LINQ comprehension syntax to clean up a little:
+
+```csharp
+static void Main(string[] args) {
+    var program =
+        from a in IO.WriteLine("Hi, I'm C#. What's your name?")
+        from name in IO.ReadLine()
+        from b in IO.WriteLine("Nice to meet you " + name)
+        select new Unit(); // our program doesn't return a value,
+                           // so we'll return Unit.
+
+    program.UnsafePerformIO();
+}
+```
+
+## A quick Haskell IO diversion
+
+Although I'm sure probably over-simplifying things, this is how I tend to think about Haskell IO. Haskell has a type `IO a` which wraps up side-effects, and we we have several pure functions available to help us combine them. Haskell's `main` function returns an `IO ()` (IO unit) so the entire program is completely side-effect free. The Haskell execution engine then takes care of invoking that program.
+
+## More combinatory goodness
+
