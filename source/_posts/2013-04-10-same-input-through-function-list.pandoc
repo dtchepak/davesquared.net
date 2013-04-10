@@ -1,0 +1,141 @@
+---
+layout: post
+title: "A mad Haskeller runs the same input through a list of functions"
+date: 2013-04-10 22:25
+comments: true
+categories: ["functional programming", "haskell", "+mad haskeller"]
+---
+
+Last time I donned my [mad Haskeller lab coat](http://davesquared.net/2013/02/from-two-functions-to-tuples.html) we ended up using arrows to pipe the output of two functions into a tuple. This time I'm going to look at piping a single input through a list of functions to get a list of output.
+
+The motivation for this experiment was a small section of a code snippet I found in Chris Wilson's [From Ruby to Haskell, Part 2: Similarity, Refactoring, and Patterns](http://bendyworks.com/geekville/articles/2013/4/from-ruby-to-haskell-part-2-similarity-refactoring-and-patterns) post:
+
+```haskell
+... [eventDescription e, eventName e, eventLocation e, eventType e] ...
+```
+
+As far as I can tell there's nothing at all wrong with this. It is creating a list of values by passing `e` to several functions. It did get me thinking though -- do we have to explicitly pass in that `e` argument to every function? To the laboratory!
+
+![With apologies to Randall. Original: [xkcd store](http://store-xkcd-com.myshopify.com/products/try-science)](/images/2013/standbacktryhaskell.png "Stand back, I'm going to try Haskell")
+
+<!-- more -->
+
+## Our example
+
+Let's capture the most important information about a person in a `Person` type, and provide a function to return a list of these properties (in order of relevance):
+
+```haskell
+data Person = Person { firstName :: String
+                     , lastName :: String
+                     , twitterHandle :: String
+                     } deriving (Show, Eq)
+details :: Person -> [String]
+details p = [ twitterHandle p, firstName p, lastName p ]
+
+-- ghci> let dave = Person "Dave" "Squared" "@davetchepak"
+-- ghci> details dave
+-- ["@davetchepak","Dave","Squared"]
+-}
+```
+
+Now say we're a normal, happy developer person. Hooray, we're done!
+
+However I'm wearing a lab coat, coding Haskell, and writing a post about it, so I don't qualify as normal^[... and just quietly, as you seem to be reading it, I have my concerns about you too], and all those explicit references to `p` in `details` are bugging me more than they should. Maybe if I hadn't had so much tea before writing this post? Well, the damage is done, let's fix it.
+
+## The boring way
+
+Whenever I see a list of something, I think `map`. We can use that to apply `p` to every function in a list of functions:
+
+```haskell
+details :: Person -> [String]
+details p = map (\f -> f p) [ twitterHandle, firstName, lastName ]
+
+-- or:
+details p = map ($ p) [ twitterHandle, firstName, lastName ]
+```
+
+Well, we got rid of the repeated `p`s. But `\f -> f p` and `($ p)` are a bit yucky. And it's not [point free](http://davesquared.net/2012/05/towards-point-free-redux.html), that's bad right? Back to the drawing board.
+
+## Applying a small measure of pure madness^[So many puns! Well, two.]
+
+We have `[ twitterHandle, firstName, lastName ]`, a list of functions of type `[Person -> String]`, and we want to give it a `Person` and return a `[String]`. This reminds me of [applicative functors](http://davesquared.net/2012/05/towards-point-free-redux.html).
+
+```haskell
+(<*>) :: Applicative f => f (a -> b) -> f a -> f b
+-- when f = list
+      :: [a -> b] -> [a] -> [b]
+-- let a = Person, b = String
+      :: [Person -> String] -> [Person] -> [String]
+-- We want:
+      :: [Person -> String] -> Person -> [String]
+```
+
+Now we have the first argument, and the output type matches. We just need a list of `Person` rather than the single one we have. The `pure :: Applicative f => a -> f a` function can do this for us, putting a single person into a singleton list:
+
+```haskell
+details :: Person -> [String]
+details p = [ twitterHandle, firstName, lastName ] <*> pure p
+
+-- or pointfree:
+details = (<*>) [ twitterHandle, firstName, lastName ] . pure
+```
+
+So we got to point free, and the mix of `<*>` and composition makes it almost hard enough to decipher for us to call it a day.
+
+## Sequencing reader
+
+No, with enough work someone may be able to understand this! We demand *complete incomprehensibility*!^[When do we want it? asdfqwerv!]
+
+```haskell
+details :: Person -> [String]
+details = sequence [ twitterHandle, firstName, lastName ]
+```
+
+Yes, this works. I was thinking about the problem by emphasising the *list* of functions, but we can actually get further by thinking in terms of the type of *function* that takes a `Person`, of which we just happen to have a list.^[Thanks again to [Tony](https://twitter.com/dibblego) for pointing this out on #haskell.au IRC]
+
+```haskell
+sequence :: Monad m => [m a] -> m [a]
+-- Our monad is Reader, or (t ->). So let m = (t ->):
+         :: [t -> a] -> (t -> [a])
+-- let t = Person, a= String
+         :: [Person -> String] -> (Person -> [String])
+         :: [Person -> String] -> Person -> [String]
+```
+
+So rather than using the fact list is an applicative functor, we can use the fact the functions we're dealing with all take the same argument, which we can work with using the [Reader monad](http://davesquared.net/2012/08/reader-monad.html). And `sequence` works with all monads.
+
+## Salvaging some small shred of practical value
+
+I like to finish these posts with some kind of practical application of whatever we've found. Here's the best I could do for this case: an if-you-squint-it-kinda-looks-like-a DSL for formatting our `Person`:
+
+```haskell
+display :: [a -> String] -> a -> String
+display format = mconcat . sequence format
+
+displayPerson :: Person -> String
+displayPerson = display
+                    [ firstName
+                    , const " "
+                    , lastName
+                    , const " ("
+                    , twitterHandle
+                    , const ")"
+                    ]
+
+-- ghci> displayPerson dave
+-- "Dave Squared (@davetchepak)"
+```
+
+The `display` function takes a list of formatter functions, and uses [Chris' monoid tip](http://bendyworks.com/geekville/articles/2013/4/from-ruby-to-haskell-part-2-similarity-refactoring-and-patterns) to concatenate the result of sequencing all these functions. `displayPerson` is our semi-DSL for formatting a person. It selects the first name from the person, a constant space for any person (`const " " person` will return `" "`), the last name, and the twitter handle surrounded by parentheses.[^yesiknow]
+
+[^yesiknow]: Yes, we could have just written:
+
+    ```haskell
+    display' p = firstName p ++ " " ++ lastName p ++ 
+                 " (" ++ twitterHandle p ++ ")"
+    ``` 
+
+    I thank you for your discretion in not mentioning this.
+
+I actually quite like this, but as you have undoubtedly figured out by now, I am slightly mad. Hope you enjoyed the post, and I hope you'll be back for the next time I venture down to the lab for the sweet solace of a mad Haskell experiment. :)
+

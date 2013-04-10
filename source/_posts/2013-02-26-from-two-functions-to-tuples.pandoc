@@ -4,7 +4,7 @@ title: "From two functions to tuples with a mad Haskeller"
 date: 2013-02-26 23:58
 updated: 2013-02-27 11:52
 comments: true
-categories: ["functional programming", "haskell"]
+categories: ["functional programming", "haskell", "+mad haskeller"]
 ---
 
 I love finding neat little bits of Haskell that do things in ways I haven't really thought of before. This usually happens when I come across a simple yet slightly clumsy way of doing something, and embark on some mad experiments to find alternative approaches (usually ending in a trip to #haskell.au on Freenode). These alternatives may not result in anything usable, but they often prove to be fun learning experiences for me.
