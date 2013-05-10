@@ -4,7 +4,7 @@ title: "An introduction to the SOLID principles of OO design"
 blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5616194819787817713"
 categories: ["dev practices"]
 date: "2009-01-21T21:56:00.0+11:00"
-updated: "2011-02-18T09:40:36.227+11:00"
+updated: "2013-05-10T23:06:00.000+11:00"
 ---
 
 <p>I would be very hard pressed to go passed Robert &quot;Uncle Bob&quot; Martin's <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">SOLID principles</a> as the single most useful tool for helping me with OO design. Some people seem to have a natural talent for OO design and thinking, and have an innate understanding of these principles without requiring the SOLID formalism. I, on the other hand, find them indispensable.</p>
@@ -47,7 +47,7 @@ updated: "2011-02-18T09:40:36.227+11:00"
 <h2>Liskov Substitution Principle</h2>
 <blockquote>
 <p><i>&quot;Functions that use pointers or references to base classes must be able to use objects of derived classes without knowing it.&quot; &mdash; Robert Martin, LSP paper linked from <a href="http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod">The Principles of OOD</a><br/></i></p>
-<p>My translation:  Subclasses should behave nicely when used in place of their base class</p>
+<p>My translation:  Subclasses should behave nicely when used in place of their parent class</p>
 </blockquote>
 
 <p>The LSP sounds deceptively straightforward &mdash; we should be able to substitute an instance of a subclass for its parent class and everything should continue to work. Easy right? Well, actually, no it's not, which is probably why we are often advised to <a href="http://www.artima.com/lejava/articles/designprinciples4.html">favour composition over inheritance</a>.  Ensuring a subclass works in any situation the parent does is really hard work, and whenever you use inheritance its a good idea to keep the LSP firmly in mind.</p>
