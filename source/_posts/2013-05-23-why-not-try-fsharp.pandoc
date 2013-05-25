@@ -1,0 +1,142 @@
+---
+layout: post
+title: "Why not try F#?"
+date: 2013-05-23 21:40
+comments: true
+categories: ["f#", ".net"]
+---
+
+I have been avoiding learning F# for years. There were several reasons for this.
+
+* F# was described as a "functional programming language", and I didn't know FP. I was keen to learn, but always wound up concetrating on learning more about OO design and patterns that seemed more immediately useful to me and my everyday work.
+* The syntax looked really confusing. I could read Python and decipher Ruby, but F# code seemed really dense and filled with strange operators.
+* Whenever I heard about F# it was in the same breath as "financial data processing" and other quite niche areas that seemed to have little to do with the types of applications I wrote.
+
+I carried these hastily-acquired preconceptions around for years, until this year I needed to do a small application for work, and decided to try it in F#. To my surprise I found that *none of these preconceptions were valid*! Not a single one! What's more, I actually quite enjoyed it. F# seemed to let me do everything I would normally do in C#, only with less code, and with more powerful features waiting in the wings should I want to dabble with them.
+
+So in this post I wanted to go through why these assumptions were false, just in case they are holding you back too. I think F# is well worth trying out for every developer that does anything with .NET.
+
+<!-- more -->
+
+## Misconception 1: F# is for functional programming
+
+Functional programming is programming with pure functions. Functions return the same output whenever applied to a specific input, and they have no side-effects. With this in mind, here is a snippet of F#:
+
+```fsharp
+let mutable counter = 0
+let NotAFunction() = 
+    counter <- counter + 1
+    printfn "%d" counter
+```
+
+`NotAFunction` takes no input and produces no output, so it doesn't meet the first criterion for a function. It also has a side-effect -- it mutates the `counter` variable (the `<-` operator is for destructive assignment) and prints to the console. The first time we call `NotAFunction()` it prints `1`, then next call prints `2`.
+
+F# is more than capable of expressing mutable, imperative procedures. It has some features that can help if we want to do FP, just like C# does. We don't have to use them, nor do we have to be an applicative functor-toting, monad-wielding FP boffin in order to use either language.
+
+## Misconception 2: F# syntax is confusing
+
+When I thought "confusing", what I really meant was "different". And what I should have meant was "a little different". F# is often terser than C# which threw off my brain's pattern matching a bit, but this disorientation didn't last much longer than my first hour with F#. 
+
+F# has most of the C# constructs you've come to know and love, and in very similar forms. We still have equivalents to `for`, `while` and `foreach` loops (F# uses `for .. in` instead of `foreach`), `if .. else if .. else` conditionals, `try .. catch` (`with` instead of `catch`), `using` (`open`) etc. Nothing a quick trip to the [F# language reference (MSDN)](http://msdn.microsoft.com/en-us/library/dd233181.aspx) won't fix.
+
+Granted, we can (and probably should) write F# in a quite non-C#ish style which can result in more of a culture-shock^[I've also seen some C# written in a style that has taken me quite a while to parse, despite me knowing the language reasonbly well.], but we don't have to start out like that. We can happily write C#ish F# code and get immediate benefits from the relative terseness of the language, with the added benefit of gaining access to more powerful features to explore later on if we choose to.
+
+### Slight differences for more power
+
+Let's look at an example of how we can start making small departures from C#-style to better take advantage of F#'s features.
+
+```csharp
+//c#
+int Add(int a, int b) {
+    return a + b;
+}
+var result = Add(1, 2);
+```
+
+```fsharp
+//f#
+let Add(a, b) = a + b
+let result = Add(1, 2)
+```
+
+These two `Add` methods both take two `int` arguments and return an `int`. They are both statically typed, F# just infers the types for us. So we get essentially the same syntax, just with a little less noise.
+
+This isn't quite idiomatic F#, but there is no problem in us declaring methods in this way. A more idiomatic F# version costs us a very slight syntax change, but gains us quite a lot of power.
+
+```fsharp
+//let Add(a, b) = a + b
+//let result = Add(1, 2)
+
+let Add a b = a + b
+let result = Add 1 2
+```
+
+Here we've lost the parentheses around the arguments, and separate them with spaces rather than commas. This form lets us [partially apply](/2012/05/lengthy-approach-to-haskell.html#partial-function-application) the method, which makes it easy for us to construct new methods from existing ones. For example, we can make a method to increment an integer by supplying `Add` with `1` as a single argument, resulting in a method that will take another `int` and return that plus one:
+
+```fsharp
+let Inc = Add 1
+let result = Inc 4    // result is 5
+```
+
+Being able to compose methods like this can drastically cut down the amount of plumbing code we need to write. While this style of composition is possible in C#, it is a too unwieldy to be of much use:
+
+    //c#
+    Func<int, Func<int, Func<int, int>>> Sum(int a) {
+        return b => c => d => a + b + c + d;
+    }
+    //f#
+    let Sum a b c d = a + b + c + d
+
+
+## Misconception 3: F# is a bad fit for the applications I write
+
+It turns out F# is more than capable of expressing standard OO designs we tend to see in C#, including [GOOS-style](http://www.growing-object-oriented-software.com/), class-with-injected-dependency-type OO.
+
+```csharp
+public class MonadPolice {
+  private readonly ImDave _dave;
+  private readonly IEmailGateway _email;
+
+  public MonadPolice(ImDave dave, IEmailGateway email) {
+    _dave = dave;
+    _email = email;
+  }
+
+  public void Surveil() {
+    var overheard = _dave.RecentRamblings();
+    var zealotTalk = overheard.Where(x => x.Contains("monad"));
+    foreach (var outburstOfZealotry in zealotTalk) {
+      _email.Send("xerx", "the monad police", 
+                  "Lack of pragmatism detected", outburstOfZealotry);
+    }
+  }
+}
+```
+
+Here's one way to express this in F#:
+
+```fsharp
+type MonadPolice(dave : ImDave, email : IEmailGateway) = 
+  member this.Surveil() = 
+    let overheard = dave.RecentRamblings()
+    let zealotTalk = overheard.Where(contains "monad")
+    for outburstOfZealotry in zealotTalk do
+        email.Send "xerx" "the monad police" 
+                   "Lack of pragmatism detected" outburstOfZealotry
+```
+
+Again we get the same capabilities and style, in a similar albeit terser syntax. We provide the default constructor arguments in the type declaration, which gives us a constructor and what are effectively private, readonly fields for free. F# also has sensible defaults for member visibility, so much of the time we won't need to explicitly mark something as `public` or `private`. And we can test it in the same way as usual too.
+
+## Not perfect
+
+The main problems I had with F# were around tooling. Many of the R# and VS shortcuts and refactorings I reach for by reflex just weren't there. For some reason VS doesn't provide a way to add folders to an `fsproj`. And perhaps most perturbingly, I have to define members before they are referenced elsewhere, which means I actually have to explicitly order the files in my project (ugh!).
+
+There are also a few things we drop that C# has, like combined `try .. catch .. finally` (we have to use nested `try/with` and `try/finally` for F#), and the `protected` modifier (it works for interop, but we can't declare a member `protected` as of F# 3).
+
+That said, we haven't touched on all the features F# offers that are lacking in C#. Even without these features I think the terseness of F# makes up for these difficiencies.
+
+## Conclusion
+
+I'd put off learning F# due to talk about it being a "functional" language, the odd looking syntax, and because I didn't think it would work for the apps I work with. I could not have been more wrong.
+
+
