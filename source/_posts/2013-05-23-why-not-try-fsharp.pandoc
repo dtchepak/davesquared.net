@@ -8,7 +8,7 @@ categories: ["f#", ".net"]
 
 I have been avoiding learning F# for years. There were several reasons for this.
 
-* F# was described as a "functional programming language", and I didn't know FP. I was keen to learn, but prioritise learning more about OO design and patterns that seemed more immediately useful to my everyday work.
+* F# was described as a "functional programming language", and I didn't know FP. I was keen to learn, but prioritised learning more about OO design and patterns that seemed more immediately useful to my everyday work.
 * The syntax looked really confusing.
 * Whenever I heard about F# it was in the same breath as "financial data processing" and other quite niche areas that seemed to have little to do with the types of applications I wrote.
 
@@ -41,7 +41,7 @@ F# has most of the C# constructs you've come to know and love, and in very simil
 
 Granted, we can (and probably should) write F# in a quite non-C#ish style which can result in more of a culture-shock^[I've also seen some C# written in a style that has taken me quite a while to parse, despite me knowing the language reasonably well.], but we don't have to start out like that. We can happily write C#ish F# code and get immediate benefits from the relative terseness of the language, with the added benefit of gaining access to more powerful features to explore later on if we choose to.
 
-## Misconception 3: F# is a bad fit for the applications I write
+## Misconception 3: F# is for data processing, not for normal applications
 
 It turns out F# is more than capable of expressing standard OO designs we tend to see in C#, including [GOOS-style](http://www.growing-object-oriented-software.com/), class-with-injected-dependency-type OO.
 
@@ -84,13 +84,13 @@ So F# is not just for modelling financial or scientific calculations. It's fine 
 
 ## The fine print
 
-So not everything about my first F# project as positive. The main problems I had with F# were around tooling. Many of the R# and VS shortcuts and refactorings I reach for by reflex just weren't there. For some reason VS doesn't provide a way to add folders to an `fsproj`. And perhaps most disturbingly, I have to define members before they were referenced elsewhere, which means I actually have to explicitly order the files in my project (ugh!).
+Not everything about my first F# project was positive. The main problems I had with F# were around tooling. There aren't templates (as far as I could tell) for F#-backed WPF views (same for MVC?) that I could see, so it may be easiest to stick a C# shell around a core F# project. Many of the R# and VS shortcuts and refactorings I reach for by reflex just weren't there. For some reason VS doesn't provide a way to add folders to an `fsproj`. And perhaps most disturbingly, I have to define members before they were referenced elsewhere, which means I actually have to explicitly order the files in my project (ugh!).
 
 There are also a couple of things we lose that C# has, like combined `try .. catch .. finally` (we have to use nested `try/with` and `try/finally` for F#), and the `protected` modifier (it works for interop, but we can't declare a member `protected` as of F# 3). But F# offers a lot of features C# lacks to compensate.
 
 ## Why bother?
 
-I've attempted to argue we shouldn't ignore F#, on the basis that it can work similarly to C#. Why not just stick to C# then?
+I've attempted to argue we shouldn't ignore F# on the grounds that it can work similarly to C#. Why not just stick to C# then?
 
 For me, F# offers new opportunities to improve the way I develop software. We gain access to other sorts of types, like discriminated unions and records. We get usable tuples. We gain the ability to compose methods from existing methods, rather than requiring us to create new classes and plumb objects together. We get terser syntax and some interesting ways to create embedded DSLs. We get immutability by default, as well as non-nullable references.
 
@@ -98,9 +98,9 @@ And perhaps best of all, we can choose when we start experimenting with this stu
 
 ## Conclusion
 
-I'd put off learning F# due to talk about it being a "functional" language, its odd looking syntax, and because I didn't think it would work for the apps I work with. After completing my first small F# project, I've learned I don't need to know FP to use F#, the syntax wasn't a problem and could actually be used as a terser form of what I already knew, and that I can apply F# to the same problems and even using the same patterns as I always have in .NET.
+After completing my first small F# project, I've learned we don't need to know FP to use F#, the syntax isn't really a problem and can actually be used as a terser form of what we already know, and that we can apply F# to the same problems and even using the same patterns as we normally do in .NET.
 
-In exchange, I open the door for myself to try out new techniques and improve the way I develop software.
+In exchange, we gain the ability to try out new techniques and improve the way we develop software.
 
 My F# experience has admittedly been very limited so far, so I'm not sure what problems await for larger projects. What I have learned however is more than enough to encourage me to spend more time with F#. I'm tempted to stick an F# project into every VS solution I work with, and see if it ends up accumulating loads of useful functionality, or whether it will need a more concerted effort at adoption.
 
