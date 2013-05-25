@@ -80,7 +80,7 @@ type MonadPolice(dave : ImDave, email : IEmailGateway) =
 
 Again we get the same capabilities and style, in a similar albeit terser syntax. We provide the default constructor arguments in the type declaration, which gives us a constructor and what are effectively private, readonly fields for free. F# also has sensible defaults for member visibility, so much of the time we won't need to explicitly mark something as `public` or `private`. And we can test it in the same way as usual too.
 
-So F# is not just for boffins modelling financial or scientific calculations. It's fine for querying repositories, sending emails, and doing whatever useful stuff our apps normally need to do.
+So F# is not just for modelling financial or scientific calculations. It's fine for querying repositories, sending emails, and doing whatever useful stuff our apps normally need to do.
 
 ## The fine print
 
