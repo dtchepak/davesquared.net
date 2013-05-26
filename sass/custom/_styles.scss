@@ -1,5 +1,10 @@
 // This File is imported last, and will override other styles in the cascade
 // Add styles here to make changes without digging in too much
+ul {
+    padding-left: 2em;
+    padding-right: 2em;
+}
+
 .note {
     @include border-radius(0.5em);
     border: 1px solid #528bc5;
