@@ -6,7 +6,7 @@ comments: true
 categories: ["functional programming", "haskell"]
 ---
 
-I was recently working on some Haskell exercises with [Michael](https://twitter.com/michael_dubs), and we were trying to come up with an example for `filterM` that didn't involve `IO` or `State`. Here's the standard `filter` and it's monadic cousin:
+I was recently working on some Haskell exercises with [Michael](https://twitter.com/michael_dubs), and we were trying to come up with an example for `filterM` that didn't involve `IO`. Here's `filter` and it's monadic cousin `filterM`:
 
 ```haskell
 filter  ::            (a ->   Bool) -> [a] ->   [a]
@@ -14,6 +14,8 @@ filterM :: Monad m => (a -> m Bool) -> [a] -> m [a]
 ```
 
 <!-- more -->
+
+## Maybe example
 
 We can use the non-monadic `filter` to get a list of even numbers, or use `fmap` to apply this filter inside a monad (or any functor):
 
@@ -34,9 +36,14 @@ ghci> Just [1,2,-5,4] >>= naturalEvens
 Nothing
 ```
 
-Because `fmap` takes a function `(a -> b)` it can't interact with the monadic context in any way. So mapping `filter` can lets us return `True` or `False` for each element, but not `Nothing`. `filterM` doesn't have this limitation, thanks to its `(a -> m Bool)` argument.
+*** Mention that `fmap` can never affect the environment? It takes (a->b), so
+*** can only do transformation, not affect structure
 
-## Parsers
+`filter` takes a predicate `(a -> Bool)` which can only evaluate to `True` or `False` for each element -- there is no way for it to affect the monadic environment it is mapped into. `filterM` doesn't have this limitation thanks to its `(a -> m Bool)` argument, which can produce `Just True`, `Just False`, or stop the computation by evaluating to `Nothing`.
+
+Because `fmap` takes a function `(a -> b)` it can't interact with the monadic context. So mapping `filter` can lets us return `True` or `False` for each element, but not `Nothing`. `filterM` doesn't have this limitation, thanks to its `(a -> m Bool)` argument.
+
+## Parser example
 
 We can apply a similar filter function to a parser.
 
@@ -70,17 +77,7 @@ ghci> (csv >>= naturalEvens) `parse` "1,2,-3,4"
 Nothing
 ```
 
-## `IO` and `State` examples
-
-At the beginning of this post I mentioned we wanted to avoid `IO` and `State` examples. This was because we'd already come across these a few times. For example, filtering a list of files paths requires checking the file system, which requires a `FilePath -> IO Bool` function called `doesFileExist`:
-
-```haskell
-validFiles :: [FilePath] -> IO [FilePath]
-validFiles = filterM doesFileExist
-
-ghci> validFiles ["data.hs", "fileReader.hs", "non-existent"]
-["data.hs","fileReader.hs"]
-```
+## State example
 
 Another [example from Tony's Haskell exercises](/2013/02/from-two-functions-to-tuples.html#mad-haskell-meets-practical-application) is getting a distinct list of elements using the [State monad](/2012/10/state-monad.html) with a `Set` to keep track of which elements have been seen:
 
@@ -93,6 +90,18 @@ distinct =
 
 ghci> distinct [1,2,3,34,4,23,3,2,3,22,2,4,5]
 [1,2,3,34,4,23,22,5]
+```
+
+## `IO` example
+
+At the beginning of this post I mentioned we wanted to avoid `IO` examples. This was because we'd already come across these a few times. For example, filtering a list of files paths requires checking the file system, which requires a `FilePath -> IO Bool` function called `doesFileExist`:
+
+```haskell
+validFiles :: [FilePath] -> IO [FilePath]
+validFiles = filterM doesFileExist
+
+ghci> validFiles ["data.hs", "fileReader.hs", "non-existent"]
+["data.hs","fileReader.hs"]
 ```
 
 ## Conclusion
