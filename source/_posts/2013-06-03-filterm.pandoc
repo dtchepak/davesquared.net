@@ -1,0 +1,102 @@
+---
+layout: post
+title: "filterM"
+date: 2013-06-03 20:00
+comments: true
+categories: ["functional programming", "haskell"]
+---
+
+I was recently working on some Haskell exercises with [Michael](https://twitter.com/michael_dubs), and we were trying to come up with an example for `filterM` that didn't involve `IO` or `State`. Here's the standard `filter` and it's monadic cousin:
+
+```haskell
+filter  ::            (a ->   Bool) -> [a] ->   [a]
+filterM :: Monad m => (a -> m Bool) -> [a] -> m [a]
+```
+
+<!-- more -->
+
+We can use the non-monadic `filter` to get a list of even numbers, or use `fmap` to apply this filter inside a monad (or any functor):
+
+```haskell
+ghci> filter even [1..10]
+[2,4,6,8,10]
+ghci> fmap (filter even) (Just [1..10])
+Just [2,4,6,8,10]
+```
+
+The `filterM` form gives us something `fmap` and `filter` can't, and that's allowing us to interact with the monadic context. For example, say we want to filter out even numbers from a `Maybe [Int]`, but we don't want to return anything if any number is less than 0:
+
+```haskell
+ghci> let naturalEvens = filterM (\i -> if i<0 then Nothing else return (even i))
+ghci> Just [1..10] >>= naturalEvens
+Just [2,4,6,8,10]
+ghci> Just [1,2,-5,4] >>= naturalEvens
+Nothing
+```
+
+Because `fmap` takes a function `(a -> b)` it can't interact with the monadic context in any way. So mapping `filter` can lets us return `True` or `False` for each element, but not `Nothing`. `filterM` doesn't have this limitation, thanks to its `(a -> m Bool)` argument.
+
+## Parsers
+
+We can apply a similar filter function to a parser.
+
+```haskell
+-- parse will succeed with an `a` and the rest of the unparsed input,
+-- or fail with Nothing.
+data Parser a = P { parse :: String -> Maybe (String, a) }
+```
+
+If we have an instance of a `Parser [Int]` that parses comma-separated numbers, we can filter even numbers like in our previous example:
+
+```haskell
+ghci> csv `parse` "no numbers"
+Nothing
+ghci> csv `parse` "1,2,3,4,5,6,7,8,9"
+Just ("",[1,2,3,4,5,6,7,8,9])
+ghci> fmap (filter even) csv `parse` "1,2,3,4,5,6,7,8,9"
+Just ("",[2,4,6,8])
+```
+
+Now we want to filter even numbers from our parser, but we want to stop parsing if we get a negative number. We can use `filterM` to construct a new parser from our `csv` parser that does this:
+
+```haskell
+naturalEvens :: [Int] -> Parser [Int]
+naturalEvens = filterM $ \i ->
+                  if i<0 then failP else return (even i)
+-- Example:
+ghci> (csv >>= naturalEvens) `parse` "1,2,3,4,5,6,7,8,9"
+Just ("",[2,4,6,8])
+ghci> (csv >>= naturalEvens) `parse` "1,2,-3,4"
+Nothing
+```
+
+## `IO` and `State` examples
+
+At the beginning of this post I mentioned we wanted to avoid `IO` and `State` examples. This was because we'd already come across these a few times. For example, filtering a list of files paths requires checking the file system, which requires a `FilePath -> IO Bool` function called `doesFileExist`:
+
+```haskell
+validFiles :: [FilePath] -> IO [FilePath]
+validFiles = filterM doesFileExist
+
+ghci> validFiles ["data.hs", "fileReader.hs", "non-existent"]
+["data.hs","fileReader.hs"]
+```
+
+Another [example from Tony's Haskell exercises](/2013/02/from-two-functions-to-tuples.html#mad-haskell-meets-practical-application) is getting a distinct list of elements using the [State monad](/2012/10/state-monad.html) with a `Set` to keep track of which elements have been seen:
+
+```haskell
+distinct :: Ord a => [a] -> [a]
+distinct =
+    flip evalState S.empty . 
+        filterM (\a -> state (\s -> (S.notMember a s, S.insert a s)))
+        -- or: filterM (liftA2 (&&&) S.notMember S.insert)
+
+ghci> distinct [1,2,3,34,4,23,3,2,3,22,2,4,5]
+[1,2,3,34,4,23,22,5]
+```
+
+## Conclusion
+
+What hadn't really twigged for me until now is that `filterM`'s first argument `(a -> m Bool)` lets us do standard filtering like `filter`, but gives us the additional option to keep some monadic effect while filtering, such as canceling a computation with `Nothing` or by failing parsing, or updating some state. In contrast, mapping `filter` inside a monad does not give us this ability to interact with that effect.
+
+
