@@ -1,21 +1,23 @@
 ---
 layout: post
 title: "filterM"
-date: 2013-06-03 20:00
+date: 2013-06-04 22:35
 comments: true
 categories: ["functional programming", "haskell"]
 ---
 
-I was recently working on some Haskell exercises with [Michael](https://twitter.com/michael_dubs), and we were trying to come up with an example for `filterM` that didn't involve `IO`. Here's `filter` and it's monadic cousin `filterM`:
+Here is `filter` and it's monadic cousin `filterM`:
 
 ```haskell
 filter  ::            (a ->   Bool) -> [a] ->   [a]
 filterM :: Monad m => (a -> m Bool) -> [a] -> m [a]
 ```
 
+This is my attempt to understand the relevance of the differences between these two functions. Please leave a comment to let me know about anything I've misunderstood. :)
+
 <!-- more -->
 
-## Maybe example
+## Filtering with `Maybe`
 
 We can use the non-monadic `filter` to get a list of even numbers, or use `fmap` to apply this filter inside a monad (or any functor):
 
@@ -26,26 +28,28 @@ ghci> fmap (filter even) (Just [1..10])
 Just [2,4,6,8,10]
 ```
 
-The `filterM` form gives us something `fmap` and `filter` can't, and that's allowing us to interact with the monadic context. For example, say we want to filter out even numbers from a `Maybe [Int]`, but we don't want to return anything if any number is less than 0:
+The `filterM` form gives us something `fmap` and `filter` can't, and that's allowing us to interact with a monadic context. 
+
+For example, say we want to filter out even numbers from an `[Int]`, but we don't want to return anything if any number is less than or equal to 0 (perhaps we want to call a function that only works with positive integers).
 
 ```haskell
-ghci> let naturalEvens = filterM (\i -> if i<0 then Nothing else return (even i))
-ghci> Just [1..10] >>= naturalEvens
+naturalEvens :: [Int] -> Maybe [Int]
+naturalEvens = filterM (\i -> if i<=0 then Nothing else return (even i))
+{-
+ghci> naturalEvens [1..10]
 Just [2,4,6,8,10]
-ghci> Just [1,2,-5,4] >>= naturalEvens
+ghci> naturalEvens [1,2,-5,4] 
 Nothing
+-}
 ```
 
-*** Mention that `fmap` can never affect the environment? It takes (a->b), so
-*** can only do transformation, not affect structure
+`filter` takes a predicate `(a -> Bool)` which can only evaluate to `True` or `False` for each element -- there is no way for it to interact with a monadic environment, even if it is mapped into one. Nor can `fmap` for that matter, as it works with functions `(a -> b)` and preserves the structure it is mapping over.
 
-`filter` takes a predicate `(a -> Bool)` which can only evaluate to `True` or `False` for each element -- there is no way for it to affect the monadic environment it is mapped into. `filterM` doesn't have this limitation thanks to its `(a -> m Bool)` argument, which can produce `Just True`, `Just False`, or stop the computation by evaluating to `Nothing`.
-
-Because `fmap` takes a function `(a -> b)` it can't interact with the monadic context. So mapping `filter` can lets us return `True` or `False` for each element, but not `Nothing`. `filterM` doesn't have this limitation, thanks to its `(a -> m Bool)` argument.
+`filterM` doesn't have this restriction due to its `(a -> m Bool)` argument, which in this case can produce `Just True`, `Just False`, or stop the computation by evaluating to `Nothing`.
 
 ## Parser example
 
-We can apply a similar filter function to a parser.
+We can apply a similar filter function to a monadic parser.
 
 ```haskell
 -- parse will succeed with an `a` and the rest of the unparsed input,
@@ -64,22 +68,23 @@ ghci> fmap (filter even) csv `parse` "1,2,3,4,5,6,7,8,9"
 Just ("",[2,4,6,8])
 ```
 
-Now we want to filter even numbers from our parser, but we want to stop parsing if we get a negative number. We can use `filterM` to construct a new parser from our `csv` parser that does this:
+Now we want to filter even numbers from our parser, but we want to stop parsing if we get 0 or a negative number. We can use `filterM` to construct a new parser from our `csv` parser that does this:
 
 ```haskell
 naturalEvens :: [Int] -> Parser [Int]
 naturalEvens = filterM $ \i ->
-                  if i<0 then failP else return (even i)
--- Example:
+                  if i<=0 then failP else return (even i)
+{-
 ghci> (csv >>= naturalEvens) `parse` "1,2,3,4,5,6,7,8,9"
 Just ("",[2,4,6,8])
 ghci> (csv >>= naturalEvens) `parse` "1,2,-3,4"
 Nothing
+-}
 ```
 
 ## State example
 
-Another [example from Tony's Haskell exercises](/2013/02/from-two-functions-to-tuples.html#mad-haskell-meets-practical-application) is getting a distinct list of elements using the [State monad](/2012/10/state-monad.html) with a `Set` to keep track of which elements have been seen:
+Another [example from Tony Morris's Haskell exercises](/2013/02/from-two-functions-to-tuples.html#mad-haskell-meets-practical-application) is getting a distinct list of elements using the [State monad](/2012/10/state-monad.html) with a [`Data.Set`](http://hackage.haskell.org/packages/archive/containers/latest/doc/html/Data-Set.html) to keep track of which elements have been seen:
 
 ```haskell
 distinct :: Ord a => [a] -> [a]
@@ -92,20 +97,23 @@ ghci> distinct [1,2,3,34,4,23,3,2,3,22,2,4,5]
 [1,2,3,34,4,23,22,5]
 ```
 
+`filterM` ensures that the state (the contents of the `Data.Set`) is preserved as each element in the source list is traversed.
+
 ## `IO` example
 
-At the beginning of this post I mentioned we wanted to avoid `IO` examples. This was because we'd already come across these a few times. For example, filtering a list of files paths requires checking the file system, which requires a `FilePath -> IO Bool` function called `doesFileExist`:
+Say we want to filter a list of files paths to only include files that exist. This requires checking the file system, which requires a `FilePath -> IO Bool` function called `doesFileExist`:
 
 ```haskell
 validFiles :: [FilePath] -> IO [FilePath]
 validFiles = filterM doesFileExist
-
+{-
 ghci> validFiles ["data.hs", "fileReader.hs", "non-existent"]
 ["data.hs","fileReader.hs"]
+-}
 ```
 
 ## Conclusion
 
-What hadn't really twigged for me until now is that `filterM`'s first argument `(a -> m Bool)` lets us do standard filtering like `filter`, but gives us the additional option to keep some monadic effect while filtering, such as canceling a computation with `Nothing` or by failing parsing, or updating some state. In contrast, mapping `filter` inside a monad does not give us this ability to interact with that effect.
+What hadn't really twigged for me previously is that `filterM`'s first argument `(a -> m Bool)` lets us do standard filtering like `filter`, but gives us the additional option to keep some monadic effect while filtering, such as canceling a computation with `Nothing` or by failing parsing, or updating some state. In contrast, mapping `filter` inside a monad does not give us this ability to interact with that effect^[I think this limitation can also be a big advantage. Using `fmap` means we know we aren't going to interacting with a monadic context, so we can safely transform an `m a` without being concerned about ill effects.].
 
 
