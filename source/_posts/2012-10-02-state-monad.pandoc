@@ -188,7 +188,7 @@ randomStringWithLength i = sequence (replicate i randomChar)
 -- ("ndfeolyrgn",2052659270 1336516156)
 ```
 
-I assume this pattern of `replicate` and `sequence` is fairly common, has Haskell provides a [`replicateM`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#v:replicateM) function that does just this.
+I assume this pattern of `replicate` and `sequence` is fairly common, as Haskell provides a [`replicateM`](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Monad.html#v:replicateM) function that does just this.
 
 ## Now with 12% extra randomness!
 
