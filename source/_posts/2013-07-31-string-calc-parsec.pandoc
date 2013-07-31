@@ -1,0 +1,175 @@
+---
+layout: post
+title: "String calculator with Parsec"
+date: 2013-07-31 21:30
+comments: true
+categories: ["haskell"]
+---
+
+> "I hope that one day, the business needs a string calculator. Then I can say "This is the moment I trained for my whole life!"" -- Michael Stum (@mstum), [tweet](https://twitter.com/mstum/status/339793450985746433)
+
+An effective [string calculator](http://osherove.com/tdd-kata-1/) is obviously indispensable to any software project. I have [attempted this before](http://davesquared.net/categories/-calculator-tdd/), but one can never be too prepared, and so I thought I'd revisit it. But this time I thought I'd try it using [Parsec](http://www.haskell.org/haskellwiki/Parsec), a parser combinator library for Haskell.
+
+<!-- more -->
+
+<div class="note">**Note:** I'm not going to strictly follow the kata, nor do TDD. I just wanted to play around with parsers! :)</div>
+
+## The basic idea
+
+One way to think of a parser is as a function that takes a `String`, and either succeeds by producing a value and the remainder of the input to parse, or fails.
+
+```haskell
+data Parser a = P { parse :: String -> Maybe (String, a) }
+
+-- Example: something that can parse a digit character (a Char from '0' to '9')
+digit :: Parser Char
+
+ghci> digit `parse` "123abc"
+Just ("23abc",'1')   -- success! Parsed a single '1' from input,
+                     -- still have "23abc" left to parse
+ghci> digit `parse` "abc"
+Nothing              -- could not parse a digit from input
+```
+
+We can use functions to combinate, er, combine, parsers in this form to make new parsers. 
+
+```haskell
+digits :: Parser [Char]
+digits = atLeast1 digit
+
+-- A natural number is an int read from one or more digits (0 or positive number)
+natural :: Parser Int
+natural = read `fmap` digits
+
+-- A number is a natural or a negative number
+number :: Parser Int
+number = natural <|> negative
+```
+
+We can [implement these parser combinator functions ourselves](https://gist.github.com/dtchepak/5693190#file-stringcalc-hs-L28), but there are some ready-built implementations in libraries like Parsec and Attoparsec (and they'll undoubtedly perform better than my naive attempt).
+
+## Some boilerplate
+
+Let's create a `stringCalc.hs` file with some pre-entered imports and so on, so it doesn't get in the way for the rest of the post. It's here for completeness, but feel free to [skip it](#comma-separated-values).
+
+We'll start this file by importing the libraries we'll need for this post:
+
+```haskell
+import Control.Applicative ((<*))
+import Data.Functor ((<$))
+import Data.Text (Text, pack)
+import Text.Parsec
+import Text.Parsec.Text (Parser)
+```
+
+Next, we'll include a `parseAll` function which will try to parse the full block of text and return a result. If the parse fails, or if there is unparsed text left over, this will return `Nothing`.
+
+``` haskell
+-- Parse entire string. If anything is left over, then return Nothing.
+parseAll :: Parser a -> Text -> Maybe a
+parseAll p s = 
+    let parseToEnd = p <* eof    -- matches p then eof, but only returns value from p
+        parsed = parse parseToEnd [] s
+    in either (const Nothing) Just parsed
+```
+
+## Comma-separated values
+
+The first part of the string calculator exercise is to sum a comma-separated sequence of natural numbers. So we'll want a `Parser [Int]` that can get these numbers from a string, and then we can use the built-in `sum` function to add those numbers.
+
+We'll start by constructing a parser for a natural number. It will parse `many1` (i.e. at least one) digits, then use Haskell's `read` function to convert those digits to an integer.
+
+```haskell
+natural :: Parser Int
+natural = read `fmap` many1 digit
+```
+
+Now we can get comma-separated numbers by constructing a new parser -- naturals, separated by ',' characters:
+
+```haskell
+csvNumbers :: Parser [Int]
+csvNumbers = natural `sepBy` char ','
+
+-- Examples:
+ghci> parseAll csvNumbers "1,2,3"
+Just [1,2,3]
+ghci> parseAll csvNumbers "abc"
+Nothing
+```
+
+We can add these together by telling Haskell we want to `sum` whatever integers have been parsed by the `csvNumbers` parser (using `fmap`), and then get the result using our `parseAll` helper function:
+
+```haskell
+add :: Text -> Maybe Int
+add s = parseAll (fmap sum csvNumbers) s
+
+-- Examples:
+ghci> add "1,2,3"
+Just 6
+ghci> add ""
+Just 0
+ghci> add "asdf"
+Nothing
+```
+
+## Newlines as delimiters
+
+The next part of the exercise is to support both commas and newline characters as separators. We'll rename `csvNumbers` parsers to `stringCalcP` (string calculator parser), and adjust it to accept either delimiter. The `<|>` operator can be read as "or".
+
+```haskell
+stringCalcP :: Parser [Int]
+stringCalcP = 
+    let delim = newline <|> char ','
+    in natural `sepBy` delim
+
+-- Examples:
+ghci> add "1,2\n3,4"
+Just 10
+ghci> add "1a2b"
+Nothing
+ghci> add ""
+Just 0
+```
+
+## Custom delimiters
+
+Our next job is to support optional custom delimiters, not just ',' and '\n'. Strings with custom delimiters will be in the format "//[delimiter]\n[numbers...]". So let's construct a parser that produces a parser as a value (it's parsers all the way down, [until we hit the turtles](http://en.wikipedia.org/wiki/Turtles_all_the_way_down)). We'll also extract our current delimiter logic into a default delimiter parser.
+
+```haskell
+-- Parse out a parser that will match the custom delimiter
+customDelim :: Parser (Parser Char)
+customDelim = do
+    count 2 (char '/')      -- match 2 forward-slash characters
+    delim <- anyChar        -- ... then any character as a delimiter
+    newline                 -- ... then a newline
+    return (char delim)     -- return a parser for that character
+
+-- Parse default delimiters: newline or ','
+defaultDelim :: Parser Char
+defaultDelim = newline <|> char ','
+```
+
+We can now update `stringCalcP` to use a custom delimiter, and fall back to the default delimiters as required.
+
+```haskell
+stringCalcP :: Parser [Int]
+stringCalcP = do
+    delim <- customDelim <|> return defaultDelim
+    natural `sepBy` delim
+
+-- Example: custom delimiter
+ghci> add "//;\n1;2;3"  
+Just 6
+-- Examples: previous delimiters still supported
+ghci> add "1,2,3"       
+Just 6
+ghci> add "1\n2\n3"
+Just 6
+ghci> add "1,2\n3"
+Just 6
+```
+
+## The business is safe... but for how long?!
+
+I think that should be enough to satisfy the most common business requirements for calculating strings. Now, to await the call...
+
