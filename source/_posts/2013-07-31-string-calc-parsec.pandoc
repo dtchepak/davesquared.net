@@ -19,9 +19,7 @@ An effective [string calculator](http://osherove.com/tdd-kata-1/) is obviously i
 One way to think of a parser is as a function that takes a `String`, and either succeeds by producing a value and the remainder of the input to parse, or fails.
 
 ```haskell
-data Parser a = P { parse :: String -> Maybe (String, a) }
-
--- Example: something that can parse a digit character (a Char from '0' to '9')
+-- Example: something that can parse a digit character (a Char from '1' to '9')
 digit :: Parser Char
 
 ghci> digit `parse` "123abc"
@@ -56,13 +54,12 @@ We'll start this file by importing the libraries we'll need for this post:
 
 ```haskell
 import Control.Applicative ((<*))
-import Data.Functor ((<$))
 import Data.Text (Text, pack)
 import Text.Parsec
 import Text.Parsec.Text (Parser)
 ```
 
-Next, we'll include a `parseAll` function which will try to parse the full block of text and return a result. If the parse fails, or if there is unparsed text left over, this will return `Nothing`.
+Next, we'll include a `parseAll` function which will try to parse the full block of text and return a result. If the parse fails, or if there is unparsed text left over, this will return `Nothing`.^[This throws away some useful information Parsec gives us when a string is not parsed, but makes for cleaner output when showing examples in a post.]
 
 ``` haskell
 -- Parse entire string. If anything is left over, then return Nothing.
@@ -114,7 +111,7 @@ Nothing
 
 ## Newlines as delimiters
 
-The next part of the exercise is to support both commas and newline characters as separators. We'll rename `csvNumbers` parsers to `stringCalcP` (string calculator parser), and adjust it to accept either delimiter. The `<|>` operator can be read as "or".
+The next part of the exercise is to support both commas and newline characters as separators. We'll rename the `csvNumbers` parser to `stringCalcP` (string calculator parser), and adjust it to accept either delimiter. The `<|>` operator can be read as "or".
 
 ```haskell
 stringCalcP :: Parser [Int]
@@ -133,7 +130,7 @@ Just 0
 
 ## Custom delimiters
 
-Our next job is to support optional custom delimiters, not just ',' and '\n'. Strings with custom delimiters will be in the format "//[delimiter]\n[numbers...]". So let's construct a parser that produces a parser as a value (it's parsers all the way down, [until we hit the turtles](http://en.wikipedia.org/wiki/Turtles_all_the_way_down)). We'll also extract our current delimiter logic into a default delimiter parser.
+Our next job is to support optional custom delimiters, not just ',' and '\\n'. Strings with custom delimiters will be in the format "//[delimiter]\\n[numbers...]". So let's construct a parser that produces a parser as a value (it's parsers all the way down, [until we hit the turtles](http://en.wikipedia.org/wiki/Turtles_all_the_way_down)). We'll also extract our current delimiter logic into a default delimiter parser.
 
 ```haskell
 -- Parse out a parser that will match the custom delimiter
@@ -167,6 +164,14 @@ ghci> add "1\n2\n3"
 Just 6
 ghci> add "1,2\n3"
 Just 6
+```
+
+And if we chuck in a `main` function, we can compile this into an EXE that reads from stdin before doing its calculatory magic:
+
+```haskell
+main = do
+    input <- getLine
+    print $ add (pack input)
 ```
 
 ## The business is safe... but for how long?!
