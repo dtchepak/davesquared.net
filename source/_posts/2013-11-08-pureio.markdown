@@ -1,0 +1,50 @@
+---
+layout: post
+title: "Freely representing pure IO"
+date: 2013-11-08 12:00
+comments: true
+categories: ["functional programming", "f#"]
+published: false
+---
+
+Previously we looked at [using IO without side-effects](/2013/04/side-effect-free-csharp.html) in C# by deferring the execution of side-effects. Rather than performing IO, we wrapped up side-effecting operations in an `IO` type and used combinators like `Select`, `Then` and `SelectMany` to work within that type, all without actually having to execute the side-effect.
+
+This is a useful technique, but it has the drawback that the `IO` instances assembled with these combinators are opaque -- there is no way for us to inspect them and work out what the represent. We know an `IO<String>` is some IO operation that will result in a string, but is it `readLine`, or `launchMissilesAndShowStatus`?
+
+In this post we'll look at another way of representing side-effecting (and other) operations that addresses this drawback.
+
+## Representing operations with data
+
+We'll use IO as an example again.
+
+```fsharp
+let helloWorld() =
+    Console.WriteLine "Hi, what's your name?"
+    let name = Console.ReadLine()
+    Console.WriteLine ("Hello " + name)
+```
+
+There are two main operations used by this program, `WriteLine` and `ReadLine`. These operations are chained together in a specific order -- we write a prompt, we read some input, we write a greeting based on that input, and then we end the program. Let's represent these operations, and the idea of chaining them together, with a `Terminal` data type:
+
+```fsharp
+type Terminal =
+    | WriteLine of string * Terminal
+    | ReadLine of (string -> Terminal)
+    | EndProgram
+```
+
+* `WriteLine` -- takes a `string` to write, and the next `Terminal` to run.
+* `ReadLine` -- takes a function which, given a `string` read in via IO, will return the next `Terminal` to run. This means the next operation to run after reading a line can depend on the value read.
+* `EndProgram` -- takes no arguments, so does not specify a next `Terminal`. Once we get here our terminal program can have no more operations. It's done.
+
+We can represent our original `helloWorld()` using the `Terminal` data structure:
+
+```fsharp
+let helloWorld2 () : Terminal =
+    WriteLine ("Hi, what's your name?", 
+        ReadLine (fun name -> 
+            WriteLine ("Hello " + name, Pure)))
+```
+
+
+
