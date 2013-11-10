@@ -248,3 +248,9 @@ In addition to the [normal benefits of purity](http://davesquared.net/2013/03/re
 * we can distinguish between two programs of the same type
 * we can run a single program in different ways, so we can run it with side-effects, in a pure way for testing or differentiation, to target different environments, etc.
 
+## Further reading
+
+* [Purely Functional I/O in Scala (PDF)](http://blog.higher-order.com/assets/scalaio.pdf), Rúnar Óli Bjarnason
+* [Why free monads matter](http://www.haskellforall.com/2012/06/you-could-have-invented-free-monads.html), Gabriel Gonzalez
+* [Purify code using free monads](http://www.haskellforall.com/2012/07/purify-code-using-free-monads.html), Gabriel Gonzalez
+* StackOverflow answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906), Philip J-F.
