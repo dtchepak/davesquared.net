@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Freely representing pure IO"
+title: "Side-effect free side-effects in F#"
 date: 2013-11-08 12:00
 comments: true
 categories: ["functional programming", "f#"]
@@ -116,7 +116,7 @@ The benefits of this separation doesn't stop at IO, we could model database oper
 
 Our current implementation suffers from one big problem; we can't combine `Terminal` programs. We have to define a full `Terminal` program upfront, as each operation also defines what the next operation is going to be. Speaking of which, assembling programs that are more complex than `helloWorld2` is going to get very messy.
 
-So let's add a new item to our list of aims: we'd like to be able to compose `Terminal` programs so it's easy to build them, while still keeping the benefits of separate definitions and execution.
+So let's add a new item to our list of aims: we'd like to be able to compose `Terminal` programs so it's easy to build them, while still keeping the benefits of having definition separate from execution.
 
 ## Separating primitive operations from recursion
 
@@ -154,9 +154,9 @@ let rec interpretIO (term:FreeTerm<'a>) : 'a =
         | Pure a -> a
 ```
 
-## Combining primitives
+## Combining programs
 
-We're not done yet. We can define some general functions to help us update and combine these types, and from there build some helper functions to give us a much nicer way of defining our `Terminal` IO progarms.
+Now we can define some general functions to help us update and combine these types, and from there build some helper functions to give us a much nicer way of defining our `Terminal` IO programs.
 
 The first function we need is `mapTerm`, which will let us transform a `Terminal<'a>` into a `Terminal<'b>` if we can change `'a -> 'b`.
 
@@ -179,7 +179,7 @@ let liftF (term:Terminal<'a>) : FreeTerm<'a> =
     FreeTerm (mapTerm Pure term)
 ```
 
-We can use these as the basis for a nice way to expression our terminal IO programs.
+We can use these as the basis for a nice way to express our terminal IO programs.
 
 ```fsharp
 let (>>=) = fun term f -> bind f term
@@ -195,7 +195,7 @@ let helloWorld4 : FreeTerm<Unit> =
 
 ## Computation expression syntax
 
-I'm quite happy with `helloWorld4()`, but we can also use [computation expressions](http://fsharpforfunandprofit.com/series/computation-expressions.html) to get what is possibly a more familiar-looking syntax:
+I'm quite happy with `helloWorld4`, but we can also use [computation expressions](http://fsharpforfunandprofit.com/series/computation-expressions.html) to get what is possibly a more familiar-looking syntax:
 
 ```fsharp
 type TermBuilder() =
@@ -215,7 +215,7 @@ let helloWorld5 = termIO {
 
 ## More general solutions
 
-Much of the work we did define `FreeTerm` and the relevant combinators can be eliminated by using a more generalised type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). I'm not sure how to express the more general form in F#, but the fact it exists means defining a specific `FreeX` type for each `X` is quite fast and mechanical.
+Much of the work we did define `FreeTerm` and the relevant combinators can be eliminated by using a more generalised type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). I'm not sure how to express the more general form in F#, but the fact it exists means defining a specific `FreeX` type for each `X` is quite a fast and mechanical process.
 
 In a language with higher-order polymorphism like Haskell we can get `Free` for [all types we can map over](/2012/05/fp-newbie-learns-functors.html) for, well, free. Here is the entire example in Haskell:
 
@@ -252,6 +252,8 @@ We can get a pure representation of any side-effecty program by defining a type 
 In return, we are able to limit the expression of programs to a set of known operations so we can tell their potential and limitations just from the types, compared with general IO which could try and do anything. We also get the ability to define multiple interpreters for these programs for testing, optimisation, targeting multiple platforms, inspection, etc.
 
 <!-- motivations:
+benefits of pure code:
+http://davesquared.net/2013/03/reasoning-and-mutability.html
 
 What we'd like to achieve is:
 
