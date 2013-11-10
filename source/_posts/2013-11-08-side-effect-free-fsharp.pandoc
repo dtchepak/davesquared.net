@@ -232,9 +232,9 @@ let rec bind (f : 'a -> FreeX<'b>) (term : FreeX<'a>) : FreeX<'b> =
 let liftF (term : X<'a>) : FreeX<'a> = Free (mapX Pure term)
 ```
 
-<div class="note">**Aside:** Because `Free` defines `bind` in terms of `map`, and provides a `Pure` or unit constructor, it gives us a monad for any functor (type that supports `map`). Philip J-F has a great explanation about the general form as an answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906) on StackOverflow.</div>
-
 I'm not sure how to express the more general form in F#, but the fact it exists means defining a specific `FreeX` type for each `X` is quite a fast and mechanical process.
+
+<div class="note">**Aside:** Because `Free` defines `bind` in terms of `map`, and provides a `Pure` or unit constructor, it gives us a monad for any functor (type that supports `map`). Philip J-F explains the general form wonderfully in his answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906) on StackOverflow.</div>
 
 <div class="note">**Obligatory Haskell plug:** In a language with higher-order polymorphism like Haskell we can get `Free` for all types we can map over for, well, free. The full `helloWorld` example written in Haskell is [available here](/2013/11/side-effect-free-in-haskell.html).</div>
 
