@@ -16,7 +16,7 @@ In this post we'll look at another way of representing side-effecting (and other
 
 ## Motivation
 
-Let's use IO as an example again:
+The approach used here will work for any type of side-effecting program (database access, network, etc.), but let's stick with terminal IO as an example:
 
 ```fsharp
 let helloWorld() =
@@ -24,11 +24,9 @@ let helloWorld() =
     let name = Console.ReadLine()
     Console.WriteLine ("Hello " + name)
 ```
-This representation combines definition and execution. We can isolate the rest of our program from the effects of this execution by [wrapping it in an `IO` type](/2013/04/side-effect-free-csharp.html), but then we end up with an opaque box of `IO ()`. If a function returns an `IO ()`, there is no way we can inspect it to find out what it is doing. We can't distinguish `helloWorld()` from `launchMissiles`. 
+This representation combines definition and execution. We can isolate the rest of our program from the effects of this execution by [wrapping it in an `IO` type](/2013/04/side-effect-free-csharp.html), but then we end up with an opaque box of `IO ()`. If a function returns an `IO ()`, there is no way we can inspect it to find out what it is doing. We can't distinguish `helloWorld` from `launchMissiles`, except by running them and hoping for the best. 
 
-What we'd like to do is separate the definition of this program from its execution. By representing programs that do terminal IO with a data type, we can use it in different ways; inspecting it to see what it does, running it with a pure interpreter, or executing it and performing the effect it defines.
-
-This is all a bit hand-wavy at this point, so let's get to specifics.
+What we're going to try instead is separating the definition of this program from its execution. By representing programs that do terminal IO with a data type we can use it in different ways; inspecting it to see what it does, running it with a pure interpreter, or executing it and performing the effect it defines.
 
 ## Representing operations with data
 
@@ -42,12 +40,12 @@ type Terminal =
 ```
 
 * `WriteLine` -- takes a `string` to write, and the next `Terminal` to run.
-* `ReadLine` -- takes a function which, given a `string` read in via IO, will return the next `Terminal` to run. This means the next operation to run after reading a line can depend on the value read.
+* `ReadLine` -- takes a function which, given a `string` read in via an input source, will return the next `Terminal` to run. This means the next operation to run after reading a line can depend on the value read.
 * `EndProgram` -- takes no arguments, so does not specify a next `Terminal`. Once we get here our terminal program can have no more operations. It's done.
 
-We know that any `Terminal` program can only do these operation. No confusing `helloWorld()` and `launchMissles()` anymore. As we'll see later, we can also differentiate two `Terminal` programs.
+We know that any `Terminal` program can only do these operations. No confusing `helloWorld` and `launchMissiles` anymore. As we'll see later, we can also differentiate two `Terminal` programs by inspecting their structures.
 
-We can represent our original `helloWorld()` using the `Terminal` data structure:
+We can represent our original `helloWorld` using the `Terminal` data structure:
 
 ```fsharp
 let helloWorld2 : Terminal =
@@ -56,14 +54,14 @@ let helloWorld2 : Terminal =
             WriteLine ("Hello " + name, EndProgram)))
 ```
 
-This is clumsy, but we'll improve things as we go along. For now fill in the gap between this and the original `helloWorld()`: executing the program.
+This is clumsy, but we'll improve things as we go along. For now let's fill in the gap between this and our original `helloWorld`: executing the program.
 
 ## Interpreting operations
 
-We're now separated the definition of `helloWorld()` from it's execution. Now we can define an interpreter that will execute not just `helloWorld()`, but any `Terminal` program.
+We're separated the definition of `helloWorld` from it's execution. Now we can define an interpreter that will execute not just `helloWorld`, but any `Terminal` program.
 
 ```fsharp
-let rec interpretIO (term:Terminal) : Unit =
+let rec interpretIO (term:Terminal) : unit =
     match term with
         | WriteLine (s, next) -> Console.WriteLine s; interpretIO next
         | ReadLine f          ->
@@ -83,13 +81,13 @@ This interpreter traverses the given `Terminal`, translating each operation to a
     Hi, what's your name?
     World
     Hello World
-    val it : Unit = ()
+    val it : unit = ()
 
-We now have parity with our original program. We've split the program's definition from its execution, giving us pure, side-effect-free representation of a side-effecting program. But is it worth the increased complexity, the author asked rhetorically?
+We now have parity with our original program. We've split the program's definition from its execution, giving us a pure, side-effect-free representation of a side-effecting program. But is it worth the increased complexity, the author asked rhetorically?
 
 ## Pure interpreters
 
-This split of definition and execution opens up some interesting possibilities. For example, we can interpret this program using a purely functional interpreter which reads from a stack of inputs and produces a list of outputs. Very useful for testing!
+This split of definition and execution opens up some interesting possibilities. For example, we can interpret this program using a purely functional interpreter which reads from a stack of inputs and produces a list of outputs. We can use this for testing, including as a means to differentiate `Terminal` programs.
 
 ```fsharp
 let interpretPure (input:string Stack) (term:Terminal) : string list =
@@ -108,19 +106,19 @@ let interpretPure (input:string Stack) (term:Terminal) : string list =
 *)
 ```
 
-We could also write other interpreters, say one that pretty prints a program so we can see exactly what an instance of `Terminal` is doing, or one that translates our `Terminal` program to another language like Javascript.
+We could also write other interpreters, say one that pretty prints a program so we can see exactly what an instance of `Terminal` is doing, or one that translates our `Terminal` program to another language like JavaScript.
 
-The benefits of this separation doesn't stop at IO, we could model database operations like this, and have different interpreters to perform those operations against SQL Server, RavenDB, an in-memory datastore and the filesystem.
+The benefits of this separation don't stop at terminal IO. We could model database operations like this, and have different interpreters to perform those operations against SQL Server, RavenDB, an in-memory datastore and the filesystem. The program is the definition, how we interpret it is up to us.
 
 ## Composing `Terminal` programs
 
 Our current implementation suffers from one big problem; we can't combine `Terminal` programs. We have to define a full `Terminal` program upfront, as each operation also defines what the next operation is going to be. Speaking of which, assembling programs that are more complex than `helloWorld2` is going to get very messy.
 
-So let's add a new item to our list of aims: we'd like to be able to compose `Terminal` programs so it's easy to build them, while still keeping the benefits of having definition separate from execution.
+For this separation of definition and execution to be really useful we need to be able to compose `Terminal` programs so it's easy to assemble them.
 
-## Separating primitive operations from recursion
+### Separating the recursion from the definition of operations
 
-There first steps towards composing these operations is removing the need for each operation to specify the next operation. We still need to be able to chain together operations, but we'll separate this job out into two data types, one for the primitive operations, and another to handle recursion part of the old `Terminal` data type:
+There first steps towards composing these operations is removing the need for each operation to specify the next operation. We still need to be able to chain together operations, but we'll separate this job out into another type. This will give us two data types, one defining the available operations, and another to handle recursive part of the old `Terminal` data type:
 
 ```fsharp
 type Terminal<'a> =
@@ -131,7 +129,7 @@ type FreeTerm<'a> =
     | FreeTerm of Terminal<FreeTerm<'a>>
 ```
 
-We now have a funny looking `Terminal` definition. `WriteLine`, for example, takes the `string` to write, but also some value of some generic type `'a` instead of the next `Terminal` operation to execute. This generic parameter lets us define the `FreeTerm` type which we can use to chain `Terminal` operations together (using the `FreeTerm of Terminal<FreeTerm<'a>>` constructor, or end the recursive definition (using the `Pure of 'a` constructor). 
+We now have a funny looking `Terminal` definition. `WriteLine`, for example, takes the `string` to write, but also a value of some generic type `'a` instead of the next `Terminal` operation to execute. This generic parameter lets us define the `FreeTerm` type which we can use to chain `Terminal` operations together using the `FreeTerm of Terminal<FreeTerm<'a>>` constructor, or to end the recursive definition using the `Pure of 'a` constructor. 
 
 Using these two types, our program becomes:
 
@@ -154,11 +152,11 @@ let rec interpretIO (term:FreeTerm<'a>) : 'a =
         | Pure a -> a
 ```
 
-## Combining programs
+### Combining programs
 
 Now we can define some general functions to help us update and combine these types, and from there build some helper functions to give us a much nicer way of defining our `Terminal` IO programs.
 
-The first function we need is `mapTerm`, which will let us transform a `Terminal<'a>` into a `Terminal<'b>` if we can change `'a -> 'b`.
+The first function we need is `mapTerm`, which will let us transform a `Terminal<'a>` into a `Terminal<'b>` if we have a way to convert `'a` to `'b`.
 
 ```fsharp
 let mapTerm (f : 'a -> 'b) (term : Terminal<'a>) : Terminal<'b> =
@@ -184,10 +182,10 @@ We can use these as the basis for a nice way to express our terminal IO programs
 ```fsharp
 let (>>=) = fun term f -> bind f term
 let (>>) = fun t1 t2 -> t1 >>= fun _ -> t2
-let writeLine s : FreeTerm<Unit> = liftF (WriteLine (s, ()))
+let writeLine s : FreeTerm<unit> = liftF (WriteLine (s, ()))
 let readLine : FreeTerm<string> = liftF (ReadLine id)
 
-let helloWorld4 : FreeTerm<Unit> =
+let helloWorld4 : FreeTerm<unit> =
     writeLine "Hi, what's your name?" >> 
     readLine >>= fun name -> 
     writeLine ("Hello " + name)
@@ -215,9 +213,28 @@ let helloWorld5 = termIO {
 
 ## More general solutions
 
-Much of the work we did define `FreeTerm` and the relevant combinators can be eliminated by using a more generalised type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). I'm not sure how to express the more general form in F#, but the fact it exists means defining a specific `FreeX` type for each `X` is quite a fast and mechanical process.
+Much of the work we did define `FreeTerm` and the relevant combinators can be eliminated by using a more generalised type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). Rather than being tied to a specific type like `Terminal`, it can be generalised to [any type that supports a `map` function](http://davesquared.net/2012/05/fp-newbie-learns-functors.html). 
 
-In a language with higher-order polymorphism like Haskell we can get `Free` for [all types we can map over](/2012/05/fp-newbie-learns-functors.html) for, well, free. Here is the entire example in Haskell:
+We can see this for ourselves by replacing "Terminal" in our definition with "X". Provided there is a `mapX`, all the code is identical:
+
+```fsharp
+type FreeX<'a> = Pure of 'a | Free of X<FreeX<'a>>
+
+let rec bind (f : 'a -> FreeX<'b>) (term : FreeX<'a>) : FreeX<'b> =
+    match term with
+        | Pure value -> f value
+        | Free t -> Free (mapX (bind f) t)
+
+let liftF (term : X<'a>) : FreeX<'a> = Free (mapX Pure term)
+```
+
+<div class="note">**Aside:** Because `Free` defines `bind` in terms of `map`, and provides a `Pure` or unit constructor, it gives us a monad for any functor (type that supports `map`). Philip J-F has a great explanation about the general form as an answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906) on StackOverflow.</div>
+
+I'm not sure how to express the more general form in F#, but the fact it exists means defining a specific `FreeX` type for each `X` is quite a fast and mechanical process.
+
+### Obligatory Haskell plug
+
+In a language with higher-order polymorphism like Haskell we can get `Free` for all types we can map over for, well, free. Here is the entire example in Haskell:
 
 ```haskell
 {-# LANGUAGE DeriveFunctor #-}
@@ -249,7 +266,7 @@ interpretIO (Pure a) = return a
 
 We can get a pure representation of any side-effecty program by defining a type for the primitive operations required for the program and a corresponding `Free` type. This `Free` type and related combinators is quite general, and even in languages where we can't use a generalised version, it is a fast and mechanical process to write one.
 
-In return, we are able to limit the expression of programs to a set of known operations so we can tell their potential and limitations just from the types, compared with general IO which could try and do anything. We also get the ability to define multiple interpreters for these programs for testing, optimisation, targeting multiple platforms, inspection, etc.
+In return, we are able to limit the expressible programs of that type to a set of known operations so we can tell their potential and limitations just from the types, compared with general IO which could try and do anything. We also get the ability to define multiple interpreters for these programs for testing, optimisation, targeting multiple platforms, inspection, etc.
 
 <!-- motivations:
 benefits of pure code:
