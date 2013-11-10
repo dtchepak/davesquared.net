@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Terminal IO example in Haskell"
-date: 2013-11-10 23:18
+date: 2013-11-11 10:00
 comments: true
 categories: ["functional programming", "haskell"]
 ---
@@ -36,3 +36,15 @@ interpretIO (Free (ReadLine f)) = getLine >>= interpretIO . f
 interpretIO (Pure a) = return a
 ```
 
+This is using `Free` and `liftF` from [Control.Monad.Free](http://hackage.haskell.org/package/free), but for the sake of equivalence with the F# example, I've included a definition that can be used in place of the `import Control.Monad.Free` line in the above code.
+
+```haskell
+data Free f a = Pure a | Free (f (Free f a))
+instance Functor f => Monad (Free f) where
+    return = Pure
+    (Pure a) >>= f = f a
+    (Free fr) >>= f = Free (fmap (>>= f) fr)
+
+liftF :: Functor f => f a -> Free f a
+liftF =  Free . fmap Pure
+```

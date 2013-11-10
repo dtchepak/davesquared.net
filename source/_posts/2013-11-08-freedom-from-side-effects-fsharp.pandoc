@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "More freedom from side-effects with F#"
-date: 2013-11-08 12:00
+date: 2013-11-10 23:00
 comments: true
 categories: ["functional programming", "f#"]
 ---
@@ -10,13 +10,15 @@ Previously we looked at [using IO without side-effects](/2013/04/side-effect-fre
 
 This is a useful technique, but it has the drawback that the `IO` instances assembled with these combinators are opaque -- there is no way for us to inspect them and work out what the represent. We know an `IO<String>` is some IO operation that will result in a string, but is it `readLine`, or `launchMissilesAndShowStatus`?
 
-In this post we'll look at another way of representing side-effecting (and other) operations that addresses this drawback.
+In this post we'll look at another way of representing side-effecting (and other) operations that addresses this drawback. 
+
+I'm going to use F# for the examples but the idea is more broadly applicable than just F#. It's a bit [easier in Haskell](/2013/11/terminal-io-example-in-haskell), and a bit [more difficult in C#](https://github.com/NICTA/xsharpx/commit/a2bc21eb56fea0dde306685944ab672aad0ae9e1).
 
 <!-- more -->
 
 ## Motivation
 
-The approach used here will work for any type of side-effecting program (database access, network, etc.), but let's stick with terminal IO as an example:
+The approach used here will work for any type of side-effecting program (database access, networking, etc.), but let's stick with terminal IO as an example:
 
 ```fsharp
 let helloWorld() =
@@ -24,6 +26,7 @@ let helloWorld() =
     let name = Console.ReadLine()
     Console.WriteLine ("Hello " + name)
 ```
+
 This representation combines definition and execution. We can isolate the rest of our program from the effects of this execution by [wrapping it in an `IO` type](/2013/04/side-effect-free-csharp.html), but then we end up with an opaque box of `IO ()`. If a function returns an `IO ()`, there is no way we can inspect it to find out what it is doing. We can't distinguish `helloWorld` from `launchMissiles`, except by running them and hoping for the best. 
 
 What we're going to try instead is separating the definition of this program from its execution. By representing programs that do terminal IO with a data type we can use it in different ways; inspecting it to see what it does, running it with a pure interpreter, or executing it and performing the effect it defines.
@@ -106,7 +109,7 @@ let interpretPure (input:string Stack) (term:Terminal) : string list =
 *)
 ```
 
-We could also write other interpreters, say one that pretty prints a program so we can see exactly what an instance of `Terminal` is doing, or one that translates our `Terminal` program to another language like JavaScript.
+We could also write other interpreters, say one that pretty prints a program so we can see exactly what an instance of `Terminal` is doing for certain inputs, or one that translates our `Terminal` program to another language like JavaScript.
 
 The benefits of this separation don't stop at terminal IO. We could model database operations like this, and have different interpreters to perform those operations against SQL Server, RavenDB, an in-memory datastore and the filesystem. The program is the definition, how we interpret it is up to us.
 
