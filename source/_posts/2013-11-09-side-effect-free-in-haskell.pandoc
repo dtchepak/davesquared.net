@@ -1,0 +1,38 @@
+---
+layout: post
+title: "Side-effect free in Haskell"
+date: 2013-11-10 23:18
+comments: true
+categories: ["functional programming", "haskell"]
+---
+
+[Last post](/2013/11/side-effect-free-fsharp.html) we looked at using a less general form of the Free monad to purely represent side-effects in F#. Because Haskell supports higher-order polymorphism it makes using this approach much easier. Here is the complete example from that post, rewritten in Haskell:
+
+<!-- more -->
+
+```haskell
+{-# LANGUAGE DeriveFunctor #-}
+import Control.Monad.Free
+
+data Terminal a =
+    WriteLine String a
+    | ReadLine (String -> a)
+    deriving (Functor)
+
+writeLine :: String -> Free Terminal ()
+writeLine s = liftF $ WriteLine s ()
+readLine :: Free Terminal String
+readLine = liftF $ ReadLine id
+
+helloWorld :: Free Terminal ()
+helloWorld = do
+    writeLine "Hi, what's your name?"
+    name <- readLine
+    writeLine $ "Hello " ++ name
+
+interpretIO :: Free Terminal a -> IO a
+interpretIO (Free (WriteLine s a)) = putStrLn s >> interpretIO a
+interpretIO (Free (ReadLine f)) = getLine >>= interpretIO . f
+interpretIO (Pure a) = return a
+```
+

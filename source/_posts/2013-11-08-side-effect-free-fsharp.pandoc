@@ -110,6 +110,8 @@ We could also write other interpreters, say one that pretty prints a program so 
 
 The benefits of this separation don't stop at terminal IO. We could model database operations like this, and have different interpreters to perform those operations against SQL Server, RavenDB, an in-memory datastore and the filesystem. The program is the definition, how we interpret it is up to us.
 
+Or we could have interpreters that optimise programs, interpreting programs and batching certain operations to produce a new, more efficient program.
+
 ## Composing `Terminal` programs
 
 Our current implementation suffers from one big problem; we can't combine `Terminal` programs. We have to define a full `Terminal` program upfront, as each operation also defines what the next operation is going to be. Speaking of which, assembling programs that are more complex than `helloWorld2` is going to get very messy.
@@ -191,6 +193,8 @@ let helloWorld4 : FreeTerm<unit> =
     writeLine ("Hello " + name)
 ```
 
+This gives us quite a nice mini DSL for defining pure terminal IO programs.
+
 ## Computation expression syntax
 
 I'm quite happy with `helloWorld4`, but we can also use [computation expressions](http://fsharpforfunandprofit.com/series/computation-expressions.html) to get what is possibly a more familiar-looking syntax:
@@ -211,7 +215,7 @@ let helloWorld5 = termIO {
 }
 ```
 
-## More general solutions
+## Generalising
 
 Much of the work we did define `FreeTerm` and the relevant combinators can be eliminated by using a more generalised type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). Rather than being tied to a specific type like `Terminal`, it can be generalised to [any type that supports a `map` function](http://davesquared.net/2012/05/fp-newbie-learns-functors.html). 
 
@@ -232,57 +236,15 @@ let liftF (term : X<'a>) : FreeX<'a> = Free (mapX Pure term)
 
 I'm not sure how to express the more general form in F#, but the fact it exists means defining a specific `FreeX` type for each `X` is quite a fast and mechanical process.
 
-### Obligatory Haskell plug
-
-In a language with higher-order polymorphism like Haskell we can get `Free` for all types we can map over for, well, free. Here is the entire example in Haskell:
-
-```haskell
-{-# LANGUAGE DeriveFunctor #-}
-import Control.Monad.Free
-
-data Terminal a =
-    WriteLine String a
-    | ReadLine (String -> a)
-    deriving (Functor)
-
-writeLine :: String -> Free Terminal ()
-writeLine s = liftF $ WriteLine s ()
-readLine :: Free Terminal String
-readLine = liftF $ ReadLine id
-
-helloWorld :: Free Terminal ()
-helloWorld = do
-    writeLine "Hi, what's your name?"
-    name <- readLine
-    writeLine $ "Hello " ++ name
-
-interpretIO :: Free Terminal a -> IO a
-interpretIO (Free (WriteLine s a)) = putStrLn s >> interpretIO a
-interpretIO (Free (ReadLine f)) = getLine >>= interpretIO . f
-interpretIO (Pure a) = return a
-```
+<div class="note">**Obligatory Haskell plug:** In a language with higher-order polymorphism like Haskell we can get `Free` for all types we can map over for, well, free. The full `helloWorld` example written in Haskell is [available here](/2013/11/side-effect-free-in-haskell.html).</div>
 
 ## Conclusion
 
-We can get a pure representation of any side-effecty program by defining a type for the primitive operations required for the program and a corresponding `Free` type. This `Free` type and related combinators is quite general, and even in languages where we can't use a generalised version, it is a fast and mechanical process to write one.
+We can get a pure representation of any side-effecty program by defining a type for the primitive operations required for the program and using the `Free` type and related functions to combine these operations into programs, all without side-effects. We then separately define the execution of these programs in one or more interpreters.
 
-In return, we are able to limit the expressible programs of that type to a set of known operations so we can tell their potential and limitations just from the types, compared with general IO which could try and do anything. We also get the ability to define multiple interpreters for these programs for testing, optimisation, targeting multiple platforms, inspection, etc.
+In addition to the [normal benefits of purity](http://davesquared.net/2013/03/reasoning-and-mutability.html), this separation of a program's definition from its execution gives us some big advantages over the [deferred execution approach to IO](/2013/04/side-effect-free-csharp.html):
 
-<!-- motivations:
-benefits of pure code:
-http://davesquared.net/2013/03/reasoning-and-mutability.html
+* we can limit the expressible programs of a specific type to a set of known operations, so we can immediately tell their potential and limitations just from the types (compared with general IO which could attempt anything).
+* we can distinguish between two programs of the same type
+* we can run a single program in different ways, so we can run it with side-effects, in a pure way for testing or differentiation, to target different environments, etc.
 
-What we'd like to achieve is:
-
-* separate the definition of these programs from their execution
-* be able to limit the operations of programs to a set of known operations (not all-bets-are-off-IO)
-* be able to distinguish between two programs of the same type
-
-* be able to run a single program in different ways, so we can run it with side-effects or in a pure way for testing, or to target different environments.
-
--- optimise programs, interpret to batch expensive ops, etc
--- possible in C#
--- much more general in Haskell (not sure how general it can be made in F#)
-
--- DSL
--->
