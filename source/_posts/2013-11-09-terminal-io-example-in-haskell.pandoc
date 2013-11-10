@@ -1,12 +1,12 @@
 ---
 layout: post
-title: "Side-effect free in Haskell"
+title: "Terminal IO example in Haskell"
 date: 2013-11-10 23:18
 comments: true
 categories: ["functional programming", "haskell"]
 ---
 
-[Last post](/2013/11/side-effect-free-fsharp.html) we looked at using a less general form of the Free monad to purely represent side-effects in F#. Because Haskell supports higher-order polymorphism it makes using this approach much easier. Here is the complete example from that post, rewritten in Haskell:
+[Last post](/2013/11/freedom-from-side-effects-fsharp.html) we looked at using a less general form of the Free monad to purely represent side-effects in F#. Because Haskell supports higher-order polymorphism it makes using this approach much easier. Here is the complete example from that post, rewritten in Haskell:
 
 <!-- more -->
 

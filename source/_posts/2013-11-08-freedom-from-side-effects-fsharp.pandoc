@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Side-effect free side-effects in F#"
+title: "More freedom from side-effects with F#"
 date: 2013-11-08 12:00
 comments: true
 categories: ["functional programming", "f#"]
@@ -236,7 +236,7 @@ I'm not sure how to express the more general form in F#, but the fact it exists 
 
 <div class="note">**Aside:** Because `Free` defines `bind` in terms of `map`, and provides a `Pure` or unit constructor, it gives us a monad for any functor (type that supports `map`). Philip J-F explains the general form wonderfully in his answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906) on StackOverflow.</div>
 
-<div class="note">**Obligatory Haskell plug:** In a language with higher-order polymorphism like Haskell we can get `Free` for all types we can map over for, well, free. The full `helloWorld` example written in Haskell is [available here](/2013/11/side-effect-free-in-haskell.html).</div>
+<div class="note">**Obligatory Haskell plug:** In a language with higher-order polymorphism like Haskell we can get `Free` for all types we can map over for, well, free. The full `helloWorld` example written in Haskell is [available here](/2013/11/terminal-io-example-in-haskell.html).</div>
 
 ## Conclusion
 
