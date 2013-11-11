@@ -216,7 +216,7 @@ let helloWorld5 = termIO {
 
 ## Generalising
 
-Much of the work we did define `FreeTerm` and the relevant combinators can be eliminated by using a more generalised type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). Rather than being tied to a specific type like `Terminal`, it can be generalised to [any type that supports a `map` function](http://davesquared.net/2012/05/fp-newbie-learns-functors.html). 
+Much of the work we did to define `FreeTerm` and the relevant combinators can be eliminated by using a more general type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). Rather than being tied to a specific type like `Terminal`, it can be generalised to [any type that supports a `map` function](http://davesquared.net/2012/05/fp-newbie-learns-functors.html). 
 
 We can see this for ourselves by replacing "Term" in our `FreeTerm` definition with "X"; the code works fine with any type `X` provided there is a `mapX` defined for it. The rest of the code can remain unchanged.^[Because `Free` defines `bind` in terms of `map`, and provides a `Pure` or unit constructor, it gives us a monad for any functor (type that supports `map`). Philip J-F explains the general form wonderfully in his answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906) on StackOverflow.]
 
@@ -250,4 +250,4 @@ In addition to the [normal benefits of purity](http://davesquared.net/2013/03/re
 * [Purely Functional I/O in Scala (PDF)](http://blog.higher-order.com/assets/scalaio.pdf), Rúnar Óli Bjarnason
 * [Why free monads matter](http://www.haskellforall.com/2012/06/you-could-have-invented-free-monads.html), Gabriel Gonzalez
 * [Purify code using free monads](http://www.haskellforall.com/2012/07/purify-code-using-free-monads.html), Gabriel Gonzalez
-* StackOverflow answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906), Philip J-F.
+
