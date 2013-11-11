@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "More freedom from side-effects with F#"
-date: 2013-11-10 23:00
+date: 2013-11-11 17:30
 comments: true
 categories: ["functional programming", "f#"]
 ---
@@ -12,13 +12,11 @@ This is a useful technique, but it has the drawback that the `IO` instances asse
 
 In this post we'll look at another way of representing side-effecting (and other) operations that addresses this drawback. 
 
-I'm going to use F# for the examples but the idea is more broadly applicable than just F#. It's a bit [easier in Haskell](/2013/11/terminal-io-example-in-haskell), and a bit [more difficult in C#](https://github.com/NICTA/xsharpx/commit/a2bc21eb56fea0dde306685944ab672aad0ae9e1).
-
 <!-- more -->
 
 ## Motivation
 
-The approach used here will work for any type of side-effecting program (database access, networking, etc.), but let's stick with terminal IO as an example:
+The approach used here will work for any type of side-effecting program, but let's stick with terminal IO as an example. We'll also use F#, although we could probably do this in any language. It's a bit [easier in Haskell](/2013/11/terminal-io-example-in-haskell), and a bit [more difficult in C#](https://github.com/NICTA/xsharpx/commit/a2bc21eb56fea0dde306685944ab672aad0ae9e1).
 
 ```fsharp
 let helloWorld() =
@@ -33,7 +31,7 @@ What we're going to try instead is separating the definition of this program fro
 
 ## Representing operations with data
 
-There are two main operations used by our `helloWorld()` program, `WriteLine` and `ReadLine`. These operations are chained together in a specific order -- we write a prompt, we read some input, we write a greeting based on that input, and then we end the program. Let's represent these operations, and the idea of chaining them together, with a `Terminal` data type:
+There are two main operations used by our `helloWorld` program, `WriteLine` and `ReadLine`. These operations are chained together in a specific order -- we write a prompt, we read some input, we write a greeting based on that input, and then we end the program. Let's represent these operations, and the idea of chaining them together, with a `Terminal` data type:
 
 ```fsharp
 type Terminal =
@@ -109,11 +107,9 @@ let interpretPure (input:string Stack) (term:Terminal) : string list =
 *)
 ```
 
-We could also write other interpreters, say one that pretty prints a program so we can see exactly what an instance of `Terminal` is doing for certain inputs, or one that translates our `Terminal` program to another language like JavaScript.
+We could also write other interpreters, say one that pretty prints a program so we can see exactly what an instance of `Terminal` is doing for certain inputs.
 
-The benefits of this separation don't stop at terminal IO. We could model database operations like this, and have different interpreters to perform those operations against SQL Server, RavenDB, an in-memory datastore and the filesystem. The program is the definition, how we interpret it is up to us.
-
-Or we could have interpreters that optimise programs, interpreting programs and batching certain operations to produce a new, more efficient program.
+The benefits of this separation don't stop at terminal IO. We could model database operations like this, and have different interpreters to perform those operations against SQL Server, RavenDB, an in-memory datastore and the filesystem. The program is the definition, how we interpret it is up to us. ^[I'm not sure just how far the potential for multiple interpreters for a single type can be pushed. Could we have an interpreter to translate `Terminal` programs to other platforms? Or have interpreters that optimise programs, batching certain operations to produce a new, more efficient program?]
 
 ## Composing `Terminal` programs
 
@@ -182,7 +178,7 @@ let liftF (term:Terminal<'a>) : FreeTerm<'a> =
     FreeTerm (mapTerm Pure term)
 ```
 
-We can use these as the basis for a nice way to express our terminal IO programs.
+We can use these as the basis for some combinators to help us express our terminal IO programs:
 
 ```fsharp
 let (>>=) = fun term f -> bind f term
@@ -222,7 +218,7 @@ let helloWorld5 = termIO {
 
 Much of the work we did define `FreeTerm` and the relevant combinators can be eliminated by using a more generalised type called [`Free`](http://hackage.haskell.org/package/free-2.0.3/docs/Control-Monad-Free.html#t:Free). Rather than being tied to a specific type like `Terminal`, it can be generalised to [any type that supports a `map` function](http://davesquared.net/2012/05/fp-newbie-learns-functors.html). 
 
-We can see this for ourselves by replacing "Terminal" in our definition with "X". Provided there is a `mapX`, all the code is identical:
+We can see this for ourselves by replacing "Terminal" in our definition with "X", provided there is a `mapX`. The rest of the code can remain unchanged.^[Because `Free` defines `bind` in terms of `map`, and provides a `Pure` or unit constructor, it gives us a monad for any functor (type that supports `map`). Philip J-F explains the general form wonderfully in his answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906) on StackOverflow.]
 
 ```fsharp
 type FreeX<'a> = Pure of 'a | Free of X<FreeX<'a>>
@@ -237,19 +233,17 @@ let liftF (term : X<'a>) : FreeX<'a> = Free (mapX Pure term)
 
 I'm not sure how to express the more general form in F#, but the fact it exists means defining a specific `FreeX` type for each `X` is quite a fast and mechanical process.
 
-<div class="note">**Aside:** Because `Free` defines `bind` in terms of `map`, and provides a `Pure` or unit constructor, it gives us a monad for any functor (type that supports `map`). Philip J-F explains the general form wonderfully in his answer to ["What are free monads?"](http://stackoverflow.com/a/13357359/906) on StackOverflow.</div>
-
 <div class="note">**Obligatory Haskell plug:** In a language with higher-order polymorphism like Haskell we can get `Free` for all types we can map over for, well, free. The full `helloWorld` example written in Haskell is [available here](/2013/11/terminal-io-example-in-haskell.html).</div>
 
 ## Conclusion
 
-We can get a pure representation of any side-effecty program by defining a type for the primitive operations required for the program and using the `Free` type and related functions to combine these operations into programs, all without side-effects. We then separately define the execution of these programs in one or more interpreters.
+We can get a pure representation of any side-effecty program (not just terminal IO) by defining a type for the primitive operations required for the program and using the `Free` type and related functions to combine these operations into programs, all without side-effects. We then separately define the execution of these programs in one or more interpreters.
 
 In addition to the [normal benefits of purity](http://davesquared.net/2013/03/reasoning-and-mutability.html), this separation of a program's definition from its execution gives us some big advantages over the [deferred execution approach to IO](/2013/04/side-effect-free-csharp.html):
 
 * we can limit the expressible programs of a specific type to a set of known operations, so we can immediately tell their potential and limitations just from the types (compared with general IO which could attempt anything).
 * we can distinguish between two programs of the same type
-* we can run a single program in different ways, so we can run it with side-effects, in a pure way for testing or differentiation, to target different environments, etc.
+* we can run a single program in different ways, so we can run it with side-effects (or translate it to `IO`), in a pure way for testing or differentiation, or in any other way we need.
 
 ## Further reading
 
