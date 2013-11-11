@@ -36,7 +36,7 @@ interpretIO (Free (ReadLine f)) = getLine >>= interpretIO . f
 interpretIO (Pure a) = return a
 ```
 
-This is using `Free` and `liftF` from [Control.Monad.Free](http://hackage.haskell.org/package/free), but for the sake of equivalence with the F# example, I've included a definition that can be used in place of the `import Control.Monad.Free` line in the above code.
+This is using `Free` and `liftF` from [Control.Monad.Free](http://hackage.haskell.org/package/free), but for the sake of equivalence with the F# example, here's a definition that can be used in place of the `import Control.Monad.Free` line in the above code.
 
 ```haskell
 data Free f a = Pure a | Free (f (Free f a))
