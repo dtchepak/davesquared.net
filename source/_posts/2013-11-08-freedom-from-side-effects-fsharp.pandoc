@@ -248,7 +248,8 @@ In addition to the [normal benefits of purity](http://davesquared.net/2013/03/re
 
 ## Further reading
 
-* [Purely Functional I/O in Scala (PDF)](http://blog.higher-order.com/assets/scalaio.pdf), Rúnar Óli Bjarnason
+* [Purely Functional I/O in Scala (PDF slides)](http://blog.higher-order.com/assets/scalaio.pdf), Rúnar Óli Bjarnason
 * [Why free monads matter](http://www.haskellforall.com/2012/06/you-could-have-invented-free-monads.html), Gabriel Gonzalez
 * [Purify code using free monads](http://www.haskellforall.com/2012/07/purify-code-using-free-monads.html), Gabriel Gonzalez
+* [Free: Intepreters and Little Languages (HTML slides)](http://mth.io/talks/free/), Mark Hibberd
 
