@@ -2,6 +2,7 @@
 layout: post
 title: "More freedom from side-effects (F#)"
 date: 2013-11-11 20:05
+updated: 2013-11-12 07:20
 comments: true
 categories: ["functional programming", "f#"]
 ---
@@ -182,12 +183,12 @@ We can use these as the basis for some combinators to help us express our termin
 
 ```fsharp
 let (>>=) = fun term f -> bind f term
-let (>>) = fun t1 t2 -> t1 >>= fun _ -> t2
+let (>>.) = fun t1 t2 -> t1 >>= fun _ -> t2
 let writeLine s : FreeTerm<unit> = liftF (WriteLine (s, ()))
 let readLine : FreeTerm<string> = liftF (ReadLine id)
 
 let helloWorld4 : FreeTerm<unit> =
-    writeLine "Hi, what's your name?" >> 
+    writeLine "Hi, what's your name?" >>.
     readLine >>= fun name -> 
     writeLine ("Hello " + name)
 ```
@@ -202,7 +203,7 @@ I'm quite happy with `helloWorld4`, but we can also use [computation expressions
 type TermBuilder() =
     member x.Bind(term, f) = bind f term
     member x.Return(value) = Pure value
-    member x.Combine(term1, term2) = term1 >> term2
+    member x.Combine(term1, term2) = term1 >>. term2
     member x.Zero() = Pure ()
     member x.Delay(f) = f()
 let termIO = new TermBuilder()
