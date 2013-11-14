@@ -2,6 +2,7 @@
 layout: post
 title: "Composition via scary-sounding maths terms"
 date: 2012-07-23 15:15
+updated: 2013-11-14 13:13
 comments: true
 categories: ["functional programming", "haskell"]
 ---
@@ -26,7 +27,7 @@ Too right! So let's dive right in. Please ask me to clarify anything I've done a
 ## Monoids in Haskell
 A monoid is a type that has an [associative](/2012/04/associativity.html) binary function, and an identity value such that when we pass it as one of the arguments to that function, we always get the other argument back. 
 
-This is much simpler to understand by looking at examples. The [Sum](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Sum) monoid for numbers is the function `(+)` and the value `0`. This is associative (`10 + 2 = 2 + 10`), and has the required identity property (`x + 0 = x`). Another example is multiplication, which has function `(*)` and value `1`. Division is not a monoid because `10 / 2 != 2 / 10`, so it is not associative.
+This is much simpler to understand by looking at examples. The [Sum](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html#t:Sum) monoid for numbers is the function `(+)` and the value `0`. This is associative (`1 + (2 + 3) = (1 + 2) + 3`), and has the required identity property (`x + 0 = x`). Another example is multiplication, which has function `(*)` and value `1`. Division is not a monoid because `10 / (5 / 2) != (10 / 5) / 2`, so it is not associative^[Thanks to Dan for [correcting my original example](/2012/07/composition-via-scary-sounding-maths-terms.html#comment-1122233859)].
 
 In Haskell monoids are represented with the [Monoid](http://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Monoid.html) type class. The binary function is called `mappend` (it combines, or appends, two values), and the identity value is called `mempty`. (We need to provide implementations of these two functions when we make a type an instance of the monoid typeclass.)
 
