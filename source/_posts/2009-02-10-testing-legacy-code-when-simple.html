@@ -132,13 +132,13 @@ public class ThreadDispatcherFixture {
   public void CanRunFunctionCall() {
     var dispatcher = new ThreadDispatcher();
     bool wasRun = false;
-    dispatcher.Dispach(() =&gt; wasRun = true);
+    dispatcher.Dispatch(() =&gt; wasRun = true);
     Assert.That(wasRun);
   }
 }
 
 public class ThreadDispatcher {
-  public void Dispach(Action function) {
+  public void Dispatch(Action function) {
     function();
   }
 }
@@ -152,12 +152,12 @@ public void RunsFunctionFromDifferentThread() {
   var dispatcher = new ThreadDispatcher();
   int callingThreadId = Thread.CurrentThread.ManagedThreadId;
   int dispatchedThreadId = -1;
-  dispatcher.Dispach(() =&gt; dispatchedThreadId = Thread.CurrentThread.ManagedThreadId);
+  dispatcher.Dispatch(() =&gt; dispatchedThreadId = Thread.CurrentThread.ManagedThreadId);
   Assert.That(dispatchedThreadId, Is.Not.EqualTo(callingThreadId));
 }
 //...
 public class ThreadDispatcher {
-  public void Dispach(Action function) {
+  public void Dispatch(Action function) {
     var thread = new Thread(() =&gt; function());
     thread.Start();
   }
@@ -173,7 +173,7 @@ public class ThreadDispatcher {
 public void CanRunFunctionCall() {
   var dispatcher = new ThreadDispatcher();
   bool wasRun = false;            
-  var dispatchedThread = dispatcher.Dispach(() =&gt; wasRun = true);
+  var dispatchedThread = dispatcher.Dispatch(() =&gt; wasRun = true);
   <b>dispatchedThread.Join();</b>
   Assert.That(wasRun);
 }
@@ -182,7 +182,7 @@ public void RunsFunctionFromDifferentThread() {
   var dispatcher = new ThreadDispatcher();
   int callingThreadId = Thread.CurrentThread.ManagedThreadId;
   int dispatchedThreadId = callingThreadId;
-  var dispatchedThread = dispatcher.Dispach(() =&gt; dispatchedThreadId = Thread.CurrentThread.ManagedThreadId);
+  var dispatchedThread = dispatcher.Dispatch(() =&gt; dispatchedThreadId = Thread.CurrentThread.ManagedThreadId);
   <b>dispatchedThread.Join();</b>
   Assert.That(dispatchedThreadId, Is.Not.EqualTo(callingThreadId));
 }
@@ -191,7 +191,7 @@ public void RunsFunctionFromDifferentThread() {
 <p>And a reliably passing implementation (I hope):</p>
 
 <pre>
-public <b>Thread</b> Dispach(Action function) {
+public <b>Thread</b> Dispatch(Action function) {
   var thread = new Thread(() =&gt; function());
   thread.Start();
   <b>return thread;</b>
@@ -202,7 +202,7 @@ public <b>Thread</b> Dispach(Action function) {
 
 <pre>
 public class ThreadDispatcher {
-  public AsyncCall Dispach(Action function) {
+  public AsyncCall Dispatch(Action function) {
     var thread = new Thread(() =&gt; function());
     thread.Start();
     return new AsyncCall(thread);
@@ -238,7 +238,7 @@ public class LoggingFixture {
     var dispatcher = MockRepository.GenerateMock&lt;ThreadDispatcher&gt;();
     ILogger logging = new Logging(dispatcher);
     logging.AsyncLog(&quot;some message&quot;);
-    dispatcher.AssertWasCalled(x =&gt; x.Dispach(null), options =&gt; options.IgnoreArguments());
+    dispatcher.AssertWasCalled(x =&gt; x.Dispatch(null), options =&gt; options.IgnoreArguments());
   }
 }
 
@@ -261,7 +261,7 @@ public class Logging : ILogger {
   }
 
   void ILogger.AsyncLog(string message) {
-    <b>dispatcher.Dispach(() =&gt; Log(message));</b>
+    <b>dispatcher.Dispatch(() =&gt; Log(message));</b>
   }
 }
 </pre>
@@ -272,7 +272,7 @@ public class Logging : ILogger {
 [TestFixture]
 public class LoggingFixture {
   private class FakeThreadDispatcher : ThreadDispatcher {
-    public override AsyncCall Dispach(Action function) {
+    public override AsyncCall Dispatch(Action function) {
       function();
       return new AsyncCall(null);
     }
