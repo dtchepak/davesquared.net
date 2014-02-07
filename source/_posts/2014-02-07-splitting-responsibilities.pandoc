@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Splitting responsibilities by abstraction"
+title: "Splitting responsibilities by abstracting type details"
 date: 2014-02-08 08:30
 comments: true
 categories: ["functional programming", "dev practices"]
