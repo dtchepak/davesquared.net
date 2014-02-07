@@ -1,0 +1,127 @@
+---
+layout: post
+title: "Splitting responsibilities by abstraction"
+date: 2014-02-08 08:30
+comments: true
+categories: ["functional programming", "dev practices"]
+---
+
+One thing I've battled with in my OO, TDD adventures is useless abstractions. I find it very easy to churn out class like the `PaddedSingleWidgetList` described below in an attempt to follow the Single Responsibility Principle and write testable code, but in doing so I end up with lots of classes that don't really make much sense in isolation, and that are not inherently reusable. (Just me?)
+
+Instead of my usual approach of splitting a problem in terms of somewhat arbitrarily chosen responsibilities, what if we divided it into the part that needs knowledge of a specific type, and the part that can have the specific type abstracted away?
+
+<!-- more -->
+
+## A confusing responsibility
+
+I was looking at some code that produced a list of `Widget` based on a single `Widget`. This list had to have certain properties in order to be used by another class. There had been some trouble naming the class that housed this responsibility, and it had ended up as an uncomfortable `PaddedSingleWidgetList` with the following interface.
+
+```csharp
+public interface IPaddedSingleWidgetList {
+    IEnumerable<Widget> BuildFrom(Widget widget, int length);
+}
+```
+
+From the types and names used it would be reasonable to guess this code produces a list containing the given `widget` and pads that list out to `length` with by appending `default(Widget)` values. Reasonable, but wrong: 
+
+```csharp
+public class PaddedSingleWidgetList : IPaddedSingleWidgetList {
+    public IEnumerable<Widget> BuildFrom(Widget widget, int length) {
+        var padding = Enumerable.Repeat(Widget.EmptyWidget, length - 1);
+        return new[] { StandaloneWidget(widget) }.Concat(padding);
+    }
+
+    private Widget StandaloneWidget(Widget w) {
+        //return an altered widget loosely based on the one passed in
+        var standalone = new Widget();
+        standalone.Foo = w.Foo;
+        return standalone;
+    }
+}
+```
+
+This implementation creates a modified version of the single widget it uses as the first element, and pads the list with a specific `EmptyWidget` rather than a `default(Widget)`.
+
+Our guess was incorrect because the types we were using were too specific. `BuildFrom` knows it has a `Widget` and so can inspect its fields and use that to change behaviour, create new `Widget` instances, and use `Widget.EmptyWidget` as a default. 
+
+## Improving our guessing
+
+If instead the type signature was `IEnumerable<T> SomeMethod<T>(T value, int length)`, and we ban reflection and exceptions and the like, we could make a more reliable guess. In this case `SomeMethod` knows nothing specific about the type `T`, so it can't modify `value`, nor can it arbitrarily create instances of `T`. Our guess becomes that the output contains `length` copies of the given `value` (i.e. `Enumerable.Repeat<T>`).^[Other possibilities include it returning `null`, an empty `IEnumerable<T>`, or some arbitrary number of `value` elements (constant or some function of `length`). This still gives us quite a bit of room for incorrect guesses and buggy implementations, but less room than we had with a specific `Widget` type.]
+
+Our attempt to guess is aided by the type signature (and the restrictions we placed on reflection, exceptions etc.) letting us definitively rule out certain implementations. For example, we can tell that any values of `T` that appear in the output are the same `value` instance passed in. Our implementation can't create a new instance of `T` without reflection as we don't know which type `T` will be. Nor can it modify a property of `value` or call a method on it (again, no reflection, so we can't know what properties or methods `T` will have). C# won't even let us yield `null` without putting constraints on the generic parameter.
+
+Abstracting away the specifics of a type with a type parameter (a.k.a. parametric polymorphism) in this way is very useful. It limits the number of possible implementations (including the number of buggy ones), which makes it easier for us to guess what the code does just from the type.^[In some cases we can restrict the number of reasonable implementations to one, which means if it compiles it is almost guaranteed to work. One of my favourites is this: `Func<A,C> X<A,B,C>(Func<B,C> f, Func<A,B> g)`. If you get `X` compiling and don't deliberately break it by throwing an exception or going in to an infinite loop, then your `X` will be the correct implementation!]
+
+## Abstracting responsibilities
+
+Let's look at the process which led to our original `IPaddedSingleWidgetList` abstraction, and then see how abstracting type details can help us split responsibilities differently.
+
+The `Qux` class' responsibility is to configure a snarfblat with correct widgets based on a single widget. In the original design this has been split into two responsibilities: producing the list from a widget using an `IPaddedSingleWidgetList`, and the `IWidgetBasedSnarfblat` which uses these widgets.
+
+Here is the `Qux` class alongside the `PaddedSingleWidgetList` implementation.
+
+```csharp
+public class Qux {
+    IPaddedSingleWidgetList _listBuilder;
+    IWidgetBasedSnarfblat _widgetBasedSnarfblat;
+    /* ... snipped constructor ... */
+    public void ConfigureSnarfblat(Widget w) {
+        const int widgetSlots = 3;
+        var widgets = _listBuilder.BuildFrom(w, widgetSlots);
+        _widgetBasedSnarfblat.Use(widgets);
+    }
+}
+public class PaddedSingleWidgetList : IPaddedSingleWidgetList {
+    public IEnumerable<Widget> BuildFrom(Widget widget, int length) {
+        var padding = Enumerable.Repeat(Widget.EmptyWidget, length - 1);
+        return new[] { StandaloneWidget(widget) }.Concat(padding);
+    }
+    private Widget StandaloneWidget(Widget w) { /* ... snip ... */ }
+}
+```
+
+This seems a reasonable way of breaking the problem down into testable parts, but given the advantages of generalising we've seen, let's try breaking it into the code that needs to know specifics about a `Widget`, and the code that can be generalised for any type `T`.
+
+The `StandaloneWidget()` method needs to know how to transform a `Widget`, something needs to know how to create the `Widget.EmptyWidget`, but the padding logic can be generalised to work for any type `T`.
+
+
+```csharp
+public class Qux {
+    /* ... snip ... */
+    public void ConfigureSnarfblat(Widget w) {
+        const int widgetSlots = 3;
+        var widgets = StandaloneWidget(w).ToEnumerable()
+                        .Pad(Widget.EmptyWidget, widgetSlots);
+        _widgetBasedSnarfblat.Use(widgets);
+    }
+    private Widget StandaloneWidget(Widget w) { /* ... snip ... */ }
+}
+```
+
+We've moved the `Widget` specific logic from the `PaddedSingleWidgetList` into `Qux`, and extracted the more general code into `ToEnumerable` and `Pad` functions:
+
+```csharp
+public static IEnumerable<T> ToEnumerable<T>(this T value) { yield return value; }
+
+public static IEnumerable<T> Pad<T>(this IEnumerable<T> list, T pad, int length) {
+    var count = 0;
+    foreach (var item in list) {
+        count++;
+        yield return item;
+    }
+    while (count < length) {
+        count++;
+        yield return pad;
+    }
+}
+```
+
+Rather than the `PaddedSingleWidgetList` type that we are unlikely to use again (it is quite specific to configuring snarfblats), we now have two potentially reusable functions that will work for any type `T`. We've also moved the specific details of configuring widgets right up to where they are used, so we don't need to follow trails of indirection to figure out what the code is doing. And everything is still nice and testable. Previously we may have mocked a `IPaddedSingleWidgetList` to return a specific list to protect against changes in that logic, but now we can test the logic directly. We can rely on `Pad` and `ToEnumerable` not changing, as we know there are only a couple of reasonable implementations based on that type signature.
+
+## Conclusion
+
+Abstracting away specific types can restrict the number of possible implementations of a function. This helps make code easier to understand because we can make reasonable guesses about what it does from the type, and less compilable implementations means we have less ways to write buggy ones.
+
+It also gives us a useful way of dividing a class' responsibilities into the parts that need to know type specifics from those that don't. In doing so we can get genuinely reusable code, keep related logic together, and still have testable code.
+
+I'm not sure how broadly applicable this approach is, but it seems a useful piece of design guidance to explore.
