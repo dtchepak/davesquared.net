@@ -16,4 +16,4 @@ Without abstraction I guess we could try and argue details (Socrates' ideas have
 
 To me this echoes the idea we explored last post, where we [introduced type variables in place of concrete types](http://davesquared.net/2014/02/splitting-responsibilities.html) to help us infer information about a function. 
 
-Which makes me think that if we were to go back two and a bit millennia and chat to Aristotle he'd be quite comfortable with the idea of parametricity. :)
+Which makes me think that if we were to go back two and a bit millennia and chat to Aristotle he'd be quite comfortable with the idea of parametricity^[Well, some more recent advances in the development of logic aside. :)]. :)
