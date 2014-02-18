@@ -1,0 +1,16 @@
+---
+layout: post
+title: "Aristotle and parametricity"
+date: 2014-02-18 23:30
+comments: true
+categories: ["misc"]
+---
+
+<!-- more -->
+In [episode 6 of the Philosophize This! podcast](http://stephenwestshow.net/philosophize-this/2013/7/25/episode-006-aristotle) Stephen talks about  [Aristotle's](http://en.wikipedia.org/wiki/Aristotle) development of the first formal system of logic, one part of which is the [syllogism](http://en.wikipedia.org/wiki/Syllogism). A common example of a syllogism is "Socrates is a man, all men are mortal, therefore Socrates is mortal". 
+
+Stephen points out that Aristotle would not have put it like that^[This is discussed from 32:05 - 33:05 in [Episode #0006 - Aristotle Pt. 2](http://stephenwestshow.net/philosophize-this/2013/7/25/episode-006-aristotle) of "Philosophize This!"]. Aristotle preferred to use variables to abstract away the details, rather than concrete examples whose details can obscure the meaning. Without abstraction I guess we could try and argue details (Socrates' ideas have been immortalised; does that affect the conclusion?), but abstraction makes the logical inference clear: "`A` is a `B`, all `B`s are `C`s, therefore `A` is a `C`".
+
+This reminded me of last post where we [introduced type variables in place of concrete types](http://davesquared.net/2014/02/splitting-responsibilities.html) to help us infer information about a function. 
+
+Parametricity: established c. 350 BCE? :)
