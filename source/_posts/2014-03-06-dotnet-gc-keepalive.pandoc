@@ -1,0 +1,110 @@
+---
+layout: post
+title: "Stayin' alive with .NET GC"
+date: 2014-03-06 23:50
+comments: true
+categories: [".net"]
+---
+
+Most of the time .NET GC just works. Occasionally when dealing with things like interop with unmanaged code, things go wrong. Things I learned today from this aforementioned going wrong include:
+
+* Variable scope can be greater than the lifetime of the object it points to
+* Mark-and-sweep GC marks objects for survival, not for collection
+* `GC.KeepAlive(object)` is a no-op
+* Finalisers from collected objects can break active objects
+* Use a release configuration build for reproducing GC issues, running without the debugger attached
+* Non-deterministic finalisation makes me confused
+
+![One does not simply reason about .NET Garbage Collection](/images/2014/one_does_not_simply_gc.jpg)
+
+<!-- more -->
+
+I know far less about this stuff than I should, so please post corrections in the comments and I'll update the post.
+
+## Scope vs. lifetime
+
+I tend to think of an object's lifetime being at least equal to the scope of the single variable holding a reference to it. So the last reference goes out of scope, the GC comes along eventually and tidies up. This is not always the case. Take this fairly innocent-looking code:
+
+```csharp
+ILikeData GetData() {
+  IDataPointCollection dataPoints = source.GetPoints();
+  return processor.Process(dataPoints.GetHelpfulOnes());
+}
+```
+
+The `dataPoints` variable goes out of scope at the end of the method, but its object's lifetime could potentially be shorter or longer depending on the whims of the garbage collector and JIT. Once `dataPoints.GetHelpfulOnes()` starts executing `dataPoints` is no longer called and is therefore eligible for collection. Potentially even while `GetHelpfulOnes()` is still running.
+
+If the `IDataPointCollection` finaliser disposes of something `GetHelpfulOnes()` needs (like a handle to an unmanaged resource) or if it invalidates the object passed to `Process()`, then an ill-timed GC can cause `GetHelpfulOnes()` or `Process()` to fail. Intermittent failures are fun, right?
+
+## KeepAlive is a no-op to foil the JITter
+
+We want to force the `dataPoints` instance to stay active until `Process` completes so the finaliser doesn't break everything. Maybe we include a call after `Process` to ensure this?
+
+```csharp
+ILikeData GetData() {
+  IDataPointCollection dataPoints = source.GetPoints();
+  var result = processor.Process(dataPoints.GetHelpfulOnes());
+  Log(dataPoints.Something());
+  return result;
+}
+```
+
+Now I have zero idea of how JIT compilation actually works, and my zero understanding includes the idea that it is possible for it to rearrange the code into what it thinks is an equivalent, more efficient form. For example, it might be able to inline `dataPoints.Something()`:
+
+```csharp
+ILikeData GetData() {
+  IDataPointCollection dataPoints = source.GetPoints();
+  var arg = dataPoints.GetHelpfulOnes();
+  //Boo, no more managed calls to dataPoints, so it's eligible for GC...
+  var result = processor.Process(x);
+  var arg2 = /* method body of dataPoints.Something(). No dataPoints reference required. */;
+  Log(arg2);
+  return result;
+}
+```
+
+Here `dataPoints` is still eligible for collection, and its finalisation continues breaking `GetHelpfulOnes()` and/or `Process`. Boo! Hiss!
+
+One solution is to use [`GC.KeepAlive()`](http://msdn.microsoft.com/en-us/library/system.gc.keepalive(v=vs.110).aspx). `KeepAlive()` is a no-op method marked with a [`[MethodImpl(MethodImplOptions.NoInlining)]`](http://msdn.microsoft.com/en-us/library/system.runtime.compilerservices.methodimploptions.aspx) attribute, so the JITter can't inline it and knows it still needs to make a call with that reference, which means the GC has to mark it to live on to fight again another day.
+
+```csharp
+ILikeData GetData() {
+  IDataPointCollection dataPoints = source.GetPoints();
+  var result = processor.Process(dataPoints.GetHelpfulOnes());
+  GC.KeepAlive(dataPoints); // have to keep dataPoints around until this returns
+  return result;
+}
+```
+
+As soon as `GC.KeepAlive(dataPoints)` finishes doing nothing and returns, `dataPoints` is again eligible for collection, so we want to save this call until we know our object is ok to finalise.
+
+<div class="note">**Aside:** I believe we're meant to use the [disposable pattern](http://stackoverflow.com/a/898867/906) with `using` blocks to keep objects alive, but if we're using one that isn't `IDisposable` I think we're stuck with `KeepAlive()`.</div>
+
+## Debugging my GC issue
+
+In the particular case I faced `dataPoints` finalised before/while `Process()` was running which broke the child object instance returned from `GetHelpfulOnes()` that `Process()` was using.
+
+To reproduce this scenario I modified the `Process()` method to try to persuade the GC and finalisers run:
+
+```csharp
+public ILikeData Process(IHelpfulData d) {
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    GC.Collect();
+    /* ... original method body ... */
+}
+```
+
+This was enough to make `GetData()` fail consistently, but only using a Release build rather than a Debug one. The debugger also changes GC behaviour, so running without the debugger is a good idea too. Using `GC.KeepAlive(dataPoints)` as described above made the problem go away.
+
+Of course, non-determinism being what it is, I can't be sure its fixed, but at least it seems to have shut down one particular avenue for this bug to occur.
+
+## Conclusion
+
+Much of the time and for many project types we can get away with blindly trusting the GC. Once we have finalisers that can affect other live objects we lose this luxury.
+
+## References
+
+* [Raymond Chen on "When do I need to use GC.KeepAlive?"](http://blogs.msdn.com/b/oldnewthing/archive/2010/08/13/10049634.aspx)
+* [Chris Brumme's post on "Lifetime, GC.KeepAlive, handle recyling"](http://blogs.msdn.com/b/cbrumme/archive/2003/04/19/51365.aspx)
+* [Eric Lippert's SO answer about object scope](http://stackoverflow.com/questions/5530118/c-sharp-an-objects-scope/5530869#5530869)
