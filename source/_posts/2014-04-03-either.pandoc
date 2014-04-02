@@ -1,0 +1,121 @@
+---
+layout: post
+title: "A hasty introduction to the Either type"
+date: 2014-04-03 00:07
+comments: true
+categories: [".net", "functional programming"]
+---
+
+The `Either` type, also called `Choice` in F# parlance, is a way of representing a value that can be either one of two types. This can be extremely useful. For example, retrieving a date of birth from a textbox could be expressed as `Either<ParseException, DateTime>`. In other words, the result is a value that is either a valid `DateTime`, or is a `ParseException`. 
+
+Being a hasty introduction this post is not going to do justice to how useful this type is, but hopefully some of its goodness will shine through despite my rambling prose. :)
+
+<!-- more -->
+
+## Implementation
+
+In .NET we don't need to implement this ourselves. We can use F#'s `Choice` type from any .NET language, including C# using the [same steps as for `Option`](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget). I think it's useful to look at how we could implement this ourselves though, so here goes...
+
+It's a bit clumsy to represent in C#, but here's one implementation:
+
+```csharp
+public class Either<TLeft, TRight> {
+    private readonly bool isLeft;
+    private readonly TLeft left;
+    private readonly TRight right;
+
+    private Either(bool isLeft, TLeft a, TRight b) {
+        this.isLeft = isLeft;
+        this.left = a;
+        this.right = b;
+    }
+
+    public static Either<A, B> Left<A, B>(A left) {
+        return new Either<A, B>(true, left, default(B));
+    }
+
+    public static Either<TA, TB> Right<TA, TB>(TB right) {
+        return new Either<TA, TB>(false, default(TA), right);
+    }
+}
+```
+
+F# makes things much easier:
+
+```fsharp
+type Either<'a, 'b> = Left of 'a | Right of 'b
+```
+
+Both implementations show two main points about `Either`:
+
+* It has two generic parameters
+* We can construct an `Either` that has a value of the first type, or a value of the second type, but not both.
+
+## Accessing either value
+
+We've seen the basic `Either` structure, but so far have no way to use it. Everything we need to do with `Either` we can do by adding this function^[Everything you can do with a type can be expressed by its [catamorphism](http://davesquared.net/2012/11/catamorphisms.html).]:
+
+```csharp
+// Either.cs
+public T Fold<T>(Func<TLeft, T> onLeft, Func<TRight, T> onRight) {
+    return isLeft ? onLeft(left) : onRight(right);
+}
+```
+
+```fsharp
+// Either.fs
+let either f g = function
+    | Left a  -> f a
+    | Right b -> g b
+```
+
+If we have an `Either<ParseException, DateTime>` this will let us handle both cases.
+
+```csharp
+// Save the date, or show a validation error 
+result.Fold(ShowError, SaveDate);
+
+// Translate to ye olde exception
+result.Fold(ex => { throw ex; }, dateTime => dateTime);
+
+// Get value or some default
+result.Fold(ex => DateTime.Now, dt => dt);
+```
+
+We can [implement a number of helpful functions](https://gist.github.com/dtchepak/9818021) that make dealing with `Either` values really convenient.
+
+## Why?
+
+Because we are accurately communicating to people that a method can return two different types of results, or takes a value as an argument that can be one of two types. Importantly, we're also telling the compiler exactly what the possible values are, so it will tell us if we're not handling any cases.
+
+<div class="note">**Aside:** If me-from-a-little-while-back was reading this post, I'd be thinking that placating the compiler everywhere we use this type would surely be more trouble than it's worth. After trying it out I vehemently disagree with myself. (Warning: unsubstantiated claims ahead) The majority of the time we can use `Fold` and [similar functions](https://gist.github.com/dtchepak/9818021) to use either value in very convenient, low friction ways. The only times it causes me any pain is when I've completely overlooked a possibility in my code, and the compiler keeps me honest and makes me handle the case. I much prefer this to getting a bug report or having silently failing code.</div>
+
+Sticking with our `Either<ParseException, DateTime>` example, there is no way we can forget to handle the possibility our code could fail to parse out a `DateTime`. If we used a traditional exception we're relying on there being documentation, people reading that documentation, and people never making a mistaek.^[It's also a much more convenient mechanism than Java's checked exceptions. We can pass around and compose `Either` values without requiring special syntax like `try/catch`.]
+
+## An unexceptional example
+
+Using `Either` to represent operations that can potentially fail is a convenient example, but we don't need to restrict its use to those cases. One example that came up on [the NSubstitute mailing list](https://groups.google.com/forum/#!topic/nsubstitute/bgafuO8VAFs) was dealing with values that could be partially or fully loaded. Rather than relying on a boolean flag to indicate a load state (and hoping everyone remembers to check it before accessing unloaded fields), we can use something like `Either<PersonSummary, Person>`.
+
+If we need to display the person's name, regardless of whether the `Person` has been fully loaded, we can easily extract the information we need:
+
+```csharp
+void ShowName(Either<PersonSummary, Person> person) {
+    persionViewModel.Name = person.Fold(x => x.Name, x => x.Name);
+}
+```
+
+At some point we need to ensure the full entity is loaded, which we can express like this:
+
+```csharp
+public Person Load(Either<PersonSummary, Person> person) {
+  return person.Fold(LoadFromSummary, loadedPerson => loadedPerson);
+}
+```
+
+## Conclusion
+
+The `Either` type lets us represent a value that can be one of two possible types. By using this as a return type or argument type, we communicate to readers and the compiler that there are two possibilities, which ensures we do not accidentally forget to handle particular cases. Using `Fold` and related functions gives us really convenient, low-friction ways of using, transforming and combining these values. I can't really see a downside to using this type (please comment if you can. Normally not seeing negatives to something means I don't understand it comprehensively).
+
+Don't forget, we can start using all this from C# right away [by referencing FSharp.Core and FSharpx](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget).
+
+
