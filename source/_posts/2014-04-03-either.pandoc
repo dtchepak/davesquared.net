@@ -2,6 +2,7 @@
 layout: post
 title: "A hasty introduction to the Either type"
 date: 2014-04-03 00:07
+updated: 2014-04-05 13:45
 comments: true
 categories: [".net", "functional programming"]
 ---
@@ -14,7 +15,7 @@ Being a hasty introduction this post is not going to do justice to how useful th
 
 ## Implementation
 
-In .NET we don't need to implement this ourselves. We can use F#'s `Choice` type from any .NET language, including C# using the [same steps as for `Option`](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget). I think it's useful to look at how we could implement this ourselves though, so here goes...
+In .NET we don't need to implement this ourselves. We can use F#'s `Choice` type from any .NET language, including C# using the [same steps as for `Option`](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget), or use `Either` from the [Sasa library](https://www.nuget.org/packages/Sasa/)^[Thanks to [Sandro](http://davesquared.net/2014/04/either.html#comment-1318913011) for mentioning Sasa]. I think it's useful to look at how we could implement this ourselves though, so here goes...
 
 It's a bit clumsy to represent in C#, but here's one implementation:
 
@@ -116,6 +117,6 @@ public Person Load(Either<PersonSummary, Person> person) {
 
 The `Either` type lets us represent a value that can be one of two possible types. By using this as a return type or argument type, we communicate to readers and the compiler that there are two possibilities, which ensures we do not accidentally forget to handle particular cases. Using `Fold` and related functions gives us really convenient, low-friction ways of using, transforming and combining these values. I can't really see a downside to using this type (please comment if you can. Normally not seeing negatives to something means I don't understand it sufficiently).
 
-Don't forget, we can start using all this from C# right away [by referencing FSharp.Core and FSharpx](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget).
+Don't forget, we can start using all this from C# right away [by referencing FSharp.Core and FSharpx](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget) or by grabbing [the Sasa library from Nuget](https://www.nuget.org/packages/Sasa/).
 
 
