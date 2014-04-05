@@ -15,7 +15,7 @@ Being a hasty introduction this post is not going to do justice to how useful th
 
 ## Implementation
 
-In .NET we don't need to implement this ourselves. We can use F#'s `Choice` type from any .NET language, including C# using the [same steps as for `Option`](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget), or use `Either` from the [Sasa library](https://www.nuget.org/packages/Sasa/)^[Thanks to [Sandro](http://davesquared.net/2014/04/either.html#comment-1318913011) for mentioning Sasa]. I think it's useful to look at how we could implement this ourselves though, so here goes...
+In .NET we don't need to implement this ourselves. We can use F#'s `Choice` type from any .NET language including C# using the [same steps as for `Option`](http://davesquared.net/2012/12/optional-fp-in-csharp.html#a-little-nuget), or use `Either` from the [Sasa library](https://www.nuget.org/packages/Sasa/)^[Thanks to [Sandro](http://davesquared.net/2014/04/either.html#comment-1318913011) for mentioning Sasa]. I think it's useful to look at how we could implement this ourselves though, so here goes...
 
 It's a bit clumsy to represent in C#, but here's one implementation:
 
