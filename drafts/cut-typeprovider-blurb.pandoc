@@ -1,0 +1,8 @@
+##  Type providers in 60 seconds
+
+I don't know the ins and outs of F#'s type providers, so please take all this with a gain of salt. The impression I get is type providers are a way of extending the F# compiler. A type provider is some code that tells the F# compiler what types are available, and how to represent calls to these types.
+
+There are a few neat aspects to how this extensibility works. First, the type provider is lazily called by the compiler, which means the provider could provide access to infinitely many types, but only the small subset required will be resolved by the compiler. Second, depending on how the type provider is implemented, the types and calls to those types can be erased during compilation, replaced with more efficient calls.^[If we have access to thousands of types, we may not want to compile all of them in to our assembly. `Person.Name` could compile down to `recordset["Name"].Value`, no extra types required.]
+
+The end result: some extra static checks of things that we'd normally consider strictly in the realm of runtime. Things like regular expressions strings.
+

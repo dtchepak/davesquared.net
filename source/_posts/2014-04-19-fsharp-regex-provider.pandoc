@@ -1,0 +1,80 @@
+---
+layout: post
+title: "Some regex help from the F# compiler"
+date: 2014-04-19 21:45
+comments: true
+categories: ["f#", ".net"]
+---
+
+*tl;dr: Make invalid regular expression strings and attempts to access non-existent capture groups a compile-time error, thanks to the [Regex type provider](http://fsprojects.github.io/RegexProvider/).*
+
+<!-- more -->
+
+## Standard .NET regex
+
+Say we want to parse out some information from basic [Liquid](https://github.com/Shopify/liquid) tags, like this:
+
+```csharp
+[Test]
+public void GetInformationFromAllSampleTags() {
+    const string input =
+        @"This is a test. {% sample %}ABC{% endsample %}. Some {% other %} 123 {% endother %} tag.
+          {% sample %} DEF {% endsample %}";
+    GetSamples(input).ShouldBe(new [] { "ABC", "DEF" });
+}
+```
+
+We can give ourselves [two problems](http://regex.info/blog/2006-09-15/247) and implement this using `System.Text.RegularExpressions` (it looks almost identical in C#, see [this gist](https://gist.github.com/dtchepak/11083161) or footnote[^csharp-example]):
+
+```fsharp
+// F#
+let getSamples s : string seq =
+    let re = @"\{%\s*(?<tag>\w+)\s*\%\}(?<contents>(?s:.*?))\{%\s*end\1\s*%\}"
+    Regex.Matches(s, re)
+        |> Seq.cast<Match>
+        |> Seq.filter (fun m -> m.Groups.["tag"].Value = "sample")
+        |> Seq.map (fun m -> m.Groups.["contents"].Value.Trim())
+```
+
+[^csharp-example]: An equivalent implementation in C#:
+    <div class="highlight">
+    ```csharp
+    // C#
+    public IEnumerable<string> GetSamples(string s) {
+        var re = @"\{%\s*(?<tag>\w+)\s*\%\}(?<contents>(?s:.*?))\{%\s*end\1\s*%\}";
+        return Regex.Matches(s, re)
+                    .Cast<Match>()
+                    .Where(m => m.Groups["tag"].Value == "sample")
+                    .Select(m => m.Groups["contents"].Value.Trim());
+    }
+    ```
+    </div>
+
+## Super-helpful F# type provider version
+
+First up we need to add the [RegexProvider](http://fsprojects.github.io/RegexProvider/) to our project via nuget: `PM> Install-Package RegexProvider`.
+
+Now we can rewrite our previous implementation like this:
+
+```fsharp
+open FSharp.RegexProvider
+type LiquidTagRegex = Regex< @"\{%\s*(?<tag>\w+)\s*\%\}(?<contents>(?s:.*?))\{%\s*end\1\s*%\}" >
+
+let getSamples s : string seq =
+    LiquidTagRegex().Matches(s)
+        |> Seq.filter (fun m -> m.tag.Value = "sample")
+        |> Seq.map (fun m -> m.contents.Value.Trim())
+```
+
+This will compile equivalently to our previous implementation^[The type provider creates a type with the `tag` and `contents` properties, but this type gets erased in the final compiled output, replaced with the `Groups` accessor code from our original implementation.], but we've gained some nice static checks.
+
+We can access the `tag` and `contents` capture groups of our match as properties. This isn't a `method_missing`-style dynamic lookup -- if we rename the group in the regex to `(?<notTag>\w+)` then we get a compile-time error:
+
+    error FS0039: The field, constructor or member 'tag' is not defined
+
+Also neat, if we completely muck up our regex, the compiler will let us know:
+
+    error FS3033: The type provider ... reported an error: parsing "[asd" -
+    Unterminated [] set.
+
+Tests would catch both these errors, but feedback doesn't get much faster than "as we're typing the code", plus we get precise line numbers for the errors as well. It also reduces code noise, dealing directly with the capture group names rather than having to specify particular collection lookups. 
