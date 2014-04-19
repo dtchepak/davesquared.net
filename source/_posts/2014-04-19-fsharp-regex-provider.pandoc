@@ -50,7 +50,7 @@ let getSamples s : string seq =
     ```
     </div>
 
-## Super-helpful F# type provider version
+## F# type provider version
 
 First up we need to add the [RegexProvider](http://fsprojects.github.io/RegexProvider/) to our project via nuget: `PM> Install-Package RegexProvider`.
 
