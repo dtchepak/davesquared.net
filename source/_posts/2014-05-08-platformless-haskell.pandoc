@@ -1,0 +1,99 @@
+---
+layout: post
+title: "Haskell without the Haskell Platform"
+date: 2014-05-08 23:55
+comments: true
+categories: ["haskell"]
+---
+
+Apparently it can be [a bit tricky to get some Haskell libraries working on Windows](http://www.reddit.com/r/haskell/comments/23tj8y/haskellplatform_vs_ghccabal/ch0l784), in which case the [Haskell Platform](http://www.haskell.org/platform/) is a great way to get going with Haskell. For Mac and Linux we can just grab the latest GHC and Cabal (ooh, shiny!) and go from there. 
+
+This is how I got it working on my Mac, with loads of help from ddere and bitemyapp on the [#haskell-beginners channel on Freenode IRC](https://twitter.com/bitemyapp/status/463119899640868865) (it is reasonable to assume all mistakes in this write up are mine, while they deserve the credit for any useful bits).
+
+I've got XCode 5.something installed, which I believe is a prerequisite (or at least the dev tools?). Other than that, grab a terminal and a browser, and we're set to go.
+
+## Installing GHC
+
+* Grab the latest [binary distribution of GHC](http://www.haskell.org/ghc/download) and extract it somewhere (I used `~/dev/ghc-7.8.2`)
+* Open a terminal and run `./configure --prefix=<my-dir>` from the extract directory. I used `./configure --prefix=/Users/dave/dev/ghc`.
+* `make install`
+* Next I added the GHC binaries to my PATH. That's `~/dev/ghc/bin` for me.
+
+We should now be able to run `ghc`, `ghci` and co. Success!
+
+## Installing Cabal
+
+### Bootstrap cabal-install binary
+
+* Grab the latest [cabal-install binary](https://www.haskell.org/cabal/download.html).
+* Extract it and copy the `cabal` binary somewhere. I put mine in alongside my GHC binaries in `~/dev/ghc/bin` so it is on my PATH and I can quickly fallback to it if I nuke everything else but GHC.
+* Run `cabal update` to initialise the package database.
+* Run `mkdir ~/.cabal/bin` (we'll use this later to store binaries we build with cabal)
+
+This will just be used to kick off our cabal-ing. Afterwards we'll be managing cabal with cabal (for that nice recursive touch).
+
+### Updating to latest Cabal library
+
+Now we are going to install the latest Cabal *library* (as opposed to the `cabal-install` binary we just downloaded, confusingly named `cabal`). We're going to put this into Cabal's user-db (stored in `~/.cabal`). This will be the first and last thing we install here. Everything else will be built in sandboxes.
+
+From `~`, run `cabal install cabal`.
+
+### Updating to latest cabal-install binary
+
+* Create a directory that will be used to build Haskell binaries. I used `~/dev/hs`.
+* From this directory:
+
+    mkdir cabal-install
+    cd cabal-install
+    cabal sandbox init
+    cabal install cabal-install
+    ln -s "$(pwd)/.cabal-sandbox/bin/cabal-install" ~/.cabal/bin/
+
+This gives us a fresh `cabal` binary and creates a symbolic link to it in the `.cabal/bin` directory.
+
+### Path updates
+
+Next up I adjusted my PATH to make sure binaries are loaded from `~/.cabal/bin` first. My PATH now looks like this:
+
+    export PATH=~/.cabal/bin:~/dev/ghc/bin:(non-haskell stuff)
+
+This particular order means we'll be grabbing `cabal` and other binaries from `~/.cabal/bin`, and falling back to the `cabal` in the GHC directory if we blow away our `~/.cabal` at a later date.
+
+## Moar binaries!
+
+The next thing we need to do is install `alex` and `happy`. (Apparently some packages need these executables, but they don't get installed with the package?)
+
+We'll go through the same steps as we did while updating the cabal-install binary: building in a sandbox, and symlinking it in `~/.cabal/bin/`.
+
+In fact we'll do this for all binaries, so we may as well script it. [Here's mine](https://gist.github.com/dtchepak/d7c1ef15872c43ca304b); I'm terrible with shell scripting so use at your own risk!
+
+Long-hand it looks like this:
+
+    cd ~/dev/hs
+    mkdir alex; cd alex
+    cabal sandbox init; cabal install alex
+    ln -s "$(pwd)/.cabal-sandbox/bin/alex" ~/.cabal/bin/
+    mkdir happy; cd happy
+    cabal sandbox init; cabal install happy
+    ln -s "$(pwd)/.cabal-sandbox/bin/happy" ~/.cabal/bin/
+
+We should now be set to Haskell away!
+
+I also regularly use a couple of other utils. So, with my less-than-trusty script:
+
+    ./cabal-bin-inst.sh hlint
+    ./cabal-bin-inst.sh pointfree
+    ./cabal-bin-inst.sh hoogle
+
+## Projects
+
+We should now have everything we need to build Haskell projects. All we need to remember now is to do any `cabal install` commands within a sandbox.
+
+    mkdir myNewProj
+    cabal sandbox init
+    cabal init
+
+## Nuclear option
+
+If all goes terribly wrong for some reason, we can delete `~/.cabal` and `~/.ghc` and start again (keeping the same GHC build from `~/dev/ghc`.
+
