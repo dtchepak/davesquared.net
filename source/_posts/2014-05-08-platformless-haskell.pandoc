@@ -1,16 +1,31 @@
 ---
 layout: post
 title: "Haskell without the Haskell Platform"
-date: 2014-05-08 23:55
+date: 2014-05-10 20:00
 comments: true
 categories: ["haskell"]
 ---
 
-Apparently it can be [a bit tricky to get some Haskell libraries working on Windows](http://www.reddit.com/r/haskell/comments/23tj8y/haskellplatform_vs_ghccabal/ch0l784), in which case the [Haskell Platform](http://www.haskell.org/platform/) is a great way to get going with Haskell. For Mac and Linux we can just grab the latest GHC and Cabal (ooh, shiny!) and go from there. 
+Apparently it can be [a bit tricky to get some Haskell libraries working on Windows](http://www.reddit.com/r/haskell/comments/23tj8y/haskellplatform_vs_ghccabal/ch0l784), in which case the [Haskell Platform](http://www.haskell.org/platform/) is a great way to get going with Haskell. For Mac and Linux the platform works too, but we can also just grab the latest GHC and Cabal (ooh, shiny!) and go from there. 
 
-This is how I got it working on my Mac, with loads of help from ddere and bitemyapp on the [#haskell-beginners channel on Freenode IRC](https://twitter.com/bitemyapp/status/463119899640868865) (it is reasonable to assume all mistakes in this write up are mine, while they deserve the credit for any useful bits).
+<!-- more -->
 
-I've got XCode 5.something installed, which I believe is a prerequisite (or at least the dev tools?). Other than that, grab a terminal and a browser, and we're set to go.
+This is how I got it working on my Mac, with loads of help from [ddere](https://twitter.com/dom_dere) and [bitemyapp](https://twitter.com/bitemyapp) on the [#haskell-beginners channel on Freenode IRC](https://twitter.com/bitemyapp/status/463119899640868865). It is reasonable to assume all mistakes in this write up are mine, while they deserve the credit for any useful bits.
+
+I've got XCode 5.1.1 installed, which I believe is a prerequisite (or at least the dev tools?). Other than that, grab a terminal and a browser, and we're set to go.
+
+## tl;dr
+
+Here's the summary if you want the steps without explanation:
+
+* Grab the binary [GHC distribution](http://www.haskell.org/ghc/download), extract, and add to PATH
+* Grab the [Cabal binary](https://www.haskell.org/cabal/download.html) and add it to the GHC `bin` directory
+* `cabal update; cabal install cabal cabal-install alex happy`
+* Add `~/.cabal/bin/` to PATH
+* Build projects in a sandbox (`cabal sandbox init`)
+* Build binaries in a sandbox and symlink or copy to `~/.cabal/bin`; or install directly into `~/.cabal` and `rm -rf ~/.ghc` if we ever get build conflicts. I'm doing the former.
+
+The rest of the post will go through the specific commands used, and explain some of the decisions you might need to make.
 
 ## Installing GHC
 
@@ -21,79 +36,80 @@ I've got XCode 5.something installed, which I believe is a prerequisite (or at l
 
 We should now be able to run `ghc`, `ghci` and co. Success!
 
-## Installing Cabal
-
-### Bootstrap cabal-install binary
+## Bootstrap cabal-install binary
 
 * Grab the latest [cabal-install binary](https://www.haskell.org/cabal/download.html).
 * Extract it and copy the `cabal` binary somewhere. I put mine in alongside my GHC binaries in `~/dev/ghc/bin` so it is on my PATH and I can quickly fallback to it if I nuke everything else but GHC.
 * Run `cabal update` to initialise the package database.
-* Run `mkdir ~/.cabal/bin` (we'll use this later to store binaries we build with cabal)
 
 This will just be used to kick off our cabal-ing. Afterwards we'll be managing cabal with cabal (for that nice recursive touch).
 
-### Updating to latest Cabal library
+## Final bits and pieces
 
-Now we are going to install the latest Cabal *library* (as opposed to the `cabal-install` binary we just downloaded, confusingly named `cabal`). We're going to put this into Cabal's user-db (stored in `~/.cabal`). This will be the first and last thing we install here. Everything else will be built in sandboxes.
+We're now going to build and install some final bits and pieces into Cabal's user-db (stored in `~/.cabal/`).
 
-From `~`, run `cabal install cabal`.
+    % cabal install cabal cabal-install alex happy
 
-### Updating to latest cabal-install binary
-
-* Create a directory that will be used to build Haskell binaries. I used `~/dev/hs`.
-* From this directory:
-
-    mkdir cabal-install
-    cd cabal-install
-    cabal sandbox init
-    cabal install cabal-install
-    ln -s "$(pwd)/.cabal-sandbox/bin/cabal-install" ~/.cabal/bin/
-
-This gives us a fresh `cabal` binary and creates a symbolic link to it in the `.cabal/bin` directory.
-
-### Path updates
-
-Next up I adjusted my PATH to make sure binaries are loaded from `~/.cabal/bin` first. My PATH now looks like this:
+Next up I adjusted my PATH to make sure binaries are loaded from `~/.cabal/bin` first^[We've now installed a verion of the `cabal` binary into `~/.cabal/bin`. By putting that into our PATH first we'll always use the latest version for our builds. If we lose our `~/.cabal` for some reason then we can fall back to the one we put into the `ghc` folder earlier.]. My PATH now looks like this:
 
     export PATH=~/.cabal/bin:~/dev/ghc/bin:(non-haskell stuff)
 
-This particular order means we'll be grabbing `cabal` and other binaries from `~/.cabal/bin`, and falling back to the `cabal` in the GHC directory if we blow away our `~/.cabal` at a later date.
+## New projects
+
+We should now have everything we need to build Haskell projects. For projects we'll run all our `cabal install` commands within a sandbox.
+
+    % mkdir myNewProj
+    % cabal sandbox init
+    % cabal init
+    -- insert joyous haskelling here --
 
 ## Moar binaries!
 
-The next thing we need to do is install `alex` and `happy`. (Apparently some packages need these executables, but they don't get installed with the package?)
+Sometimes we'd like to use `cabal` to install some binaries like `hlint`, `hoogle` or `pointfree`. I've heard a few schools of thought on this.
 
-We'll go through the same steps as we did while updating the cabal-install binary: building in a sandbox, and symlinking it in `~/.cabal/bin/`.
+### Sandboxed builds
 
-In fact we'll do this for all binaries, so we may as well script it. [Here's mine](https://gist.github.com/dtchepak/d7c1ef15872c43ca304b); I'm terrible with shell scripting so use at your own risk!
+Here is what I've found works reasonably well for me. I've created a directory `~/dev/hs/` to build these utilities in. From there:
 
-Long-hand it looks like this:
+    ~/dev/hs/ % mkdir hlint
+    ~/dev/hs/ % cd hlint
+    ~/dev/hs/hlint % cabal sandbox init
+    ~/dev/hs/hlint % cabal install hlint
+    ~/dev/hs/hlint % ln -s "$(pwd)/.cabal-sandbox/bin/hlint" ~/.cabal/bin/
 
-    cd ~/dev/hs
-    mkdir alex; cd alex
-    cabal sandbox init; cabal install alex
-    ln -s "$(pwd)/.cabal-sandbox/bin/alex" ~/.cabal/bin/
-    mkdir happy; cd happy
-    cabal sandbox init; cabal install happy
-    ln -s "$(pwd)/.cabal-sandbox/bin/happy" ~/.cabal/bin/
+This builds gives us a fresh `hlint` binary and creates a symbolic link to it in the `.cabal/bin` directory (i.e. somewhere on my PATH). Sometimes I'll copy instead of symlink.
 
-We should now be set to Haskell away!
+The good thing about this is if I need to use specific versions of a particular dependent library for a build I can `cabal install` it without worrying about it affecting other builds outside the sandbox.
 
-I also regularly use a couple of other utils. So, with my less-than-trusty script:
+The catch is some libraries also link against static assets that get put in `$(pwd)/.cabal-sandbox/share`, which means if we move or delete this sandbox that binary will stop working.
 
-    ./cabal-bin-inst.sh hlint
-    ./cabal-bin-inst.sh pointfree
-    ./cabal-bin-inst.sh hoogle
+### In user-db
 
-## Projects
+The other approach is to `cabal install` the utility outside of a sandbox. This means all docs and static assets go into a safe location (`~/.cabal`), but on the downside we'll sometimes get build failures due to library version conflicts.
 
-We should now have everything we need to build Haskell projects. All we need to remember now is to do any `cabal install` commands within a sandbox.
+In these cases we need to delete everything in `~/.ghc` and try again. I have it on good authority from several sources that this is no problem. All our binaries in `~/.cabal` should still work, it just means next `cabal install` won't rely on cached library builds.
 
-    mkdir myNewProj
-    cabal sandbox init
-    cabal init
+Still, I feel more comfortable with the [sandboxed build](#sandboxed-builds) approach (almost definitely because I don't fully understand what's going on behind the scenes).
 
-## Nuclear option
+### Pandoc example
 
-If all goes terribly wrong for some reason, we can delete `~/.cabal` and `~/.ghc` and start again (keeping the same GHC build from `~/dev/ghc`.
+At the time of writing I had some trouble building the wonderful [Pandoc](http://johnmacfarlane.net/pandoc/) library due to a change in a dependent library. Pandoc is a library that relies on statically linked assets by default which was [mentioned in the sandboxed builds](#sandboxed-builds) section as a possible problem. Thankfully it provides a build option to embed these assets.
+
+    % cd ~/dev/hs
+    % mkdir pandoc
+    % cd pandoc
+    % cabal sandbox init
+    % cabal install exceptions-0.4
+    % cabal install hsb2hs
+    % cabal install pandoc -fembed_data_files
+    % cp "$(pwd)/.cabal-sandbox/bin/" ~/.cabal/bin/
+
+Installing a specific version of `exceptions-0.4` fixed the build problem, while passing the `-fembed_data_files` option to the Pandoc build embeds the static assets so we can move the binary and delete the sandbox without breaking Pandoc.
+
+Thanks to [Carter](https://twitter.com/cartazio) for telling me which version of `exceptions` I needed, and about `-fembed_data_files` for Pandoc.
+
+## Request for corrections
+
+This seems to be working ok for me, but if you can see any problems with this approach or can suggest any improvements please let me know and I'll update the post.
+
 
