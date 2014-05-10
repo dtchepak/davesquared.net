@@ -59,6 +59,7 @@ Next up I adjusted my PATH to make sure binaries are loaded from `~/.cabal/bin` 
 We should now have everything we need to build Haskell projects. For projects we'll run all our `cabal install` commands within a sandbox.
 
     % mkdir myNewProj
+    % cd myNewProj
     % cabal sandbox init
     % cabal init
     -- insert joyous haskelling here --
