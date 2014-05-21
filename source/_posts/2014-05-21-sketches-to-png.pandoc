@@ -1,0 +1,68 @@
+---
+layout: post
+title: "Digitising hand drawn sketches"
+date: 2014-05-21 22:30
+comments: true
+categories: ["misc"]
+---
+
+Every so often I want to quickly sketch out what should be a simple diagram. Irrespective of what drawing program I use, I always seem to take much more time than I intend for a result that does not even remotely resemble what I want.
+
+So I decided to give up and find a way to use hand-drawn sketches instead. Here's the method I ended up with, based almost entirely on Marc Liberatore's ["Whiteboard Diagrams as PDFs"](http://people.cs.umass.edu/~liberato/blog/2013/01/21/whiteboard-diagrams-as-pdfs/) post and the wonderful [ImageMagick](http://www.imagemagick.org/) and [Potrace](http://potrace.sourceforge.net/) utilities.
+
+My drawings still look fairly terrible, but at least they convey what I want them to and are quick to produce! :)
+
+<!-- more -->
+
+## Ingredients
+
+* Paper / whiteboard
+* Marker
+* Phone with camera
+* [ImageMagick](http://www.imagemagick.org/): `brew install imagemagick`
+* [Potrace](http://potrace.sourceforge.net/). I used the binary distribution, although it's also on Homebrew.
+
+## Method
+### Commit sin against art
+
+Here's a sample result of me unleashing my inner [da Vinci](http://en.wikipedia.org/wiki/Leonardo_da_Vinci#Drawings) on a poor, defenceless bit of paper.
+
+![I don't know much about art, but I repeat myself](/images/2014/sketch_photo.jpg)
+
+I've found a [thick texta/marker](http://en.wikipedia.org/wiki/Marker_pen) works well, but standard ball-point pens can come out alright too. 
+
+### Photo cameras: not just for tweeting lunch
+
+Next, take a photo with ye olde phone camera. I avoid using the flash - even light (no shadows) is best. (Try holding the paper up vertically so your phone does not cast a shadow over the paper.)
+
+My phone auto-uploads photos to an online thingoe from which I can quickly crop the image and download to my Mac.
+
+### Post-processing
+
+Next up I want to convert the photo to a grayscale bitmap and turn up the brightness and contrast to wash out the background and bring out the marker lines. I'm using ImageMagick's `convert` to quickly do this from the console.
+
+We'll then run the bitmap through `potrace` as described in [Marc's post](http://people.cs.umass.edu/~liberato/blog/2013/01/21/whiteboard-diagrams-as-pdfs/) to create a nice SVG. We can stop there, or use ImageMagick again to get a PNG out.
+
+Here's the original photo, which I've cropped and saved as `sketch.jpg`:
+
+![Taken with no flash. Cropped and downloaded with no processing.](/images/2014/sketch_cropped_photo.jpg)
+
+Then the adjustments:
+
+    # Convert to grayscale BMP. Dial up brightness (20) and contrast (10)
+    % convert sketch.jpg -colorspace Gray -brightness-contrast 20x10 sketch.bmp
+
+    # Convert to SVG (-s), set a reasonable height, smooth speckles (-t 10)
+    % potrace -s -H 400pt -t 10 sketch.bmp
+
+    # Convert SVG to PNG (using 256 colours)
+    % convert sketch.svg PNG8:sketch.png
+
+And here's the output:
+
+![The end result](/images/2014/sketch_processed.png)
+
+You may need to tweak settings like brightness, contrast, dimensions, PNG quality/size^[Might be worth also running [Pngcrush](http://pmt.sourceforge.net/pngcrush/) or [similar optimiser](http://www.hanselman.com/blog/BloggersKnowWhenToUseAJPGAndWhenToUseAPNGAndAlwaysSquishThemBoth.aspx) over the resulting PNG: `brew install pngcrush; png crush sketch.png sketch2.png`. A GUI option for Mac is [ImageOptim](https://imageoptim.com/).] and so on.
+
+
+
