@@ -6,7 +6,7 @@ comments: true
 categories: ["functional programming", "haskell"]
 ---
 
-Here is `filter` and it's monadic cousin `filterM`:
+Here is `filter` and its monadic cousin `filterM`:
 
 ```haskell
 filter  ::            (a ->   Bool) -> [a] ->   [a]
