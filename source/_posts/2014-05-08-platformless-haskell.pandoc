@@ -18,7 +18,7 @@ I've got XCode 5.1.1 installed, which I believe is a prerequisite (or at least t
 
 Here's the summary if you want the steps without explanation:
 
-* Grab the binary [GHC distribution](http://www.haskell.org/ghc/download), extract, and add to PATH
+* Grab the binary [GHC distribution](http://www.haskell.org/ghc/download), extract, `configure --prefix=<my-dir>`, `make install`, and add to PATH
 * Grab the [Cabal binary](https://www.haskell.org/cabal/download.html) and add it to the GHC `bin` directory
 * `cabal update; cabal install cabal cabal-install alex happy`
 * Add `~/.cabal/bin/` to PATH
