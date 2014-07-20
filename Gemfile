@@ -1,3 +1,4 @@
+ruby '1.9.3'
 source "http://rubygems.org"
 
 group :development do
@@ -18,6 +19,6 @@ group :development do
 end
 
 gem 'thin'
-gem 'sinatra', '1.2.6'
+gem 'sinatra', '~> 1.4.5'
 gem 'rack-rewrite'
 gem 'rack'

@@ -219,7 +219,7 @@ task :update_deploy do
   puts "\n## clearing files in #{deploy_dir}"
   (Dir["#{deploy_dir}/*"]).each { |f| rm_rf(f) }
   puts "\n## copying required files from root directory to #{deploy_dir}"
-  FileList[public_dir, "Gemfile", "Gemfile.lock", "config.ru", ".slugignore"].each do |file|
+  FileList[public_dir, "Gemfile", "Gemfile.lock", "config.ru", ".slugignore", "Procfile"].each do |file|
       cp_r file, deploy_dir
   end
   puts "\n## cleaning up files that do not need to be deployed"
