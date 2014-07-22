@@ -1,0 +1,106 @@
+---
+layout: post
+title: "F# assertion examples"
+date: 2014-07-22 21:30
+comments: true
+categories: ["f#", ".net"]
+---
+
+Here are some examples of different assertion libraries in F#.
+
+<!-- more -->
+
+I'm using xUnit for these examples, but all of this should apply to NUnit (and other test runners) too. I've put all the code in a [Sample.fs gist](https://gist.github.com/dtchepak/62fe3c689700180777c2) if you want to see it all in one place.
+
+## xUnit assertions
+
+I've written about [getting started with NUnit in F#](http://www.davesquared.net/2013/03/hello-world-testing-in-fsharp.html) before. We can also use [xUnit](https://github.com/xunit/xunit) and its built in assertions.
+
+```fsharp
+open Xunit
+
+[<Fact>]
+let ``map (+1) over list using Xunit`` () =
+    let result = List.map incr [1;2;3]
+    Assert.Equal<int list>([2;3;4], result)
+```
+
+I needed to specify the `int list` type explicitly to get F# to resolve the correct overload.
+
+Here's an example of an assertion failure (when I change the expected value to `[2;3;5]`):
+
+    Position: First difference is at position 2
+    Expected: FSharpList<Int32> { 2, 3, 5 }
+    Actual:   FSharpList<Int32> { 2, 3, 4 }
+
+## FsUnit
+
+[FsUnit](https://github.com/fsharp/FsUnit) provides helpers for NUnit, xUnit,  MbUnit, and MSTest assertions to make them play nicely with F# syntax and type inference. I installed the `FsUnit.Xunit` package.
+
+```fsharp
+open FsUnit.Xunit
+
+[<Fact>]
+let ``map (+1) over list using FsUnit.Xunit`` () =
+    let result = List.map incr [1;2;3]
+    result |> should equal [2;3;4]
+```
+
+Sample failure:
+
+    Position: First difference is at position 0
+    Expected: Equals [2; 3; 5]
+    Actual:   was [2; 3; 4]
+
+(I'm not sure why first difference is at position 0 here?)
+
+## Unquote
+
+[Unquote](https://code.google.com/p/unquote/) lets us use quoted expressions for assertions.
+
+```fsharp
+open Swensen.Unquote
+
+[<Fact>]
+let ``map (+1) over list using Unquote`` () =
+    test <@ List.map incr [1;2;3] = [2;3;4] @>
+```
+
+If the test fails, Unquote shows each step in reducing the expression so you can see where they start to differ:
+
+    List.map Sample.incr [1; 2; 3] = [2; 3; 5]
+    [2; 3; 4] = [2; 3; 5]
+    false
+
+This case only shows 3 steps, but more complex expressions will show more.
+
+## FsCheck
+
+[FsCheck](https://fsharp.github.io/FsCheck/) is influenced by Haskell's QuickCheck and Scala's scalacheck. Rather than asserting a specific input and output, we define a property that should hold for all values of a type (optionally requiring they meet certain criteria, such as being a positive integer).
+
+The FsCheck.Xunit package has specific support for xUnit through a `PropertyAttribute` that let us run properties directly as an xUnit test (otherwise a little more boilerplate is required, see ["Using FsCheck with other testing frameworks" in the Quick Start guide ](https://fsharp.github.io/FsCheck/QuickStart.html)).
+
+```fsharp
+open FsCheck
+open FsCheck.Xunit
+
+[<Property>]
+let ``map f . map g = map (f . g)`` (xs:int list) =
+    let f x = x*10
+    let g x = x+1
+    (List.map f << List.map g) xs = List.map (f << g) xs
+```
+
+If we modify the property to ensure it fails (for example, `(List.map f << List.map g) xs = List.map (f << g) (List.filter even xs)`), we get this output:
+
+    FsCheck.Xunit.PropertyFailedException
+    Falsifiable, after 3 tests (2 shrinks) (StdGen (267259328,295888818)):
+    [1]
+
+This shows that given an input of `[1]` the property does not hold.
+
+## Fuchu
+
+[Fuchu](https://github.com/mausch/Fuchu) is more focussed on test organisation than assertions, and can be used with any of the assertion-providing libraries above. If you'd like to try something different to the usual (N|x|Mb)Unit approaches for defining test cases then [give it a look](http://bugsquash.blogspot.com.au/2012/06/fuchu-functional-test-library-for-net.html).
+
+
