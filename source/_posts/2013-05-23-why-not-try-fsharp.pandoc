@@ -2,6 +2,7 @@
 layout: post
 title: "Why not try F#?"
 date: 2013-05-26 21:30
+updated: 2014-07-22 22:30
 comments: true
 categories: ["f#", ".net"]
 ---
@@ -86,10 +87,13 @@ So F# is not just for modelling financial or scientific calculations. It's fine 
 
 Not everything about my first F# project was positive. The main problems I had with F# were around tooling. 
 
-* No templates (as far as I could tell) for F#-backed WPF views (same for MVC?), so it may be easiest to stick a C# shell around a core F# project. 
-* Many ReSharper and VS shortcuts and refactorings I reach for by reflex just weren't there. 
+* ~~No templates (as far as I could tell) for F#-backed WPF views (same for MVC?), so it may be easiest to stick a C# shell around a core F# project.~~ \
+*Update July 2014:* This is no longer strictly true. There are quite a few [templates in the VS gallery](http://blogs.msdn.com/b/fsharpteam/archive/2013/12/12/new-visual-f-templates-for-asp-net-web-api-mstest-and-nancy-now-available.aspx) and in the [F# Community Templates site](https://github.com/fsharp/FSharpCommunityTemplates).
+* ~~Many ReSharper and VS shortcuts and refactorings I reach for by reflex just weren't there.~~ \
+*Update July 2014:* Still true of ReSharper and VS, but much less of an issue now that [VS F# Power Tools](http://fsprojects.github.io/VisualFSharpPowerTools/) covers the main stuff I need.
 * For some reason VS doesn't provide a way to add folders to an `fsproj`. 
-* And perhaps most disturbingly, I have to define members before they are referenced elsewhere, which means I actually have to explicitly order the files in my project (ugh!).
+* ~~And perhaps most disturbingly, I have to define members before they are referenced elsewhere, which means I actually have to explicitly order the files in my project (ugh!).~~ \
+*Update July 2014:* Still true, but after using F# for a while now I'm surprised by just how little this bothers me. It actually has [some advantages](http://fsharpforfunandprofit.com/posts/cyclic-dependencies/).
 
 There are also a couple of things we lose that C# has, like combined `try .. catch .. finally` (we have to use nested `try/with` and `try/finally` for F#), and the `protected` modifier (it works for interop, but we can't declare a member `protected` as of F# 3). But F# offers a lot of features C# lacks to compensate.
 
