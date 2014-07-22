@@ -1,12 +1,12 @@
 ---
 layout: post
-title: "F# assertion examples"
+title: "F# assertion libraries"
 date: 2014-07-22 21:30
 comments: true
 categories: ["f#", ".net"]
 ---
 
-Here are some examples of different assertion libraries in F#.
+There are a few different libraries that provide test assertions for F#. I went through a couple today and tried a trivial example in each.
 
 <!-- more -->
 
