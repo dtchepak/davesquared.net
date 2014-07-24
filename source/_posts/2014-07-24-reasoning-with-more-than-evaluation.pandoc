@@ -1,0 +1,115 @@
+---
+layout: post
+title: "Reasoning with more than evaluation"
+date: 2014-07-24 22:30
+comments: true
+categories: ["functional programming"]
+---
+
+<!-- more -->
+
+[Exercise 1.41 of SICP](http://mitpress.mit.edu/sicp/full-text/book/book-Z-H-12.html#%_thm_1.41) asks us to work out what the following expression will evaluate to, given the definition of `double`:
+
+```scheme
+(define (double f)
+  (lambda (x) (f (f x))))
+
+(((double (double double)) inc) 5)
+```
+
+## Direct substitution
+
+If this expression had side-effects, we'd need to [understand the evaluation order and keep track of state changes with each evaluation step](http://www.davesquared.net/2013/03/reasoning-and-mutability.html). Because this is a pure function, we can [substitute the definitions](http://mitpress.mit.edu/sicp/full-text/book/book-Z-H-10.html#%_sec_1.1.5) of each sub-expression, and in any order we like. I found these substitutions quite tricky though, because with each evaluation of `double` I had to take into account its argument. I ended up with something like this:
+
+```scheme
+Aim: evaluate (((double (double double)) inc) 5)
+
+(double f)
+= lambda (x) (f (f x))
+
+(double double)
+= lambda (x) (double (double x))
+
+(double (double double))
+= lambda (x) ( (double double) ((double double) x))
+= lambda (x) ( (lambda (x') (double (double x')))
+                 ((lambda (x') (double (double x'))) x) )
+= lambda (x) ( (lambda (x') (double (double x')))
+                 ((double (double x))) )
+= lambda (x) ( double (double (double (double x))) )
+
+((double (double double)) inc)
+= (double (double (double (double inc))))
+= (double (double (double (lambda (x) (inc (inc x))))))
+= (double (double (lambda (x) (inc (inc (inc (inc x)))))))
+= (double (lambda (x) (inc (inc (inc (inc (inc (inc (inc (inc x))))))))))
+= (lambda (x) ( ... 16 incs ... x))
+
+(((double (double double)) inc) 5)
+= (... 16 incs ... 5)
+= 16+5
+= 21
+```
+
+I found this quite hard to follow. I had to use additional intermediary steps (not shown above) to evaluate expressions like `(double (lambda (x) (inc (inc x))))`.
+
+## Using other equalities
+
+Instead of direct substitution we can transform the expression into equivalent terms we find easier to reason about, such as those with mathematical properties we can apply to simplify the expression. We still use substitution, but with other equalities instead of replacing a term's name with its definition.
+
+For this example, I found it easier to think of `double` in terms of function composition.
+
+```haskell
+f . g    = \x -> f (g x)
+
+double f = \x -> f (f x)
+         = f . f
+```
+
+Function composition is associative (which we can convince ourselves of using equalities[^assoc-comp]). I find this made it easier to reduce the nested `double` calls.
+
+[^assoc-comp]:
+    My attempt at showing function composition is associative:
+
+    ```haskell
+    -- Associativity of composition
+    f . g = \x -> f (g x)
+
+    a . (b . c) = \x -> a ( (b.c) x)
+                = \x -> a ( (\x' -> b (c x')) x)
+                = \x -> a ( b (c x) )
+                = \x -> (a . b) (c x)
+                = \x -> ((a . b) . c) x
+                = (a . b) . c
+    ```
+
+```haskell
+double double
+  = double . double
+double (double double)
+  = (double . double) . (double . double)
+  = double . double . double . double           -- by associativity of composition
+(double (double double)) inc
+  = (double . double . double . double) inc
+  = (double . double . double) (double inc)     -- by defn of f . g
+  = (double . double . double) (inc . inc)      -- by: double f = f . f
+  = (double . double) (double (inc . inc))
+  = (double . double) (inc . inc . inc . inc)
+  = double (inc . inc . inc . inc . inc . inc . inc . inc)
+  = ( ... 16 incs ...)
+  = (16+)                                       -- \x -> inc (inc x) = (2+)
+
+So (((double (double double)) inc) 5) = (16+) 5 = 21
+``` 
+
+Composition lets us deal with functions as values without having to substitute in for their arguments at each step. The fact composition is associative hides unimportant details, such as not having to worry about the order of composition in expressions like `(double . double) . (double . double)`. I found each step made more sense to me, and I had more confidence in my answer. 
+
+I imagine different people will find different forms easier than others, but the point is we can choose whichever transformations we like to get the expression into an equivalent form we can work with more easily.
+
+## Conclusion
+
+For a while now I've appreciated that pure functions mean we can [more easily use substitution to understand code](http://www.davesquared.net/2013/03/reasoning-and-mutability.html), but it wasn't until this exercise that I've finally started to get a vague idea of what [equational reasoning](http://www.haskellforall.com/2013/12/equational-reasoning.html) means. It is more than just substitution -- it is being able to use all sorts of transformations and properties to understand our code. I don't think this example really showcases this idea, but I did feel like it was my first glimpse into a different, powerful way of understanding code.
+
+
+
+
