@@ -1,0 +1,92 @@
+---
+layout: post
+title: "A simple circuit, an Arduino, and Haskell"
+date: 2014-08-12 23:45
+comments: true
+categories: ["haskell"]
+---
+
+I recently had loads of fun attending a [Nodebots AU](http://nodebots.io/) event in Sydney. (Thanks a lot to [Damon](https://twitter.com/DamonOehlman) and [Andrew](https://twitter.com/ajfisher) for organising, and [NICTA](https://www.nicta.com.au/) for the venue!) I got to muck around with some simple circuits and drive them with Javascript. Towards the end of the day I was running out of time and creativity to do anything fancy, so I decided to see if I could get one of the circuits working with Haskell.
+
+<!-- more -->
+
+## Nodebot prerequisites
+
+I got a [Node ARDX kit](http://node-ardx.org/) at the event, and followed the [Nodebots AU setup guide](https://github.com/nodebotsau/nbdau/blob/master/setup.md) to get all the software bits and pieces.
+
+For Haskelling, I used my [existing Haskell installation](http://www.davesquared.net/2014/05/platformless-haskell.html), then created a new `cabal sandbox` and installed the [hArduino](http://hackage.haskell.org/package/hArduino) package (v0.9) into it.
+
+## A simple circuit
+
+Here's a simple circuit that includes a potentiometer and a bunch of LEDs. The idea is that as someone turns up the potentiometer, the number of LEDs switched on increases accordingly. (Yes, this may seem somewhat unimpressive, but as a complete newbie who managed to do this without blowing anything up, I'm calling it a win! :))
+
+<div class="note">**DISCLAIMER:** While I somehow managed to avoid blowing anything up while attempting this, I don't know what I'm doing and so can't guarantee that this won't destroy anything you value. Use at your own risk! :)</div>
+
+![Arduino Uno with potentiometer connected to A5, and six LEDs (with 330Ω resistors) connected to pins 2-7.
+Image created with the open-source [Fritzing](http://fritzing.org/) app.
+[ [View full size] ](/images/2014/potlights-orig.png)](/images/2014/potlights.png)
+
+## Haskellbot
+
+So now I'm in my cabal sandbox and it's time to write some Haskell. Here's the main outline of the program (with some explanatory comments added).
+
+```haskell
+import Control.Applicative
+import Control.Monad (when)
+import Data.Foldable (for_)
+import System.Hardware.Arduino
+
+leds = digital <$> [2..7]             -- leds on digital pins 2 to 7
+pot = analog 5                        -- potentiometer on A5 
+setPin = flip setPinMode
+
+main :: IO()
+main =
+  withArduino False "/dev/cu.usbmodemfa131" $ do
+      for_ leds (setPin OUTPUT)       -- set each led pin as an output
+      setPin ANALOG pot               -- set potentiometer's pin as analog
+      run 0                           -- run with initial pot. value of 0
+  where
+    run cur = do
+      new <- analogRead pot           -- read potentiometer's value
+      when (new /= cur) $ updateLeds new  -- if it has changed from current,
+                                          -- update the LEDs based on the new value
+      delay 250                       -- wait for a bit
+      run new                         -- continue main run loop
+```
+
+After the initialisation stuff, the main bit of the program is the run loop, which polls the potentiometer and updates the LEDs whenever the value changes.
+
+The `updateLeds` and related code looks like this:
+
+```haskell 
+updateLeds :: Int -> Arduino ()
+updateLeds potVal =
+    for_ (zip leds [1..]) $
+        \(led, ledNum) -> digitalWrite led (ledNum <= maxLedNum)
+    where
+        maxLedNum = numLedsOn potVal
+
+numLedsOn :: Int -> Int
+numLedsOn potVal = numLeds * potVal `div` maxPotVal
+    where
+        maxPotVal = 1023
+        numLeds   = length leds
+```
+
+The `updateLeds` function takes the potentiometer value and works out how many LEDs it needs to turn on based on the `numLedsOn` function. It then loops through each numbered LED and turns it on or off based on whether the `ledNum <= maxLedNum` we need to switch on.[^applicativeDigitalWrite]
+
+[^applicativeDigitalWrite]: The `updateLeds` loop is a bit neater in applicative form, but assumes familiarity with the operators: `for_ (zip leds [1..]) $ digitalWrite <$> fst <*> ((<= maxLedNum) . snd)`
+
+`numLedsOn` doesn't need to be a separate function like this, but I found it helped to be able to test my arithmetic independently of hardware. :) (We could also get away without specifying any types, but I find doing so makes it easier for me to read.)
+
+## Running this… er… 'masterpiece'
+
+Rather than setup a build, I just ran `cabal repl` from my sandbox to get a GHCi with the `hArduino` package accessible, then loaded and ran the code:
+
+    ghci> :load lights.hs
+    ghci> main
+
+Now I could finally fulfill my life-long dream of adjusting LEDs using a twirly dial! Hooray! :)
+
+
