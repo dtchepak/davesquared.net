@@ -1,0 +1,223 @@
+---
+layout: post
+title: "D3 newbie updates a bar chart"
+date: 2014-09-01 00:01
+comments: true
+categories: ["javascript"]
+---
+
+I've been tring to learn [D3.js](http://d3js.org/) via Mike Bostock's excellent ["Let's make a bar chart"](http://bost.ocks.org/mike/bar/) tutorial series. This post is my attempt to extend that example to handle data updates.
+
+<!-- more -->
+
+## Starting point
+
+[Part 3]("http://bost.ocks.org/mike/bar/3/") of the tutorial ends with a bar chart that shows the relative frequency of letters used in the English language.
+
+The creation of each bar per datum is handled by this code:
+
+```javascript
+    chart.selectAll(".bar")
+          .data(data)
+      .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", function(d) { return x(d.name); })
+        .attr("y", function(d) { return y(d.value); })
+        .attr("height", function(d) { return height - y(d.value); })
+        .attr("width", x.rangeBand());
+```
+
+This says we're dealing with chart elements of the CSS class `.bar` for each datum. The `.enter()` call tells D3 we want to perform the operations that follow for any new data ([data that has entered source](http://bost.ocks.org/mike/join/)). We can also use `.exit()` for data that is no longer in the source. If we want to handle updated data we can add properties directly (outside of `enter()` / `exit()`).
+
+## Adjusting the bars for new data
+
+To specify updates I had to change the data join so D3 knows how to differentiate added, removed and updated data. In this case we will use the `name` property, which is a letter from `A` to `Z`.
+
+```javascript
+    var bar = chart.selectAll(".bar")
+            .data(data, function(d) { return d.name; });
+```
+
+Next we'll modify the code to specify how to handle updated and removed data, instead of just what to do on `enter()` for new data. 
+
+```
+    // new data:
+    bar.enter().append("rect")
+       .attr("class", "bar")
+       .attr("x", function(d) { return x(d.name); })
+       .attr("y", function(d) { return y(d.value); })
+       .attr("height", function(d) { return height - y(d.value); })
+       .attr("width", x.rangeBand());
+    // removed data:
+    bar.exit().remove();
+    // updated data:
+    bar
+       .attr("y", function(d) { return y(d.value); })
+       .attr("height", function(d) { return height - y(d.value); });
+       // "x" and "width" will already be set from when the data was
+       // first added from "enter()".
+```
+
+## Updating the axes
+
+This was enough to update the chart, but the y-axis would draw the new axis over the top of the previous axis, so both values would show. This [answer on StackOverflow](http://stackoverflow.com/a/13550144/906) suggested removing the axis and redrawing it each time, which worked well.
+
+```javascript
+    // Remove previous y-axis:
+    chart.select(".y.axis").remove(); // << this line added
+    // Existing code to draw y-axis:
+    chart.append("g")
+          .attr("class", "y axis")
+          .call(yAxis)
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Frequency");
+```
+
+## Basic transition
+
+The next thing I wanted to try was animating changes to existing data. This turned out to be trivial thanks to D3's `transition()` method, which I just dumped prior to the code we used to update each bar.
+
+```javascript
+    bar
+      .transition().duration(750)  // <<< added this
+        .attr("y", function(d) { return y(d.value); })
+        .attr("height", function(d) { return height - y(d.value); });
+```
+
+And that's it!
+
+## End result
+
+Here's an example of the update in action. Use the radio buttons to alternate between the chart showing frequencies of letters in English and the frequencies of letters used in the source for this post.
+
+<form>
+    <input type="radio" name="inputsrc" id="defaultInput" value="default" checked/><label for="defaultInput">English</label>
+    <input type="radio" name="inputsrc" id="thisPostInput" value="post"/><label for="thisPostInput">This post</label>
+</form>
+<svg id="d3newbie-chart"></svg>
+
+<style>
+.bar {
+  fill: steelblue;
+}
+.bar:hover {
+    fill: brown;
+}
+.axis text {
+  font: 10px sans-serif;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+</style>
+<script src="/javascripts/d3.min.js" charset="utf8=-8"></script>
+<script>
+var outerWidth = 600, outerHeight = 400;
+var margin = { top: 20, right: 30, bottom: 30, left: 40 },
+    width  = outerWidth - margin.left - margin.right,
+    height = outerHeight - margin.top - margin.bottom;
+
+var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+
+var x = d3.scale.ordinal()
+          .rangeRoundBands([0, width], .1)
+          .domain(chars);
+var y = d3.scale.linear()
+          .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+              .scale(x)
+              .orient("bottom");
+var yAxis = d3.svg.axis()
+              .scale(y)
+              .orient("left")
+              .ticks(10, "%");
+var chart = d3.select("#d3newbie-chart")
+              .attr("width", outerWidth)
+              .attr("height", outerHeight)
+            .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+// x-axis
+chart
+    .append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")") 
+      .call(xAxis);
+
+function type(d) {
+    d.value = +d.value;
+    return d;
+}
+function updateDefault() {
+    d3.tsv("/downloads/data-chars.tsv", type, update);
+}
+function updateThisPost() {
+    d3.text(".", function(err, data) { update(err, freqs(data)); });
+}
+function update(err, data) {
+    y.domain([0, d3.max(data, function(d) { return d.value; })]);
+    // y-axis
+    chart.select(".y.axis").remove();
+    chart.append("g")
+          .attr("class", "y axis")
+          .call(yAxis)
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Frequency");
+
+    var bar = chart.selectAll(".bar")
+            .data(data, function(d) { return d.name; });
+
+    // new data:
+    bar.enter().append("rect")
+       .attr("class", "bar")
+       .attr("x", function(d) { return x(d.name); })
+       .attr("y", function(d) { return y(d.value); })
+       .attr("height", function(d) { return height - y(d.value); })
+       .attr("width", x.rangeBand());
+    // removed data:
+    bar.exit().remove();
+    // updated data:
+    bar
+       .transition()
+       .duration(750)
+           .attr("y", function(d) { return y(d.value); })
+           .attr("height", function(d) { return height - y(d.value); });
+};
+
+document.getElementById("defaultInput")
+        .onclick = updateDefault;
+document.getElementById("thisPostInput")
+        .onclick = updateThisPost;
+updateDefault();
+
+function freqs(str) {
+    var s = str.toUpperCase()
+    var n = s.length
+    var x = {}
+    for (var i = 0; i<chars.length; i++) {
+        x[chars[i]] = 0;
+    }
+    for (var i=0; i<s.length; i++) {
+        if (/[A-Z]/.test(s[i])) {
+            x[s[i]]++;
+        }
+    }
+    var f = []
+    for (var c in x) {
+        f.push( { name: c, value: x[c]/=n });
+    }
+    return f;
+}
+</script>
