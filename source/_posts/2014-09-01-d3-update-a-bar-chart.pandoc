@@ -6,7 +6,7 @@ comments: true
 categories: ["javascript"]
 ---
 
-I've been tring to learn [D3.js](http://d3js.org/) via Mike Bostock's excellent ["Let's make a bar chart"](http://bost.ocks.org/mike/bar/) tutorial series. This post is my attempt to extend that example to handle data updates.
+I've been trying to learn [D3.js](http://d3js.org/) via Mike Bostock's excellent ["Let's make a bar chart"](http://bost.ocks.org/mike/bar/) tutorial series. This post is my attempt to extend that example to handle data updates.
 
 <!-- more -->
 
