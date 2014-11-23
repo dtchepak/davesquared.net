@@ -95,7 +95,7 @@ example = do
 
 ## Seriously? That's it?
 
-Yep, a monad is just another abstraction, like functors and applicative functors, to let us apply functions to values in various contexts. If your type works with a function with a bind-like signature, `m a -> (a -> m b) -> m b`, then there's a good chance you've got a monad. 
+A monad is another abstraction, like functors and applicative functors, to let us apply functions to values in various contexts. If your type works with a function with a bind-like signature, `m a -> (a -> m b) -> m b`, then there's a good chance you've got a monad. 
 
 If you've used LINQ in .NET, you may be familiar with this method:
 
