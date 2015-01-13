@@ -34,6 +34,8 @@ namespace Workshop.SomeCSharpLib {
 Trying to convert this to my own type using pattern matching resulted in the FS0729 error:
 
 ```fsharp
+type Things = Foo | Bar | Clunk | Zap
+
 let convertThingamabob =
     function
     | Thingamabobs.Foo   -> Some Foo // *
@@ -57,6 +59,8 @@ I think it looks neater as a pattern match, so worked around this using a partia
 ```fsharp
 // Partial active pattern. Match if field equals value.
 let (|Field|_|) field x = if field = x then Some () else None
+
+type Things = Foo | Bar | Clunk | Zap
 
 let convertThingamabob =
     function
