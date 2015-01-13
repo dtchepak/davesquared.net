@@ -1,0 +1,70 @@
+---
+layout: post
+title: "F#: Pattern matching on field literals"
+date: 2015-01-14 08:30
+comments: true
+categories: ["f#"]
+---
+
+F# gave me the following error when working with some C# code:
+
+    error FS0729: This field is not a literal and cannot be used in a pattern 
+
+I'm not entirely sure it's a good idea, but I managed to work around this using a [partial active pattern](http://msdn.microsoft.com/en-us/library/dd233248.aspx).
+
+<!-- more -->
+
+Here's the gist of the C# code I was working with:
+
+```csharp
+namespace Workshop.SomeCSharpLib {
+    public class Thingamabobs {
+        private Thingamabobs(string s) { }
+        // ... 
+        public static readonly Thingamabobs Foo = new Thingamabobs("foo");
+        public static readonly Thingamabobs Bar = new Thingamabobs("bar");
+        public static readonly Thingamabobs Clunk = new Thingamabobs("clunk");
+        public static readonly Thingamabobs Zap = new Thingamabobs("zap");
+    }
+}
+```
+
+`Thingamabobs` represent a sort of enum with an associated value - the kind of thing we'd typically use a [discriminated union](http://fsharpforfunandprofit.com/posts/discriminated-unions/) for in F#.
+
+Trying to convert this to my own type using pattern matching resulted in the FS0729 error:
+
+```fsharp
+let convertThingamabob =
+    function
+    | Thingamabobs.Foo   -> Some Foo // *
+    | Thingamabobs.Bar   -> Some Bar
+    | Thingamabobs.Clunk -> Some Clunk
+    | Thingamabobs.Zap   -> Some Zap
+    | _                  -> None
+
+    // * error FS0729: This field is not a literal and cannot be used in a pattern 
+```
+
+I couldn't find much information on this error, but I gather I need to explicitly compare the argument to the field value using `if ... else if ... else`, something like:
+
+```fsharp
+   fun x -> if x = Thingamabobs.Foo then Some Foo
+            else if x = ...
+```
+
+I think it looks neater as a pattern match, so worked around this using a partial active pattern to do the comparison:
+
+```fsharp
+// Partial active pattern. Match if field equals value.
+let (|Field|_|) field x = if field = x then Some () else None
+
+let convertThingamabob =
+    function
+    | Field Thingamabobs.Foo   -> Some Foo 
+    | Field Thingamabobs.Bar   -> Some Bar
+    | Field Thingamabobs.Clunk -> Some Clunk
+    | Field Thingamabobs.Zap   -> Some Zap
+    | _                        -> None
+```
+
+I'm not sure if there are any drawbacks to this approach, so if you can think of any please let me know.
