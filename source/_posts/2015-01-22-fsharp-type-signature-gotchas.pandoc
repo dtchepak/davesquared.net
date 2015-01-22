@@ -1,0 +1,89 @@
+---
+layout: post
+title: "F# type signature gotchas"
+date: 2015-01-22 23:30
+comments: true
+categories: ["f#"]
+---
+
+Today I was speaking with a colleague about some F#, and he pointed out a few gotchas with F# type signatures, especially if you've spent some time with Haskell (and not OCaml or other ML-ish language).
+
+<!-- more -->
+
+<div class="note">*Aside*: This post just runs through some gotchas, but if you would like more general information on reading `->` style function signatures please let me know.</div>
+
+The example we were looking at is [`Seq.unfold`](https://msdn.microsoft.com/en-us/library/ee340363.aspx), whose signature looks like this:
+
+```fsharp
+Seq.unfold : ('State -> ('T * 'State) option) -> 'State -> seq<'T>
+```
+
+## Apostrophes for type parameters
+
+Any type prefixed with a `'` character represents a type parameter (or generic type in C# parlance). For `unfold` this means `'State` and `'T` can be any type. We can also write this in potentially more familiar .NET syntax:
+
+```fsharp
+Seq.unfold<'State, 'T> : ('State -> ('T * 'State) option) -> 'State -> seq<'T>
+```
+
+A lot of the F# code I see follows a more Haskellish (?) convention of using lowercase type variable names, more like:
+
+```fsharp
+Seq.unfold<'s, 't> : ('s -> ('t * 's) option) -> 's -> seq<'t>
+```
+
+## Asterisk for tuples
+
+Types separated by a `*` are tupled (or [product types](http://en.wikipedia.org/wiki/Product_type), which explains the `*` symbol). For example, `(1, "abc", Foo())` is of type `int * string * Foo`.
+
+So in `unfold`, `'T * 'State` represents a tuple of `'T` and `'State`.
+
+## Postfix generic syntax
+
+F# supports [both .NET-style prefix generic syntax and ML-style postfix syntax](http://stackoverflow.com/questions/10167359/any-difference-between-ta-and-a-t-in-f). So instead of writing `int option`, we can also write `Option<int>` ([both forms are equivalent](http://stackoverflow.com/a/10167770/906)). Which means we can re-write `unfold` as:
+
+```fsharp
+Seq.unfold<'s, 't> : ('s -> Option<'t * 's>) -> 's -> seq<'t>
+```
+
+## Using `unfold`
+
+With those things in mind, let's use the `unfold` signature to work out what it does.
+
+```fsharp
+unfold :
+  ('s -> Option<'t * 's>) -- A function that takes an 's and gives an optional tuple of 't and 's.
+  -> 's                   -- A value of type 's
+  -> seq<'t>              -- A sequence of 't values
+```
+
+Given a function that can take `'s` values and return a tuple of an element and next `'s` value or nothing, and a starting `'s`, `unfold` will generate a sequence of `'t` values until the generator function returns `None` (i.e. potentially infinite).
+
+We could use this to generate a sequence of all the days since a starting date (infinite, at least until `DateTime` hits `DateTime.MaxValue`):
+
+```fsharp
+let daysAfterThisPost = 
+    DateTime(2015, 1, 22)
+    |> Seq.unfold (fun d -> let d' = d.AddDays(1) in Some (d', d'))
+```
+
+## Translating to other languages
+
+Finally, if you're more familiar with C# or Haskell, here are my attempted translations:
+
+```
+// F#
+Seq.unfold : ('State -> ('T * 'State) option) -> 'State -> seq<'T>
+
+-- Haskell
+unfold :: (s -> Maybe (t,s)) -> s -> [t]
+
+// C# (uncurried. seq = IEnumerable)
+IEnumerable<T> Unfold<S,T>(Func<S, Option<Tuple<T,S>>> generator, S initial);
+```
+
+Haskell uses lowercase type names for generics (instead of `'` characters), while concrete types have uppercase names. It also uses the same syntax for tuple types as values, so `(1,2) :: (Int, Int)`. For some odd reason, Haskell uses `::` for "type of" instead of a single `:`.
+
+The C# version is a bit messier due to having to use `Func` instead of a shorthand for function types, and similarly for declaring tuple types. (I've also uncurried the C# version otherwise we end up with nested `Func` types everywhere, and it is the more typical form for C# functions.)
+
+
