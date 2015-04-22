@@ -12,10 +12,12 @@ Rather than my usual fumbling about (check out both, copy, diff) I thought I'd t
 
 <!-- more -->
 
-I ended up [using `git diff` with the `COMMIT:PATH` format](http://stackoverflow.com/a/8131164/906), using `HEAD` and `HEAD~1` as the commit references:
+I ended up [using `git diff` with the `COMMIT:PATH` format](http://stackoverflow.com/a/8131164/906), using `HEAD` and `HEAD~1` as the commit references (shown split over multiple lines):
 
 ```
-git diff --ignore-space-change HEAD:source/packages/FSharp.Formatting.CommandTool.2.9.1/templates HEAD~1:source/packages/FSharp.Formatting.CommandTool.2.8.0/templates/
+git diff --ignore-space-change \
+    HEAD:source/packages/FSharp.Formatting.CommandTool.2.9.1/templates \
+    HEAD~1:source/packages/FSharp.Formatting.CommandTool.2.8.0/templates/
 ```
 
 To get a summary of the files changes instead (in this case, to confirm nothing changed), use the `--stat` option:
