@@ -1,0 +1,36 @@
+---
+layout: post
+title: "Git tidbit: Comparing different paths across branches or commits"
+date: 2015-04-22 11:25
+comments: true
+categories: ["git"]
+---
+
+Today I updated a library version in a project, which changed the path from `packages/FSharp.Formatting.CommandTool-2.8.0` to `packages/FSharpFormatting.CommandTool-2.9.1`. We'd also taken our own copies of some templates in the package, and I wanted to check if there were any differences between `-2.8.0\templates` and `-2.9.1\templates` that I should port across. 
+
+Rather than my usual fumbling about (check out both, copy, diff) I thought I'd try to learn the necessary Git incantation to compare the paths. And then blog it, so that when I forget I'll have a quick reference handy for next time. :)
+
+<!-- more -->
+
+I ended up [using `git diff` with the `COMMIT:PATH` format](http://stackoverflow.com/a/8131164/906), using `HEAD` and `HEAD~1` as the commit references:
+
+```
+git diff --ignore-space-change HEAD:source/packages/FSharp.Formatting.CommandTool.2.9.1/templates HEAD~1:source/packages/FSharp.Formatting.CommandTool.2.8.0/templates/
+```
+
+To get a summary of the files changes instead (in this case, to confirm nothing changed), use the `--stat` option:
+
+```
+% git diff --stat --ignore-space-change HEAD:source/packages/FSharp.Formatting.CommandTool.2.9.1/templates HEAD~1:source/packages/FSharp.Formatting.CommandTool.2.8.0/templates
+ docpage.cshtml                | 0
+ reference/module.cshtml       | 0
+ reference/namespaces.cshtml   | 0
+ reference/part-members.cshtml | 0
+ reference/part-nested.cshtml  | 0
+ reference/type.cshtml         | 0
+ template.cshtml               | 0
+ 7 files changed, 0 insertions(+), 0 deletions(-)
+```
+
+I was pretty impressed that Git's Bash prompt on Windows gave me autocompletion on the `HEAD~1:/...2.8.0/` path despite the path no longer being in the working directory.
+
