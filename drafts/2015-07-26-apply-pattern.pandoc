@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "The Apply pattern"
-date: 2015-04-26 11:30
+date: 2015-04-27 21:00
 comments: true
 categories: ["functional programming", "fsharp"]
 ---
@@ -14,7 +14,7 @@ I've found this pattern incredibly useful in F#, Swift and Haskell. The examples
 
 ## Aim
 
-Say we have some generic type `Widget<T>`. There are lots of useful functions that work with non-widget types, and we would like them to work with `Widget` values without having to re-write them.
+Say we have some generic type, let's call it `Widget<T>` (we'll use the term "widget" as a placeholder for a generic type we are working with - feel free to substitute in `Option<T>`, `Either<E,A>`, `Future<T>`, `List<T>` etc.). There are lots of useful functions that work with non-widget types, and we would like them to work with `Widget` values without having to re-write them.
 
 ```fsharp
 // Some useful, non-widget functions:
@@ -30,7 +30,7 @@ widgetThingoe : Widget<Pop>  -> Widget<Blah>  -> Widget<Zap> -> Widget<Thingoe>
 
 ## Prerequisites
 
-We can achieve this aim if the generic type has a `map` (or `Select` in C# terminology) and an `apply` function:
+We can achieve this aim if the generic type has a `map` (or `Select` in C# terminology) and an `apply` function. Continuing our `Widget` example:
 
 ```fsharp
 module Widget =
@@ -42,7 +42,7 @@ If the type does not have these functions provided we may still be able to write
 
 ## Apply pattern
 
-We can use any non-widget function with widgets using `map` for the first argument, and `apply` for subsequent arguments.
+We can use any non-widget function with widget values using `map` for the first argument, and `apply` for subsequent arguments.
 
 ```fsharp
 let (<^>) = Widget.map
@@ -145,7 +145,7 @@ Person.create <^> nonEmpty (name.text) <*> Success email <*> parseInt (age.text)
     |> ...
 ```
 
-Here we convert `email` to a `Result<AppError,string>` value first using the `Success` constructor. Then we have our three `Result<AppError,'T>` values to use with the apply pattern.
+Here we convert `email` from a `string` to a `Result<AppError,string>` value first using the `Success` constructor. Then we have our three `Result<AppError,'T>` values to use with the apply pattern.
 
 ## Summary
 
@@ -155,7 +155,7 @@ This pattern is useful for being able reuse all our existing functions in the co
 let map : ('a -> 'b) -> Widget<'a> -> Widget<'b>
 let apply : Widget<'a -> 'b> -> Widget<'a> -> Widget<'b>
 
-// Can also use bind/flatMap to get an apply function
+// Alternatively, can also use bind/flatMap to get an apply function
 let flatMap : ('a -> Widget<'b>) -> Widget<'a> -> Widget<'b>
 ```
 
