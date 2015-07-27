@@ -6,9 +6,9 @@ comments: true
 categories: ["functional programming", "fsharp"]
 ---
 
-I really enjoy trying to understand how and why things like work, but for this post I'm going to try to skip all that and give a practical outline of how to use a very useful pattern arising from [applicative functors](http://www.davesquared.net/2012/05/fp-newbie-learns-applicatives.html).
+I really enjoy trying to understand how and why things like work, but for this post I'm going to try to skip all that wonderful stuff and instead give a practical outline of how to use a very useful pattern arising from [applicative functors](http://www.davesquared.net/2012/05/fp-newbie-learns-applicatives.html).
 
-I've found this pattern incredibly useful in F#, Swift and Haskell. The examples here are in F#, but as far as I can tell we can use it anywhere with generic types and higher-order functions.
+I've found this pattern incredibly useful in F#, Swift and Haskell. The examples here are in F#, but as far as I can tell we can use it anywhere that has generic types and higher-order functions.
 
 <!-- more -->
 
@@ -34,11 +34,11 @@ We can achieve this aim if the generic type has a `map` (or `Select` in C# termi
 
 ```fsharp
 module Widget =
-    let map   :     ('a->'b)    -> Widget<'a> -> Widget<'b> = ...
+    let map   :    ('a->'b)    -> Widget<'a> -> Widget<'b> = ...
     let apply : Widget<'a->'b> -> Widget<'a> -> Widget<'b> = ...
 ```
 
-If the type does not have these functions provided we may still be able to write them. We'll look at this later.
+If the type does not have these functions provided we may still be able to write them. We'll look at this [later](#when-a-generic-type-does-not-meet-the-prequisites).
 
 ## Apply pattern
 
@@ -52,7 +52,8 @@ let (<*>) = Widget.apply
 let normalResult =
   nonWidgetFn firstArg secondArg thirdArg ... finalArg
 
-// Use non-widget function with widgets:
+// Use non-widget function with widgets. It's just like non-widget function
+// application, only with more punctuation. :)
 let widgetResult =
   nonWidgetFn <^> firstWidget <*> secondWidget <*> thirdWidget <*> ... <*> finalWidget
 
@@ -72,14 +73,14 @@ widgetCons a b =
     cons <^> a <*> b
 ```
 
-## Examples
+## Example
 
-We are using a library with a `Result<'Error, 'T>` type that represents operations that can fail with a value of type `'Error`, or succeed with a value of type `'T`. The library also supplies `map` and `apply` functions for this type. We want to use this type to try to parse a `Person` value from a UI form with `name`, `email` and `age` text fields:
+Say we are using a library with a `Result<'Error, 'T>` type that represents operations that can fail with a value of type `'Error`, or succeed with a value of type `'T`. The library also supplies `map` and `apply` functions for this type. We want to use this type to try to parse a `Person` value from a UI form with `name`, `email` and `age` text fields:
 
 ```fsharp
-let nonEmpty (s : string) : Result<AppError, string> = ...
+let nonEmpty   (s : string) : Result<AppError, string> = ...
 let validEmail (s : string) : Result<AppError, string> = ...
-let parseInt (s : string) : Result<AppError, int> = ...
+let parseInt   (s : string) : Result<AppError, int> = ...
 
 type Person = { name : string; email : string; age : int }
     with
@@ -107,7 +108,7 @@ When age.text is invalid:
 
 ## When a generic type does not meet the prequisites
 
-Sometimes a type will not have an `apply` function provided, but will have `map`, and also a `flatMap`/`bind` function provided with with the following type:
+Sometimes a type will not have an `apply` function provided, but will have `map`, and also a `flatMap`/`bind` function provided with the following type:
 
 ```fsharp
 // Also called "bind"
@@ -137,7 +138,7 @@ let result : Option<int> = (+) <^> tryParseInt (first.text) <*> tryParseInt (sec
 
 ## Mixing widget and non-widget arguments
 
-Sometimes we may have a mix of arguments, some using our generic type and others not. We can still apply^[Sorry.] the pattern in these cases by converting the values to our generic type. For our `Person.create` example, say we already have the person's email as a valid `string` value from earlier in the sign-up process:
+In cases where we have a mix of arguments, some using our generic type and others not, we can still apply^[Sorry.] the pattern by converting the values to our generic type. For our `Person.create` example, we could already have the person's email as a valid `string` value from earlier in the sign-up process:
 
 ```fsharp
 let email : string = "abc@example.com"
@@ -149,7 +150,7 @@ Here we convert `email` from a `string` to a `Result<AppError,string>` value fir
 
 ## Summary
 
-This pattern is useful for being able reuse all our existing functions in the context of another type. For example, we can take a function `'a -> 'b -> 'c` and use it with widget values to get a `Widget<'a> -> Widget<'b> -> Widget<'c>` function. To do this we need:
+This pattern is useful for being able reuse all our existing functions in the context of another type, like `Future<T>`, `Option<T>`, `Result<E,A>` and lots, lots more. To do this for some generic type `Widget<T>` we need:
 
 ```fsharp
 let map : ('a -> 'b) -> Widget<'a> -> Widget<'b>
@@ -168,9 +169,13 @@ let result : Widget<A> =
     nonWidgetFn <^> firstWidgetArg <*> secondWidgetArg <*> ... <*> lastWidgetArg
 ```
 
+Calls look similar to regular function application, with the additional operators taking care of conversion into our `Widget<T>` context.
+
 We can mix widget and non-widget arguments by converting non-widgets:
 
 ```fsharp
 let result : Widget<A> =
     nonWidgetFn <^> firstWidgetArg <*> toWidget secondArg <*> ... <*> lastWidgetArg
 ```
+
+I wrote a bit more about [how this works](/2012/05/fp-newbie-learns-applicatives.html) a while back, or search around for "applicative functor" if you are interested in the theory behind the practice. We can effectively use this pattern without delving into the details though - so we can apply now and ask questions later. :)
