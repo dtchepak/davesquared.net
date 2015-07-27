@@ -3,7 +3,7 @@ layout: post
 title: "The Apply pattern"
 date: 2015-07-27 21:45
 comments: true
-categories: ["functional programming", "fsharp"]
+categories: ["functional programming", "f#"]
 ---
 
 I really enjoy trying to understand how and why things like work, but for this post I'm going to try to skip all that wonderful stuff and instead give a practical outline of how to use a very useful pattern arising from [applicative functors](http://www.davesquared.net/2012/05/fp-newbie-learns-applicatives.html).
