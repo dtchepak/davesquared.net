@@ -8,9 +8,6 @@ $root = ::File.dirname(__FILE__)
 
 use Rack::Deflater
 use Rack::Rewrite do
-    r301 %r{.*}, 'http://www.davesquared.net$&', :if => Proc.new {|rack_env|
-          rack_env['SERVER_NAME'] != 'www.davesquared.net' && ENV['RACK_ENV'] == 'production'
-    }
     r301 '/feeds/posts/default', '/atom.xml'
 end
 
