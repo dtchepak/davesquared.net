@@ -95,8 +95,8 @@ And that's it!
 Here's an example of the update in action. Use the radio buttons to alternate between the chart showing frequencies of letters in English and the frequencies of letters used in the source for this post.
 
 <form>
-    <input type="radio" name="inputsrc" id="defaultInput" value="default" checked/><label for="defaultInput">English</label>
-    <input type="radio" name="inputsrc" id="thisPostInput" value="post"/><label for="thisPostInput">This post</label>
+<input type="radio" name="inputsrc" id="defaultInput" value="default" checked/><label for="defaultInput">English</label>
+<input type="radio" name="inputsrc" id="thisPostInput" value="post"/><label for="thisPostInput">This post</label>
 </form>
 <svg id="d3newbie-chart"></svg>
 
