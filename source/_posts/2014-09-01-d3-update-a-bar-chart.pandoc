@@ -12,7 +12,7 @@ I've been trying to learn [D3.js](http://d3js.org/) via Mike Bostock's excellent
 
 ## Starting point
 
-[Part 3]("http://bost.ocks.org/mike/bar/3/") of the tutorial ends with a bar chart that shows the relative frequency of letters used in the English language.
+[Part 3](http://bost.ocks.org/mike/bar/3/) of the tutorial ends with a bar chart that shows the relative frequency of letters used in the English language.
 
 The creation of each bar per datum is handled by this code:
 
