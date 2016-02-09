@@ -1,0 +1,79 @@
+---
+layout: post
+title: "Currying vs. partial application"
+date: 2016-02-08 15:20
+comments: true
+categories: ["functional programming"]
+published: false
+---
+
+When I first came across the terms "currying" and "partial application" I was a bit confused about the difference. Here is my attempt at an explanation (originally left as a comment to [this post](http://blog.thecodewhisperer.com/2016/01/21/how-a-smell-in-the-tests-points-to-a-risk-in-the-design/), modified slightly here). I'm not 100% confident of my understanding, so please point out any inconsistencies -- I'm happy to be corrected :).
+
+<!-- more -->
+
+<div class="note">**Note on notation:** I'll use the non-C language style of type annotations. If you're from C/Java/C# background like me this takes a bit of getting used to, but I think it ends up much clearer. This style is used in quite a few languages, like Swift, F#, Scala, Haskell etc. Here's a few examples:
+
+```
+// C-style
+int blah(string a, Foo b);
+
+// translates to:
+blah : (string, Foo) -> int
+// reads: blah's type is a function that takes a String and a Foo, and returns an int
+
+// C# higher-order function
+int Zap(Func<string, int> f);
+
+// translates to:
+Zap : (string -> int) -> int
+// reads: Zap's type is a function that takes another function, which takes a string and returns an int, and returns an int. 
+```
+</div>
+
+Consider a call that takes 2 arguments and returns some value:
+
+```
+f : (a, b) -> c
+// Example call:
+f("a", 1)
+```
+
+Currying is the process of converting this to a function that takes a single argument, and returns another function that takes a single argument.
+
+```
+f' : a -> (b - c)
+// or just:
+f' : a -> b -> c
+
+// Example call:
+f'("a")(1)
+```
+
+For functions with more that 2 arguments, we can use currying to convert it to a series of functions that each take a single argument:
+
+```
+g : (a,b,c,d) -> e
+g' : a -> (b -> (c -> (d -> e)))
+// or just:
+g' : a -> b -> c -> d -> e
+```
+
+Partial application is when we can a function that takes multiple arguments, give it a subset of those arguments, and get back a function that will take the remaining arguments. With curried functions we get this ability for free, but you could imagine a mechanism where we implement this for uncurried functions:
+
+```
+// With curried function:
+g' : a -> b -> c -> d -> e
+let partialApplyG' = g'(1)(2) 
+// partialApplyG' : c -> d -> e
+partialApplyG'(3)(4) // <- providing the rest of the arguments
+
+// With uncurried function:
+g : (a,b,c,d) -> e
+let partialApplyG = g (1, 2) 
+// partialApplyG : (c, d) -> e
+partialApplyG (3, 4) // <- providing the rest of the arguments
+```
+
+What caused me a bit of confusion between the terms is that currying can be used to support partial application, so there is a bit of overlap. But I think it is correct to say that all curried functions support partial application, but not all partial application implementations require currying.
+
+

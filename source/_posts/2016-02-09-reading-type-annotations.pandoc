@@ -1,0 +1,197 @@
+---
+layout: post
+title: "Reading type annotations"
+date: 2016-02-09 22:30
+comments: true
+categories: ["functional programming"]
+---
+
+C and C-style languages like C++, Java, and C# tend to have method types written like this:
+
+```
+returnType methodName(argType0 arg0, argType1 arg1);
+```
+
+Other typed languages and programming papers use a notation more like this:
+
+```
+methodName : (argType0, argType1) -> returnType
+```
+
+I found it took a bit of getting used to, but I now much prefer to read and write this style. I think it is worth becoming familiar with, as it is used in quite a few languages^[Such as Haskell, F#, Swift, Scala, OCaml, ML, Idris, Elm, PureScript, and TypeScript.] and in all the programming papers I've seen. So here's a quick guide on how to read this style of type annotation.
+
+<!-- more -->
+
+## Structure
+
+From the `methodName` example above, we can see the structure has changed from "return type - name - arguments" to "name - arguments - return type". So the main change is moving the return type from the beginning to the end.
+
+A `:` separates the name from the type signature. `:` can be read as "has type". Haskell unfortunately uses `::` for this, instead of the `:` character which seems to be used pretty much everywhere else.
+
+A `->` arrow separates function input from function output. So `a -> b` reads as "I take values of type `a` and produce values of type `b`".
+
+Arguments are shown as a tuple of one or more types. In some languages (like ML, OCaml, and F#) tuple types are shown denoted by types separated by `*` characters, so the signature would look like `methodName : argType0 * argType1 -> returnType`.
+
+## Generics
+
+There are a few different ways of representing generic parameters. Let's take a function that, given a single element of some type, returns a singleton list of that type.
+
+```
+// C#
+List<T> Singleton<T>(T value);
+
+// Haskell
+singleton :: t -> List t
+
+// F#
+singleton : 't -> List<'t>
+// or F# can use postfix syntax where the type variable
+// is followed by the type constructor
+singleton : 't -> 't list
+```
+
+In Haskell, any type starting with a lowercase character is a type variable rather than a concrete type. In F# type parameters begin with a quote character `'`. Not requiring an additional step to list generic parameters is handy.
+
+## Higher order functions
+
+Where this notation starts to show some advantages is with higher order functions. For example, say we want a generic `map` function:
+
+```
+// C#-style
+List<A> Select<T,A>(Func<T,A> f, List<T> list);
+
+// Haskell-style
+map :: (t -> a) -> List t -> List a
+
+// or a more exact, less idiomatic translation:
+map :: ((t -> a), List t) -> List a
+```
+
+These functions take a function that translates Ts to As, and a list of Ts, to produce a list of As. The parentheses around the `(t -> a)` in the Haskell-style signature show that this is a single argument (that happens to itself be another function). This is a bit cleaner than the equivalent `Func<T, A>` in the C# version, particularly when the explicit type parameter declarations are taken into account. The difference becomes more noticeable as we increase the number of functions and type parameters:
+
+
+```
+// Example: function composition, (f ∘ g)(x) = f(g(x))
+
+// Haskell style:
+compose :: (b -> c) -> (a -> b) -> (a -> c)
+
+// C#-style:
+Func<A,C> Compose<A,B,C>(Func<B,C> f, Func<A,B> g);
+```
+
+## Curried functions
+
+In the `map` example above a "more exact, less idiomatic translation" was shown:
+
+```
+map1 :: (t -> a) -> List t -> List a
+map2 :: ((t -> a), List t) -> List a
+```
+
+`map1` takes a function `(t -> a)` and returns a function `List t -> List a`. It would also be correct to write it as `map1 :: (t -> a) -> (List t -> List a)`. In constrast, `map2` takes a single argument that happens to be a tuple of `((t -> a), List t)`. If we are supplying both arguments at once there is not much difference, but the `map1` version also lets us supply just the `(t -> a)` argument to create a new function.
+
+```
+> map1 (+1) [1..3]
+[2,3,4]
+> map2 ((+1), [1..3])
+[2,3,4]
+
+> let addOne = map1 (+1)
+addOne :: [List Int] -> [List Int]
+> addOne [1..3]
+[2,3,4]
+```
+
+Being able to supply less than the full contingent of arguments to a function, and get back a function that takes the remainder of the arguments, is called partial application.
+
+The `map1` form of signature, where a function is built out of functions that each take a single argument, is called a curried function (`map2` is "uncurried"). We get partial application, the ability to provide one argument at a time, for free with curried functions.
+
+Curried function signatures in C# get unpleasant fairly quickly:
+
+```
+// Haskell-style
+curriedEg :: a -> b -> c -> d -> e
+uncurriedEg :: (a, b, c, d) -> e
+
+// C#
+Func<B, Func<C, Func<D, E>>> CurriedEg<A,B,C,D,E>(A a);
+E UncurriedEg<A,B,C,D,E>(A a, B b, C c, D d);
+
+// cluck cluck, bgark!
+```
+
+## Unit values
+
+Some methods take no input and return a value (either a constant, or due to some side-effect). The "no input" value is normally represented by empty parenthesis `()`, and is called "unit" (because there is only a single legal value of this type, `()`).
+
+```
+DateTime GetDate();
+
+getDate : () -> DateTime
+```
+
+Similarly for things that take an argument but produce no direct output value (i.e. performs a side-effect)^[Note that `void` in C-style languages is different to the terms "unit" and "Void" in non-C-style languages. In C-style languages `void` means "has no return value", where a return type of `()` means "returns the value ()". In contrast, the type `Void` is one with no legal instance. We can never return a value of type `Void`, so my understanding is a function `a -> Void` can never return.]. Again, this is represented by unit:
+
+```
+void Save(Widget w);
+save : Widget -> ()
+```
+
+This starts to look a bit funny when methods take other calls with no input and no direct output:
+
+```
+void Subscribe(Action callback);
+subscribe : (() -> ()) -> ()
+```
+
+It does give some immediate clues as to where side-effects are in a type signature thought.
+
+## Types inside implementations
+
+We've looked at different forms of type signatures, but this style also tends to work its way into method definitions, again using the form `name : type`.
+
+```
+// C#
+List<T> Singleton<T>(T t) {
+    return new List<T> { t };
+}
+
+// Haskell
+singleton :: t -> [T]
+singleton t = [t]
+
+// F#
+let singleton (t : 'T) : List<'T> = [t]
+
+// Swift
+func singleton<T>(t : T) -> [T] {
+    return [t]
+}
+```
+
+Haskell tends to split the type signature from definition. F# specifies the arguments as `argName : argType`, and then gives the type of the resulting value (in this case `List<'T>`. Generic type parameters are indicated with a `'` prefix. Swift uses a similar style, but an arrow is used for the return type. Swift needs explicit declaration of generic type parameters.
+
+In both the Haskell and F# cases the type information can actually be omitted -- the type system will infer the correct type signature.
+
+## Conclusion
+
+This has been a quick tour through the things that first tripped me up when reading type signatures from non-C-style languages.
+
+The main habit I needed to break was expecting to see a type then a name. Instead, names are first, then their type shown. So method types change like this:
+
+```
+returnType blah()
+// becomes something like:
+blah : () -> returnType
+```
+
+Similarly arguments go from `ArgType name` to `name : ArgType`.
+
+```
+void Load(int id)
+// becomes something like:
+load(id : int) : ()
+```
+
+Hope this helps!
