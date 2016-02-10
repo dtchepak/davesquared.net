@@ -12,7 +12,7 @@ When I first came across the terms "currying" and "partial application" I was a 
 
 Consider a call that takes 2 arguments and returns some value^[See [Reading type annotations](/2016/02/reading-type-annotations.html) if this style of writing out types is unfamiliar.]:
 
-```
+```fsharp
 f : (String, Int) -> Widget
 // Example call:
 f("a", 1)
@@ -20,7 +20,7 @@ f("a", 1)
 
 Currying is the process of converting this to a function that takes a single argument, and returns another function that takes a single argument.
 
-```
+```fsharp
 f' : String -> (Int - Widget)
 // or just:
 f' : String -> Int -> Widget
@@ -29,9 +29,9 @@ f' : String -> Int -> Widget
 f'("a")(1)
 ```
 
-For functions with more that 2 arguments, we can use currying to convert it to a series of functions that each take a single argument:
+For functions with more than 2 arguments, we can use currying to convert it to a series of functions that each take a single argument:
 
-```
+```fsharp
 g : (a,b,c,d) -> e
 g' : a -> (b -> (c -> (d -> e)))
 // or just:
@@ -40,7 +40,7 @@ g' : a -> b -> c -> d -> e
 
 Partial application is when we can have a function that takes multiple arguments, give it a subset of those arguments, and get back a function that will take the remaining arguments. With curried functions we get this ability for free, but you could imagine a language feature that implements this for uncurried functions:
 
-```
+```fsharp
 // With curried function:
 g' : a -> b -> c -> d -> e
 let partialApplyG' = g'(1)(2) 
