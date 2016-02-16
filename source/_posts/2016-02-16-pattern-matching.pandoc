@@ -3,7 +3,7 @@ layout: post
 title: "Pondering a prescription for pattern matching prevalance"
 date: 2016-02-16 20:45
 comments: true
-categories: ["functional programming"]
+categories: ["functional programming", "dev practices"]
 ---
 
 In which I ramble on about how my thoughts on pattern matching have changed over the years.
