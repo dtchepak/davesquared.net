@@ -89,7 +89,7 @@ public void Should_turn_the_widget() {
 
 <p>One solution is injecting a factory into our object. We can stub out what this returns, make it return another test double, and then check it received the <code>Activate()</code> call. Just introduce a factory. Yet another factory. Searching through files matching <code>*Factory</code> becomes an exercise akin to reading War and Peace. And they're generally not even <a href="http://en.wikipedia.org/wiki/Factory_pattern">real factories</a>! They don't choose a particular implementation, they are just a glorified wrapper over a single constructor.</p>
 
-<p>Sure, I sometimes try to ease my conscience by injecting a factory method as a <code>Func&lt;T&gt;</code> which my IoC container helps me with. But deep down I know its still YAF, and a small part of me dies.</p>
+<p>Sure, I sometimes try to ease my conscience by injecting a factory method as a <code>Func&lt;T&gt;</code> which my IoC container helps me with. But deep down I know it's still YAF, and a small part of me dies.</p>
 
 <p>I'm hoping choosing &quot;better&quot; abstractions will help me with this, but I've had limited success to date.</p>
 
