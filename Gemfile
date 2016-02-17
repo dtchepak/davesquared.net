@@ -1,4 +1,4 @@
-ruby '2.0.0'
+ruby '2.2.4'
 source "http://rubygems.org"
 
 group :development do
