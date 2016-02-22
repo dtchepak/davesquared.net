@@ -21,7 +21,7 @@ f("a", 1)
 Currying is the process of converting this to a function that takes a single argument, and returns another function that takes a single argument.
 
 ```fsharp
-f' : String -> (Int - Widget)
+f' : String -> (Int -> Widget)
 // or just:
 f' : String -> Int -> Widget
 
