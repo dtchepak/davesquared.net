@@ -4,18 +4,20 @@ title: "Git pre-commit hook to help with multiple identities"
 blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-2409363022789520465"
 categories: ["git"]
 date: "2010-11-10T15:57:00+11:00"
-updated: "2011-06-15T11:00:00+11:00"
+updated: "2016-03-30T17:00:00+11:00"
 ---
 
 <p>I use git both at work and for personal projects. Unfortunately I always forget to properly set my <code>user.email</code> and <code>user.name</code> for new work repositories, and so I end up committing under my personal email address. No big deal, but not exactly brilliant either.</p>
 
 <p>When this happened again recently I decided it would be the last time. Enter <a href="http://www.kernel.org/pub/software/scm/git/docs/githooks.html">Git hooks</a>. By using a pre-commit hook I now make sure I never commit to a repo with a mycompany.com remote unless the configured user email address is a mycompany.com address.</p>
 
+<p><b>Update 2016-03-20:</b> Updated to also catch the case of committing under a company email address without a mycompany.com remote.</p>
+
 <pre class="brush:ruby">
 #!/usr/bin/env ruby
 
-# Make sure that the user has a MyCompany email address before committing
-# to a repository that contains a MyCompany remote.
+# Make sure that users with a MyCompany email address can only commit to
+# repositories that contain a MyCompany remote.
 
 useremail=`git config user.email`
 remotes=`git remote -v`
@@ -25,13 +27,18 @@ if remotes.match(/mycompany\.com/) and not useremail.match(/mycompany\.com/) the
     puts "but this repository has MyCompany remotes."
     puts
     exit 1
+elsif useremail.match(/mycompany\.com/) and not remotes.match(/mycompany\.com/) then
+    puts "Pre-commit error: MyCompany email address used for repository with no MyCompany remotes."
+    puts "Remotes:"
+    puts (remotes.strip)
+    puts
+    exit 1
 end
-</pre>
 
-<p>Obviously there's much more we could do with this (ensure non-company repos don't get commits under company email addresses for one), but this simple version solves the immediate problem.</p>
+</pre>
 
 <p>This code goes in a <code>pre-commit</code> file in your repo's <code>.git/hooks</code> directory, or in your Git templates directory to apply to all future repos (<code>C:\Program Files (x86)\Git\share\git-core\templates\hooks</code> on my machine. You can apply it to existing repos by re-calling <code>git init</code> which will re-copy the templates). The file needs to be executable (which it is if you're running Windows :)), and you'll obviously need Ruby for this specific example.</p>
 
 <p>For more information and some much more impressive examples of Git hooks, have a look at Glenn Gillen's post on <a href="http://rubypond.com/blog/slaying-dragons-git-bash-ruby">Slaying dragons with git, bash and ruby</a>.</p>
 
-<p><b>Update 2011-06-15:</b> Found a nice way of <a href="http://stackoverflow.com/a/8842663/906">setting a per-user template directory for hooks</a> on StackOverflow.</p>
+<p><b>Update 2011-06-15:</b> Found a StackOverflow answer with a nice way of <a href="http://stackoverflow.com/a/8842663/906">setting a per-user template directory for hooks</a> using <a href="https://git-scm.com/docs/git-init#_template_directory"><code>init.templatedir</code></a>.</p>
