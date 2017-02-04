@@ -8,9 +8,17 @@ categories: ["fsharp"]
 
 <!-- more -->
 
-[FAKE](http://fsharp.github.io/FAKE/) is an F#-based build tool along similar lines to Make, Rake, etc. The [FAKE documentation](http://fsharp.github.io/FAKE/gettingstarted.html) describes one way of setting up dependencies between targets using the `==>` operator. For example, `"Clean" ==> "Version" ==> "Build" ==> "Test" ==> "Package" ==> "Full"` means that to run the `Test` target, `Build` must be run beforehand, which in turn requires `Version`, which in turn requires `Clean` to be run.
+[FAKE](http://fsharp.github.io/FAKE/) is an F#-based build tool along similar lines to Make, Rake, etc. The [FAKE documentation](http://fsharp.github.io/FAKE/gettingstarted.html) describes one way of setting up dependencies between targets using the `==>` operator. For example:
 
-This approach limits us to a linear build order. I'd prefer to specify these dependencies less prescriptively, and have FAKE calculate the ordering based on whatever target or targets I need. Continuing the above example, I'd like to quickly build and run the tests during development, but for that case I don't really need to version the assemblies. I'd also like to avoid running `Clean` in this case to take advantage of incremental compilation. But if I'm running the `Package` task to package everything for NuGet then it is essential to run `Version` before `Build` to make sure the packaged assemblies have the right version numbers. And I want to make sure I `Clean` before a full build to avoid any old artefacts making it into a package.
+```fsharp
+"Clean" ==> "Version" ==> "Build" ==> "Test" ==> "Package" ==> "Full"`
+```
+
+This declaration means that to run the `Test` target, `Build` must be run beforehand, which in turn requires `Version`, which in turn requires `Clean` to be run.
+
+This approach limits us to a linear build order. I'd prefer to specify these dependencies less prescriptively, and have FAKE calculate the ordering based on whatever target or targets I need.
+
+Continuing the above example, I'd like to quickly build and run the tests during development, but for that case I don't really need to version the assemblies. I'd also like to avoid running `Clean` in this case to take advantage of incremental compilation. But if I'm running the `Package` task to package everything for NuGet then it is essential to run `Version` before `Build` to make sure the packaged assemblies have the right version numbers. And I want to make sure I `Clean` before a full build to avoid any old artefacts making it into a package.
 
 I fairly recently found out that FAKE does support this flexibility, using [soft dependencies](http://fsharp.github.io/FAKE/soft-dependencies.html) and the ability to specify multiple dependencies using the [`<==`](http://fsharp.github.io/FAKE/apidocs/fake-targethelper.html) operator. 
 
@@ -28,11 +36,11 @@ Target "Full" DoNothing
 RunTargetOrDefault "Full"
 ```
 
-The `"Clean" ?=> "Build"` operator here tells FAKE "if `Clean` needs to run, it must run before `Build`". We also tell FAKE that if we are `Version`ing, that has to be done before build as well. Unlike the linear definition we are not saying we *have* to run `Clean` or `Version`, just that *if* they need to run, they must go before `Build`.
+The `"Clean" ?=> "Build"` line tells FAKE "if `Clean` needs to run, it must run before `Build`". We also tell FAKE that if we are `Version`ing, that has to be done before build as well. Unlike the linear definition we are not saying we *have* to run `Clean` or `Version`, just that *if* they need to run, they must go before `Build`.
 
-The `<==` operator lets us make a target depend on multiple other targets. So `"Package" <== [ "Version"; "Build" ]` tells FAKE that to run `Package`, we have to run `Version` and `Build`. If we [run](http://fsharp.github.io/FAKE/commandline.html) `fake Package` FAKE knows it has to `Version` and `Build`, and it also knows that if it runs `Version` it must do so before `Build`. So the final build order for that case is: `Version`, then `Build`, then `Package`. 
+The `<==` operator lets us make a target depend on multiple other targets. So `"Package" <== [ "Version"; "Build" ]` tells FAKE that to run `Package`, we have to run `Version` and `Build`. When we [run](http://fsharp.github.io/FAKE/commandline.html) `fake Package` FAKE knows it has to `Version` and `Build`, and it also knows that if it runs `Version` it must do so before `Build`. So the final build order for that case is: `Version`, then `Build`, then `Package`. 
 
-Now we have the exactly the behaviour I was after. I can run the `Test` target which will force a build, but won't run a clean or version the assemblies. I can generate a NuGet package with versioned assemblies (I should probably make that depend on `Test` as well). Or I can run a `Full` build which will clean, version, build, test and create the package.
+This gives me exactly the behaviour I was after. I can run the `Test` target which will force a build, but won't run a clean or version the assemblies. I can generate a NuGet package with versioned assemblies (I should probably make that depend on `Test` as well). Or I can run a `Full` build which will clean, version, build, test and create the package.
 
 
 
