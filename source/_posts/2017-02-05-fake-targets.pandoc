@@ -30,7 +30,7 @@ Target "Full" DoNothing
 "Clean"   ?=> "Build"
 "Version" ?=> "Build"
 "Test"    <== [ "Build" ]
-"Package" <== [ "Version"; "Build"]
+"Package" <== [ "Build"; "Version" ]
 "Full"    <== [ "Clean"; "Version"; "Build"; "Test"; "Package" ]
 
 RunTargetOrDefault "Full"
@@ -38,7 +38,7 @@ RunTargetOrDefault "Full"
 
 The `"Clean" ?=> "Build"` line tells FAKE "if `Clean` needs to run, it must run before `Build`". We also tell FAKE that if we are `Version`ing, that has to be done before build as well. Unlike the linear definition we are not saying we *have* to run `Clean` or `Version`, just that *if* they need to run, they must go before `Build`.
 
-The `<==` operator lets us make a target depend on multiple other targets. So `"Package" <== [ "Version"; "Build" ]` tells FAKE that to run `Package`, we have to run `Version` and `Build`. When we [run](http://fsharp.github.io/FAKE/commandline.html) `fake Package` FAKE knows it has to `Version` and `Build`, and it also knows that if it runs `Version` it must do so before `Build`. So the final build order for that case is: `Version`, then `Build`, then `Package`. 
+The `<==` operator lets us make a target depend on multiple other targets. So `"Package" <== [ "Build"; "Version" ]` tells FAKE that to run `Package`, we have to run `Build` and `Version`. When we [run](http://fsharp.github.io/FAKE/commandline.html) `fake Package` FAKE knows it has to run both tasks, and it also knows that if it runs `Version` it must do so before `Build`. So the final build order for that case is: `Version`, then `Build`, then `Package`.^[I'd normally specify the task in the expected final order where possible, so `"Package" <== [ "Verison"; "Build" ]`, but I just wanted to illustrate that FAKE is working out the required order, it isn't a side-effect of the order dependencies are specified.]
 
 This gives me exactly the behaviour I was after. I can run the `Test` target which will force a build, but won't run a clean or version the assemblies. I can generate a NuGet package with versioned assemblies (I should probably make that depend on `Test` as well). Or I can run a `Full` build which will clean, version, build, test and create the package.
 
