@@ -23,10 +23,25 @@
   <script src="{{ root_url }}/javascripts/modernizr-2.0.js"></script>
   <script src="{{ root_url }}/javascripts/ender.js"></script>
   <script src="{{ root_url }}/javascripts/octopress.js" type="text/javascript"></script>
-  <script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=MML_HTMLorMML">
+  <!-- MathJax config based on http://docs.mathjax.org/en/latest/config-files.html#the-mml-htmlormml-configuration-file
+       (local mathjax derived from https://ro-che.info/articles/2017-04-02-deploying-mathjax) -->
+  <script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    config: ["MMLorHTML.js"],
+    jax: ["input/MathML","output/HTML-CSS","output/NativeMML"],
+    extensions: ["mml2jax.js"],
+    "HTML-CSS": {
+      availableFonts: ["TeX"],
+      imageFont: null
+    },
+    MathMenu: {
+       showRenderer: false,
+       showFontMenu: false,
+       showLocale: false
+    }
+  });
   </script>
-  
+  <script type="text/javascript" src="{{ root_url}}/javascripts/mathjax-2.7.0/MathJax.js"></script>
   <link href="{{ site.subscribe_rss }}" rel="alternate" title="{{site.title}}" type="application/atom+xml">
   {% include custom/head.html %}
   {% include google_analytics.html %}
