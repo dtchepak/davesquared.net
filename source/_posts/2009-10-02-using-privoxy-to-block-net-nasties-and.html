@@ -4,60 +4,7 @@ title: "Using Privoxy to block net nasties and ads in Chrome [Windows]"
 blogger_id: "tag:blogger.com,1999:blog-7624394686148711990.post-5240041481811593766"
 categories: ["misc"]
 date: "2009-10-02T23:30:00+10:00"
-updated: "2009-10-02T23:30:14.09+10:00"
+updated: "2018-02-15T09:58:00+10:00"
 ---
 
-<p>I love <a href="http://www.google.com/chrome">Google Chrome</a>. It is so sleek, so responsive, and so fast. Problem is I've been using Firefox with AdBlock forever (well, rounded to the nearest eternity), and when I tried to switch to Chrome all the tracking cookies and ads turned my nice neat intraweb into a garish and frightening place. I finally decided to give <a href="http://www.privoxy.org/">Privoxy</a>, a web proxy featuring junk filtering and privacy protections, a try.</p>
-
-<h2>Getting started with Privoxy</h2>
-
-<ol>
-<li>Download and install <a href="http://www.privoxy.org/">Privoxy</a></li>
-<li>Set your HTTP proxy in Chrome (which uses the IE/Windows settings) to <code>127.0.0.1:8118</code>. You can obviously use it from Firefox too if you like.</li>
-<li>Enjoy!</li>
-</ol>
-
-<p>Wow, that was tough. :) The out of the box configuration seems to do pretty well. You can also delve into the config files and disable certain filters, allow ads for sites that aren't obnoxious, or switch to only blocking ads on sites you blacklist instead of using Privoxy's pattern matching. Privoxy is meant to be faster and easier than blocking this stuff in your hosts file as it can use patterns and cache lookups rather than running through each line in your host file every time you need a DNS lookup.</p>
-
-<h2>But I'm already behind a proxy at work! What do I do?</h2>
-
-<p>Glad you asked! You can configure Privoxy to forward to your corporate proxy. Go to your install directory (<code>C:\Program Files\Privoxy</code> for me) and edit the <code>config.txt</code> file (er, maybe back it up first :)). Search for the section called "forward" (section 5.1 on my install), uncomment the forward command and add your proxy:</p>
-
-<pre>
-forward / proxy.example.com:8080
-</pre>
-
-<p>This will forward all URLs to the given proxy and port number. Next search for "accept-intercepted-requests", read the explanation and warnings about the setting, uncomment the command and set it to 1. This will allow any traffic coming back via the corporate proxy to work with Privoxy.</p>
-
-<pre>
-accept-intercepted-requests 1
-</pre>
-
-<p>And with any luck you're now surfing in Chrome-filled bliss! :)</p>
-
-<h2>But I'm not always behind another proxy! How can I switch settings?</h2>
-
-<p>Oh, good question! I couldn't find any autoproxy.pac style approach for this, so I opted for a fairly basic approach. I created two config files, <code>config.txt.work</code> (with forwarding and accept-intercepted-requests on) and <code>config.txt.nofoward</code> (which is just the default config file for me). I then wrote a little PowerShell script to switch between these (use at your own risk! :)):</p>
-
-<pre>
-$location=$args[0]
-$target=$env:ProgramFiles + &quot;\Privoxy\config.txt&quot;
-if ($location -eq &quot;work&quot;) {
-    $source=$target + &quot;.work&quot;
-} else {
-    $source=$target + &quot;.noforward&quot;
-}
-cp -force &quot;$source&quot; &quot;$target&quot;
-</pre>
-
-<p>Based on the argument given to the script, this will just copy the required configuration file over Privoxy's <code>config.txt</code> file.  I then setup two shortcuts pointing to this script, one to turn on work mode and the other to turn it off. The shortcut target looks something like this:</p>
-
-<pre>
-C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -noexit "C:\Users\davesquared\Documents\Applications\PrivoxySwitch\PrivoxySwitch.ps1" work
-</pre>
-
-<p>You don't need the -noexit option, I just had it in for debugging. Note the command ends with the "work" argument, so the other shortcut should have "noforward" or something similar. Finally I set both shortcuts to run as Administrator so it has permission to copy the files. I've got the shortcuts in a location indexed by <a href="http://davesquared.net/2007/12/qt-launchy-20.html">Launchy</a>, so now I can just activate Launchy, type "switch work", ok the admin prompt, and I'm in work mode.</p>
-
-<h2>Is it worth it?</h2>
-
-<p>Yes, yes it is. Chrome is so nice. And you can do lots of fancy stuff with Privoxy if you delve into it. Have a quick glance through the <a href="http://www.privoxy.org/user-manual/quickstart.html">Privoxy Quickstart</a> and give it a try! :)</p>
+<em>Post removed due to extremely out of date content (even by this blog's standards :) ).</em>
