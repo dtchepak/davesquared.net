@@ -19,6 +19,6 @@ group :development do
 end
 
 gem 'thin'
-gem 'sinatra', '~> 1.4.5'
+gem 'sinatra', '~> 2.0.0'
 gem 'rack-rewrite'
 gem 'rack'
