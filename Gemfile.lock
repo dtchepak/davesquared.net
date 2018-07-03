@@ -47,7 +47,7 @@ GEM
     pygments.rb (1.2.1)
       multi_json (>= 1.0.0)
     rack (2.0.4)
-    rack-protection (2.0.1)
+    rack-protection (2.0.3)
       rack
     rack-rewrite (1.5.1)
     rake (12.3.0)
@@ -58,10 +58,10 @@ GEM
     redcarpet (3.4.0)
     rubypants (0.7.0)
     sass (3.4.25)
-    sinatra (2.0.1)
+    sinatra (2.0.3)
       mustermann (~> 1.0)
       rack (~> 2.0)
-      rack-protection (= 2.0.1)
+      rack-protection (= 2.0.3)
       tilt (~> 2.0)
     stringex (2.8.2)
     temple (0.8.0)
@@ -90,7 +90,7 @@ DEPENDENCIES
   rdiscount
   redcarpet
   rubypants
-  sinatra (~> 2.0.0)
+  sinatra (~> 2.0.2)
   stringex
   thin
 
