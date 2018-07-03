@@ -106,11 +106,11 @@ data class Nullable<T : Semigroup<T>>(val value: T?) : Semigroup<Nullable<T>> {
  * Merge [Map]s where the values have a semigroup instance. If both maps have an entry for the same key, these
  * will be combined using the semigroup operation.
  */
-data class Mapped<K, V : Semigroup<V>>(val value: Map<K, V>) : Semigroup<Mapped<K, V>>, Map<K, V> by value {
-    override fun plus(other: Mapped<K, V>): Mapped<K, V> = Mapped(
-            entries.fold(other) { acc, entry ->
-                Mapped(acc.insertOrUpdate(entry.key, { if (it != null) it + entry.value else entry.value }))
-            })
+data class Mapped<K, V : Semigroup<V>>(val value: Map<K, V>) : Semigroup<Mapped<K, V>> {
+    override fun plus(other: Mapped<K, V>): Mapped<K, V> =
+            value.entries.fold(other.value) { acc, entry ->
+                acc.insertOrUpdate(entry.key) { if (it != null) it + entry.value else entry.value }
+            }.let { Mapped(it) }
 }
 ```
 
@@ -120,11 +120,15 @@ We can also write some general functions, `concat` and `concatMap`, to combine a
 
 ```kotlin
 /** Reduce a list of `T` to a single `T` using a semigroup operation */
-fun <T : Semigroup<T>> concat(empty: T, items: Iterable<T>) = items.fold(empty, { acc, t -> t + acc })
+fun <T : Semigroup<T>> concat(empty: T, items: Iterable<T>) = items.fold(empty) { acc, t -> t + acc }
 
 /** Reduce a list of [A] by converting each item to a [T] with a semigroup instance, then combining to a single value using [concat]. */
 fun <T : Semigroup<T>, A> concatMap(empty: T, items: Iterable<A>, f: (A) -> T) =
-        concat(empty, items.map(f))
+        items.fold(empty) { acc, t -> f(t) + acc }
+        /* Note: this is logically equivalent to the simpler:
+         *      concat(empty, items.map(f))
+         * But this would do two passes through the list.
+         */
 
 @Test
 fun examples() {
@@ -182,7 +186,7 @@ fun aggregateSamples() {
     assertEquals(samples.maxBy { it.value }?.value, result.largestSample.value)
     assertEquals(samples.count { (100..200).contains(it.value) }, result.inRange.value)
     val june2017 = MonthYear(2017, 6)
-    assertEquals(samples.filter { x -> june2017 == x.date }.sumBy { it.value }, result.data[june2017]?.value)
+    assertEquals(samples.filter { x -> june2017 == x.date }.sumBy { it.value }, result.data.value[june2017]?.value)
 }
 ```
 
