@@ -1,0 +1,42 @@
+---
+layout: post
+title: "StandaloneDeriving to fix forgetfulness in GHCi"
+date: 2018-07-03 15:09
+comments: true
+categories: ["haskell", "for-future-dave"]
+---
+
+Quick reminder to Future Dave, as I'm going to assume he'll keep making the same mistake Past and Present Daves make.
+
+When switching between my editor and GHCi REPL to test stuff out I often forget to add a `deriving (Show, Eq)` or similar line to my data types. This normally occurs after I've just set up a bit of test data in the REPL, so if I just fix the data declaration and `:reload` GHCi then my setup will be lost. We can use the [StandaloneDeriving](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#stand-alone-deriving-declarations) GHC extension to help here.
+
+<!-- more -->
+
+The following example is me playing around with some parsing stuff and forgetting to make `ParseError` an instance of `Show` (so it won't print in the REPL), then using `:set -XStandaloneDeriving` to fix this:
+
+```
+λ> :set -XOverloadedStrings
+λ> let kv = M.fromList [ ("hi" :: T.Text, "2011-01-02" :: T.Text), ("world" :: T.Text, "2014-05-07" :: T.Text) ]
+λ> kv
+fromList [("hi","2011-01-02"),("world","2014-05-07")]
+λ> let lookup k = (`tag` (KeyNotFound k)) . M.lookup k
+λ> lookup "hi" kv
+
+<interactive>:94:1: error:
+    • No instance for (Show ParseError) arising from a use of ‘print’
+    • In a stmt of an interactive GHCi command: print it
+
+λ> :set -XStandaloneDeriving
+λ> deriving instance Show ParseError
+
+<interactive>:1:1: warning: [-Worphans]
+    Orphan instance: instance Show ParseError ...
+
+λ> lookup "hi" kv
+Right "2011-01-02"
+```
+
+I've trimmed the orphan instance warning. In this case it should not be a problem as I'm just working around my forgetfulness. :)
+
+We can also use this in real `.hs` files if necessary via a language pragma (`{-# LANGUAGE StandaloneDeriving #-}`) as described [here](https://stackoverflow.com/a/12852367/906).
+
