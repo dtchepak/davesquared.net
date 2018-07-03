@@ -14,7 +14,7 @@ When switching between my editor and GHCi REPL to test stuff out I often forget 
 
 The following example is me playing around with some parsing stuff and forgetting to make `ParseError` an instance of `Show` (so it won't print in the REPL), then using `:set -XStandaloneDeriving` to fix this:
 
-```
+```haskell
 λ> :set -XOverloadedStrings
 λ> let kv = M.fromList [ ("hi" :: T.Text, "2011-01-02" :: T.Text), ("world" :: T.Text, "2014-05-07" :: T.Text) ]
 λ> kv
