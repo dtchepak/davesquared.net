@@ -1,0 +1,94 @@
+---
+layout: post
+title: "For sale: Several tonnes of yak hair, going cheap"
+date: 2018-10-20 10:20
+comments: true
+categories: ["misc"]
+---
+
+A sordid tale of builds, Gradle, Grunt, node, yarn, Linux, TeamCity, Docker, ssh, and [shaven yaks](https://seths.blog/2005/03/dont_shave_that/).
+
+![Happy yak shaving! [(src)](https://medium.com/@firehoseproject/a-guide-to-yak-shaving-your-code-d30f98dc759)](/images/2018/shaving-yak.png "Cartoon yak shaving his beard, from the Ren and Stimpy show")
+
+<!-- more -->
+
+Once upon a time there was a project that produced a JAR based on some generated code. I needed to make a repeatable, versioned build for the JAR and plug it into TeamCity so I could reference that build artifact from my current project. Simple!
+
+![What could possibli go rong? [(src)](https://twitter.com/simpsons_tweets/status/381502181733457920)](/images/2018/possibli-rong.jpg "Helicopter pilot from the Simpsons saying nothing can possib-lie go wrong, shortly before everything goes wrong")
+
+Here is a rough timeline of how this went.
+
+**WARNING!** In case it is not painfully obvious, this is all me learning stuff so any specifics mentioned are probably sub-optimal at best to destructive at worst. This is more about the journey than the destination.
+
+## Local build
+
+* Do some initial analysis and find I need to invert the current relationship between the JAR project and the generation code (so building the JAR can call out to a specific version of the generator and get freshly generated files).
+* Learn some Node and [Grunt](https://gruntjs.com/) so I can update the generator to accept a parameter to change the output directory, then update the JAR project to have the generator as a git submodule so we can control the version used.
+* Learn enough Gradle to trigger the generation code on build, then build the JAR and run tests.
+* Learn a bit more Gradle to call `git describe` with [`--first-parent`](http://www.davidchudzicki.com/posts/first-parent/) and use this information to shove some version info into the manifest.
+* Test build with clean checkout and various tags, document and push changes.
+
+So far so good! Now to wire this up to TeamCity.
+
+## Add build to TeamCity
+
+* Create TeamCity build
+* Build immediately fails: `--first-parent` is not supported by `git describe`
+* Log in to build agent, find it has git 1.8.3, but `--first-parent` was added to `git describe` in 1.8.4.
+* Try to update git on build agents, which needs to be done from source as an updated package is not readily available.
+* Building from source requires some new packages installed, which fails due to some certificate misconfiguration for one repository.
+* Type stuff into Google until I find a magic flag to skip that repo and get the packages installed.
+* Install updated git.
+* Build gets a step further, but fails at the generation code step. The generator requires specific versions of node and yarn. The agents have different versions.
+* Start installing updated node and yarn from packages, working around repository problems.
+* Find out that another project has started sharing these agents and requires a different version of node and yarn. They can't change their version either.
+* Roll back node and yarn changes.
+
+## Docker
+
+At this point someone suggests trying Docker to isolate the build dependencies. The generator team has an image for the generator I can use as a base. I can then create an image that adds the JDK and the version of Git I need and I should be good to go.
+
+* Start learning Docker.
+* Try to work out whether to install Docker locally via brew or via the installer, reading conflicting information on both (I ended up with the installer).
+* Work through the Docker tutorial.
+* Learn a bit about images, containers, tags and how to manage the disk space used for these (`docker system df -v`, different prune options).
+* Get access to the registry used for storing the base image.
+* Work out how to create a new Docker image with the required JDK version on top of the base image.
+* Learn how to run a bash shell in a container based on this image: `docker run -it image_name bash`
+* The base image already has a modern version of git installed. Hooray!
+* Learn how to clean up transient containers used for bash shells: `docker run -it --rm image_name bash`
+* Work out how to map volumes to get host's SSH working within container. Something like: `docker run -it --rm -v ${HOME}/.ssh:/root/.ssh -v $SSH_AUTH_SOCK:/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent image_name bash`
+* Work out how to use host's Gradle properties within container: `docker run -it --rm -v ${HOME}/.gradle:/root/.gradle ...`
+* Get build working in container! Hooray!
+* Come up with a versioning and tagging scheme for the `Dockerfile` and corresponding image so that we always have enough information to build each commit of the project with a compatible Docker image.
+* Publish new image to registry and test build.
+* Document all this in the project readme.
+
+## Add Docker build to TeamCity
+
+Great, home stretch now. TeamCity has some Docker integration so this should be easy.
+
+* Attempt to install Docker on build agents. Unfortunately due to more package problems this does not work. Have to `wget` some other packages and manually install them before installing the Docker package.
+* Read up on TeamCity's Docker integration.
+* Work out how to generate a key for TeamCity to talk to the image registry.
+* Update the TeamCity build to use the required image.
+* Run the build... JVM crash on the agent!
+* Log in to agent, find that Docker stores images and containers at a location mounted with no free space.
+* Work with server team to get more space at that mount point.
+* Run again, but generation fails. It needs access to checkout its own dependencies via SSH to a separately hosted repo.
+* Read up on SSH with TeamCity and Docker, and the git hosting being used for the other repo.
+* Talk to generation team about accessing these dependencies. Get access to generate token with SSH key that can be used for this.
+* Work out how to assign the token to the required dependency on the git host.
+* Add key to TeamCity and assign it to the build. Same error.
+* Find out about TeamCity SSH Agent build feature that needs to be added with the selected key. Same error.
+* Update TeamCity build's Docker parameters to pass through SSH info from host. Same error.
+* Various combinations of the above. Same error.
+* Work out it is a problem with `~/.ssh/known_hosts`. Update this on the agents (`ssh-keyscan -t rsa the_repo >> ~/.ssh/known_hosts`), then make sure `.ssh` from host gets mapped to container via Docker parameters.
+* Different error! Well, same error, but for a different dependency.
+* Assign token to new dependency.
+* Assign token to the other 4 dependencies as each new error occurs.
+* Finally get through the main build! 
+
+Then it failed on deployment due to a different credential issue to another internal system. But after temporarily disabling deployment, the build works! Once I sort out the deployment problem I can start on my actual task of adding this library to my project. But that should be simple to fix, right?
+
+Now if you'll excuse me I'm going to go and have a bit of a lie down on several mountains of yak hair-stuffed cushions.
