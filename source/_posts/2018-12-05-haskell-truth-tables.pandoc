@@ -1,0 +1,61 @@
+---
+layout: post
+title: "Quick, hacky truth tables in Haskell"
+date: 2018-12-05 16:20
+comments: true
+categories: ["haskell", "for-future-dave"]
+---
+
+Today I wanted to test a few boolean expressions, and ended up with some quick truth table generation hackery in Haskell which I thought I'd note down for next time. I'm sure there are many better ways of doing this, but this way was mine.
+
+<!-- more -->
+
+Here's a list of all booleans in GHCi:
+
+```haskell
+λ> let bools = [False, True]
+```
+
+We can use the default [applicative](https://davesquared.net/2015/07/apply-pattern.html) instance for lists to run all combinations of `bools` through a function. If we use a tuple constructor, we'll get truth table inputs (shown below for 2 and 3 argument expressions).
+
+```haskell
+λ> (,) <$> bools <*> bools
+[(False,False),(False,True),(True,False),(True,True)]
+λ> (,,) <$> bools <*> bools <*> bools
+[(False,False,False),(False,False,True),(False,True,False),(False,True,True),(True,False,False),(True,False,True),(True,True,False),(True,True,True)]
+```
+
+Let's check a basic expression `p`, and its equivalent using [De Morgan's laws](https://en.wikipedia.org/wiki/De_Morgan%27s_laws). Writing `x <$> bools <*> bools` gets repetitive, so we'll start off by defining `tt2` to get truth-tableish output values for a 2 input function `Bool -> Bool -> Bool`.
+
+```haskell
+λ> let tt2 f = f <$> bools <*> bools
+tt2 :: (Bool -> Bool -> b) -> [b]
+λ> let p  a b = not (a && not b)
+λ> let p' a b = not a || b
+λ> tt2 p
+[True,True,False,True]
+λ> tt2 p'
+[True,True,False,True]
+λ> tt2 p == tt2 p'
+True
+```
+
+We can then `zipWith` to get truth table inputs with the corresponding truth table output (using a bit of `uncurry` trickery):
+
+```haskell
+λ> :t uncurry (,,)
+uncurry (,,) :: (a, b) -> c -> (a, b, c)
+λ> zipWith (uncurry (,,)) (tt2 (,)) (tt2 p)
+[(False,False,True),(False,True,True),(True,False,False),(True,True,True)]
+```
+
+Or for more arguments:
+
+```haskell
+λ> let tt3 f = f <$> bools <*> bools <*> bools
+tt3 :: (Bool -> Bool -> Bool -> b) -> [b]
+λ> zipWith (\(a,b,c) d -> (a,b,c,d)) (tt3 (,,)) (tt3 (\a b c -> a && b || c))
+[(False,False,False,False),(False,False,True,True),(False,True,False,False),(False,True,True,True),(True,False,False,False),(True,False,True,True),(True,True,False,True),(True,True,True,True)]
+```
+
+We can write something to format these nicely, but this was enough for me to get the information I needed about a few expressions.
