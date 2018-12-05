@@ -88,7 +88,7 @@ This can be used to lift a function into a context so we can apply it to applica
 
    * fmap law: `pure f <*> x = fmap f x`
    * Identity: `pure id <*> v = v`
-   * Composition: `pure (.) <*> u <*> v *<> w = u <*> (v <*> w)`
+   * Composition: `pure (.) <*> u <*> v <*> w = u <*> (v <*> w)`
    * Interchange: `u <*> pure y = pure ($ y) <*> u`
    * Homomorphism: `pure f <*> pure x = pure (f x)`
 
