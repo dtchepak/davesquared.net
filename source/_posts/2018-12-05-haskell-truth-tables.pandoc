@@ -58,4 +58,4 @@ tt3 :: (Bool -> Bool -> Bool -> b) -> [b]
 [(False,False,False,False),(False,False,True,True),(False,True,False,False),(False,True,True,True),(True,False,False,False),(True,False,True,True),(True,True,False,True),(True,True,True,True)]
 ```
 
-We can write something to format these nicely, but this was enough for me to get the information I needed about a few expressions.
+We can write something to format these nicely, but this was enough for me to get the information I wanted about a few expressions.
