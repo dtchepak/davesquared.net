@@ -1,0 +1,149 @@
+---
+layout: post
+title: "Using phantom types to associate static values and generic types"
+date: 2019-01-17 07:50
+comments: true
+categories: ["kotlin"]
+---
+
+Phantom types seem to get used reasonably regularly in a variety of languages for ensuring the safe use of various values (as [identifiers](https://gekkio.fi/blog/2013-02-07-increased-compile-time-safety-with-phantom-types.html), for [state transitions](http://gabrielsw.blogspot.com/2012/09/phantom-types-in-java.html) and [others](http://kean.github.io/post/phantom-types#id-type)).
+
+A colleague and I recently found a case where they provided a slightly different benefit. They still helped provide some required type safety, but in this case they also helped to statically associate a value with a generic type parameter, avoiding a runtime lookup and keeping the code succinct using type inference.
+
+This post uses Kotlin, but should be applicable to Java or any other language with generics / parameterised types.
+
+<!-- more -->
+
+## What is a phantom type?
+
+A phantom type is a type that has a type parameter in its declaration that is not actually used by the constructors or fields of that type.
+
+For (a fairly contrived) example:
+
+```kotlin
+data class Measure<T>(val value: Double)
+```
+
+Here we have a `Measure` type with a single `Double` field. It is parameterised by some type `T`, but we could quite easily remove this parameter and the class would still work (i.e. `data class Measure(val value: Double)`).
+
+Even though `T` isn't used in the class definition, it does let us tag references to this type with additional information. The type parameter does not change how the type itself works, but it does let us restrict how it can be used.
+
+Let's make a `plus` operator for `Measure`, but ensure it only works on values of the same measurement units:
+
+```kotlin
+data class Measure<T>(val value: Double) {
+    operator fun plus(other: Measure<T>): Measure<T> =
+            Measure(value + other.value)
+}
+
+object Metres
+object Kilograms
+
+@Test
+fun testMeasures() {
+    val first = Measure<Metres>(42.0)
+    val second = Measure<Metres>(4200.0)
+    val third = Measure<Kilograms>(1.0)
+
+    // Can add Metres:
+    assertEquals(Measure<Metres>(4242.0), first + second)
+
+    // Can not add Kilograms to Metres:
+    // assertEquals(Measure<Kilograms>(43.0), first + third)
+    // Type mismatch: inferred type is Measure<Kilograms> but Measure<Metres> was expected
+}
+```
+
+Within `Measure<T>` we just have a `Double`; the actual type of `T` makes no difference at all. But when we need to use `Measure<T>` values, we can ensure only compatible `T` values are combined, or define operations only for specific `T` (such as `convert: Measure<Metres> -> Measure<Inches>`).
+
+## A problem associating a static value with a type
+
+I'll strip back the actual problem we were facing to something that is convenient to write up, yet still hopefully within the realms of plausibility. Say we have several entity types we want to load from some data store. Values of each type are queried by some schema information.
+
+```kotlin
+/** Marker interface for persistable entities. */
+interface Entity
+
+/** Schema information used to query entities in their persisted state. */
+data class Schema(val name: String, val version: Int)
+
+data class Widget(val style: String, val barcode: Barcode) : Entity {
+    companion object {
+        /** Static property of Widget, representing that type's schema */
+        val SCHEMA = Schema("acme.Widget", 12)
+    }
+}
+
+data class Sprocket(val size: Int) : Entity {
+    companion object {
+        /** Schema for Sprockets. */
+        val SCHEMA = Schema("acme.Sprocket", 12)
+    }
+}
+
+class MagicalBucketOfData {
+    // ... magical persistence code here ...
+
+    // WILL NOT COMPILE!!!
+    fun <T : Entity> fetch(): List<T> =
+            // Need to get schema for T to query:
+            db.where("schema", T.SCHEMA.name) // ??? But can't access T.SCHEMA!
+              .map { it as T }
+}
+```
+
+The problem here is that we can't get the static `SCHEMA` property from `T`. There is no way for us to say "all types `T` where `T` has a static property `SCHEMA: Schema`" in Kotlin.
+
+There are a few options here. We can change our `fetch` method to be `fun <T: Entity> fetch(schema: Schema): List<T>`, but then we could call `fetch<Sprocket>(Widget.SCHEMA)` by accident, which will cause all sorts of troubles when we try to cast/convert our data to the wrong type. We could use Kotlin's [reified type parameters](https://kotlinlang.org/docs/reference/inline-functions.html#reified-type-parameters) or pass in a `Class<T>`, and switch on type to lookup the correct schema for whatever `T` is passed in, but that gets a little messy and will add a runtime cost when we actually know what we want statically. 
+
+## Phantom types to the rescue
+
+Instead, let's make `Schema` a phantom type and tag it with the information about the specific entity type it represents.
+
+```kotlin
+data class Schema<T: Entity>(val name: String, val version: Int)
+```
+
+This gives a warning that `Type parameter "T" is never used`, a convincing indication we have a phantom type. Spooky.
+
+```kotlin
+data class Widget(val style: String, val barcode: Barcode) : Entity {
+    companion object {
+        // This isn't just any schema, it is a schema for a widget!
+        val SCHEMA = Schema<Widget>("acme.Widget", 12)
+    }
+}
+
+data class Sprocket(val size: Int) : Entity {
+    companion object {
+        val SCHEMA = Schema<Sprocket>("acme.Sprocket", 12)
+    }
+}
+```
+
+Now we can pass through a schema value to our instance, and the compiler will infer what `T` we're after:
+
+```kotlin
+fun <T : Entity> fetch(schema: Schema<T>): List<T> =
+        db.where("schema", schema.name)
+          .map { it as T }
+
+// Example uses:
+
+// Here widgets will be of type `List<Widget>`; the type will get
+// inferred by the schema we pass.
+val widgets = fetch(Widget.SCHEMA) 
+
+// Given a method that works on sprockets:
+fun handleSprockets(sprockets: List<Sprocket>) { ... }
+// This will fail as we're trying to use widgets for sprockets:
+handleSprockets(fetch(Widget.SCHEMA)) // Type mismatch!
+```
+
+Now we have schema values that are also associated with specific types, giving us the ability to write generic code that needs these values.
+
+## Conclusion
+
+Adding an essentially unused type parameter to `Schema` here gives us an easy way to associate schema values with a particular type. It avoids runtime lookups on types, and does not compromise code safety by allowing us to pass through a value that is not appropriate for the expected type `T`.
+
+
