@@ -2,11 +2,12 @@
 layout: post
 title: "Haskell without the Haskell Platform"
 date: 2014-05-10 20:00
+updated: 2019-02-06 10:51
 comments: true
 categories: ["haskell"]
 ---
 
-Apparently it can be [a bit tricky to get some Haskell libraries working on Windows](http://www.reddit.com/r/haskell/comments/23tj8y/haskellplatform_vs_ghccabal/ch0l784), in which case the [Haskell Platform](http://www.haskell.org/platform/) is a great way to get going with Haskell. For Mac and Linux the platform works too, but we can also just grab the latest GHC and Cabal (ooh, shiny!) and go from there. 
+Apparently it can be [a bit tricky to get some Haskell libraries working on Windows](http://www.reddit.com/r/haskell/comments/23tj8y/haskellplatform_vs_ghccabal/ch0l784), in which case the [Haskell Platform](http://www.haskell.org/platform/) is a great way to get going with Haskell. For Mac and Linux the platform works too, but we can also just grab the latest GHC and Cabal (ooh, shiny!) and go from there. **UPDATE 2019-02:** I tend to use [ghcup](https://github.com/haskell/ghcup) on Mac and Linux these days. Am leaving these steps here as building GHC and Cabal is still a valid way of getting Haskell up and running.
 
 <!-- more -->
 
@@ -15,6 +16,8 @@ This is how I got it working on my Mac, with loads of help from [ddere](https://
 I've got XCode 5.1.1 installed, which I believe is a prerequisite (or at least the dev tools?). Other than that, grab a terminal and a browser, and we're set to go.
 
 ## tl;dr
+
+_**UPDATE 2019-02:** Check out [ghcup](https://github.com/haskell/ghcup) for an easier way to get a platformless Haskell running on Mac or Linux. I've switched to using that to manage Haskell installations._
 
 Here's the summary if you want the steps without explanation:
 

@@ -2,6 +2,7 @@
 layout: post
 title: "Haskell newbie attempts a Haskell quick start guide"
 date: 2012-02-09 12:02
+updated: 2019-02-06 10:38
 comments: true
 categories: ["haskell"]
 ---
@@ -16,7 +17,9 @@ The aim of this post, despite your reticence to go through an [extraordinarily h
 
 ## Getting to a Haskell interactive prompt
 
-Grab the Haskell Platform from [Haskell.org](http://www.haskell.org/). Once installed, go to your favourite terminal and type `ghci` to load the [Glorious Glasgow Haskell Compilation System](http://www.haskell.org/ghc/docs/latest/html/users_guide/index.html) interactive environment (assuming `ghci` is on your path). You should see GHCi's `Prelude>` prompt. If you type in something profound like `7*6` and hit return you should get an answer of sorts. 
+There are a few ways to install [Haskell](http://www.haskell.org/). I tend to use [ghcup](https://github.com/haskell/ghcup) (on Mac or Linux). Before ghcup I used to [build the required bits](https://davesquared.net/2014/05/platformless-haskell.html) (GHC, Cabal) myself (which I found much simpler than it sounds). Failing that, and probably the simplest option if you're running Windows, you can [download and install the Haskell Platform](https://www.haskell.org/downloads).
+
+Once installed, go to your favourite terminal and type `ghci` to load the [Glorious Glasgow Haskell Compilation System](http://www.haskell.org/ghc/docs/latest/html/users_guide/index.html) interactive environment (assuming `ghci` is on your path). You should see GHCi's `Prelude>` prompt. If you type in something profound like `7*6` and hit return you should get an answer of sorts. 
 
 Don't do it now, but when you want to exit, type `:q` (in glorious vim tradition).
 
