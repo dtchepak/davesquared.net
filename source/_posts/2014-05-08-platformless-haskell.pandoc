@@ -7,7 +7,9 @@ comments: true
 categories: ["haskell"]
 ---
 
-Apparently it can be [a bit tricky to get some Haskell libraries working on Windows](http://www.reddit.com/r/haskell/comments/23tj8y/haskellplatform_vs_ghccabal/ch0l784), in which case the [Haskell Platform](http://www.haskell.org/platform/) is a great way to get going with Haskell. For Mac and Linux the platform works too, but we can also just grab the latest GHC and Cabal (ooh, shiny!) and go from there. **UPDATE 2019-02:** I tend to use [ghcup](https://github.com/haskell/ghcup) on Mac and Linux these days. Am leaving these steps here as building GHC and Cabal is still a valid way of getting Haskell up and running.
+Apparently it can be [a bit tricky to get some Haskell libraries working on Windows](http://www.reddit.com/r/haskell/comments/23tj8y/haskellplatform_vs_ghccabal/ch0l784), in which case the [Haskell Platform](http://www.haskell.org/platform/) is a great way to get going with Haskell. For Mac and Linux the platform works too, but we can also just grab the latest GHC and Cabal (ooh, shiny!) and go from there.
+
+_**UPDATE 2019-02:** I tend to use [ghcup](https://github.com/haskell/ghcup) on Mac and Linux these days. Am leaving these steps here as building GHC and Cabal is still a valid way of getting Haskell up and running._
 
 <!-- more -->
 
