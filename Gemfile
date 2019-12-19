@@ -1,4 +1,4 @@
-ruby '2.2.4'
+ruby '2.6.5'
 source "http://rubygems.org"
 
 group :development do
@@ -21,4 +21,4 @@ end
 gem 'thin'
 gem 'sinatra', '~> 2.0.2'
 gem 'rack-rewrite'
-gem 'rack', '~> 2.0.6'
+gem 'rack', '~> 2.0.8'
