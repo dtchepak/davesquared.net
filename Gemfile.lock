@@ -43,7 +43,7 @@ GEM
     mini_portile2 (2.4.0)
     multi_json (1.13.1)
     mustermann (1.0.3)
-    nokogiri (1.9.1)
+    nokogiri (1.10.8)
       mini_portile2 (~> 2.4.0)
     pandoc-ruby (2.0.2)
     posix-spawn (0.3.13)
