@@ -52,7 +52,7 @@ GEM
     posix-spawn (0.3.15)
     pygments.rb (2.2.0)
     racc (1.5.2)
-    rack (2.1.4)
+    rack (2.1.4.1)
     rack-protection (2.0.8.1)
       rack
     rack-rewrite (1.5.1)
