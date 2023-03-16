@@ -21,4 +21,4 @@ end
 gem 'thin'
 gem 'sinatra', '~> 2.0.2'
 gem 'rack-rewrite'
-gem 'rack', '~> 2.1.4'
+gem 'rack', '~> 2.2.6'
